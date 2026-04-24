@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: insu
+
+  datasource:
+    url: jdbc:oracle:thin:@localhost:15210/XEPDB1
+    username: ${DB_USERNAME:insurance}        #???? ??, ??? ??? ??
+    password: ${DB_PASSWORD:1234}
+    driver-class-name: oracle.jdbc.OracleDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true        #sql ?? ??
+    properties:
+      hibernate:
+        format_sql: true  #sql ??
+        dialect: org.hibernate.dialect.OracleDialect
+
+
+
+  thymeleaf:
+    cache: false # ????? ??
+
+
+server:
+  port: ${DB_PORT:8080}

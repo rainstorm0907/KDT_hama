@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>연습 페이지</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .title {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .welcome-msg {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            color: #555;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 20px 40px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: transform 0.2s, background-color 0.2s;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-login { background-color: #007bff; }
+        .btn-login:hover { background-color: #0056b3; }
+
+        .btn-signup { background-color: #28a745; }
+        .btn-signup:hover { background-color: #218838; }
+
+        .btn-logout { background-color: #dc3545; }
+        .btn-logout:hover { background-color: #c82333; }
+    </style>
+</head>
+<body>
+
+<div class="title">연습 페이지</div>
+
+<div sec:authorize="isAuthenticated()" style="text-align: center;">
+    <div class="welcome-msg">
+            <span style="font-weight: bold; color: #007bff;"
+                  sec:authentication="principal.user.nickname">사용자</span>님 환영합니다!
+    </div>
+    <div class="button-group">
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-logout">로그아웃</button>
+        </form>
+    </div>
+</div>
+
+<div sec:authorize="isAnonymous()">
+    <div class="welcome-msg">로그인이 필요합니다.</div>
+    <div class="button-group">
+        <a th:href="@{/login}" class="btn btn-login">로그인</a>
+        <a th:href="@{/signup}" class="btn btn-signup">회원가입</a>
+    </div>
+</div>
+
+</body>
+</html>
