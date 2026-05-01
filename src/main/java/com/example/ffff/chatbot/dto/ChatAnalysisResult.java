@@ -12,4 +12,7 @@ public class ChatAnalysisResult {
 
     private String intent;
     private String keyword;
+
+    private Long maxPrice;
+
 }

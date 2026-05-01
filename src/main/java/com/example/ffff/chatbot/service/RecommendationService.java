@@ -1,6 +1,5 @@
 package com.example.ffff.chatbot.service;
 
-
 import com.example.ffff.chatbot.dto.RecommendedItemDto;
 import com.example.ffff.chatbot.entity.RecommendedItem;
 import com.example.ffff.chatbot.repository.ItemRepository;
@@ -37,19 +36,55 @@ public class RecommendationService {
                 .toList();
     }
 
+    @Transactional
+    public List<RecommendedItemDto> recommendByKeywordAndMaxPrice(
+            Long userId,
+            String keyword,
+            Long maxPrice
+    ) {
+        String safeKeyword = normalizeKeyword(keyword);
+
+        if (safeKeyword.isBlank() || maxPrice == null || maxPrice <= 0) {
+            return List.of();
+        }
+
+        List<RecommendedItemProjection> results =
+                itemRepository.findItemsByKeywordAndMaxPrice(safeKeyword, maxPrice, 10);
+
+        saveRecommendedItems(userId, results);
+
+        return results.stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasAvailableItems() {
+        return itemRepository.countByIsDeleted("N") > 0;
+    }
+
     private void saveRecommendedItems(Long userId, List<RecommendedItemProjection> results) {
+        String recommendType = "CHATBOT_RECOMMEND";
+
         for (RecommendedItemProjection item : results) {
+            boolean alreadyExists =
+                    recommendedItemRepository.existsByUserIdAndItemIdAndRecommendType(
+                            userId,
+                            item.getItemId(),
+                            recommendType
+                    );
+
+            if (alreadyExists) {
+                continue;
+            }
+
             RecommendedItem recommendedItem = new RecommendedItem();
             recommendedItem.setUserId(userId);
             recommendedItem.setItemId(item.getItemId());
             recommendedItem.setScore(item.getScore());
-            recommendedItem.setRecommendType("CHATBOT_RECOMMEND");
+            recommendedItem.setRecommendType(recommendType);
 
-            try {
-                recommendedItemRepository.save(recommendedItem);
-            } catch (Exception ignored) {
-                // 중복 추천 저장 등은 1차 MVP에서는 무시
-            }
+            recommendedItemRepository.save(recommendedItem);
         }
     }
 

@@ -5,6 +5,17 @@
     <meta charset="UTF-8">
     <title>연습 페이지</title>
     <style>
+        :root {
+            --hama-blue: #1687ff;
+            --hama-blue-dark: #0069d9;
+            --hama-sky: #e9f5ff;
+            --hama-soft: #f6fbff;
+            --hama-cream: #fffaf0;
+            --hama-text: #263238;
+            --hama-gray: #eef2f5;
+            --hama-border: #d9e6f2;
+        }
+
         body, html {
             height: 100%;
             margin: 0;
@@ -12,7 +23,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #f8fbff 0%, #eef7ff 100%);
             font-family: 'Arial', sans-serif;
         }
 
@@ -40,15 +51,17 @@
             font-size: 1.5rem;
             font-weight: bold;
             text-decoration: none;
-            border-radius: 10px;
-            transition: transform 0.2s, background-color 0.2s;
+            border-radius: 14px;
+            transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
             color: white;
             border: none;
             cursor: pointer;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
         }
 
         .btn:hover {
-            transform: scale(1.05);
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
         }
 
         .btn-login { background-color: #007bff; }
@@ -60,147 +73,363 @@
         .btn-logout { background-color: #dc3545; }
         .btn-logout:hover { background-color: #c82333; }
 
-        /* 챗봇 버튼 */
+        /* ===============================
+           하마 챗봇 플로팅 버튼
+        =============================== */
         .chatbot-toggle {
             position: fixed;
-            right: 30px;
-            bottom: 30px;
-            width: 64px;
-            height: 64px;
+            right: 32px;
+            bottom: 32px;
+            width: 72px;
+            height: 72px;
             border-radius: 50%;
             border: none;
-            background-color: #007bff;
-            color: white;
-            font-size: 30px;
+            background: linear-gradient(145deg, #3aa0ff, #007bff);
             cursor: pointer;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 12px 28px rgba(0, 123, 255, 0.35);
             z-index: 1000;
-            transition: transform 0.2s, background-color 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
+            padding: 0;
         }
 
         .chatbot-toggle:hover {
-            transform: scale(1.08);
-            background-color: #0056b3;
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 16px 34px rgba(0, 123, 255, 0.45);
         }
 
-        /* 챗봇 창 */
+        .hama-face {
+            position: relative;
+            width: 48px;
+            height: 38px;
+            margin: 16px auto 0;
+            background: #ffffff;
+            border-radius: 45% 45% 50% 50%;
+            box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .hama-face::before,
+        .hama-face::after {
+            content: "";
+            position: absolute;
+            top: -7px;
+            width: 15px;
+            height: 15px;
+            background: #ffffff;
+            border-radius: 50%;
+        }
+
+        .hama-face::before {
+            left: 6px;
+        }
+
+        .hama-face::after {
+            right: 6px;
+        }
+
+        .hama-eye {
+            position: absolute;
+            top: 13px;
+            width: 5px;
+            height: 5px;
+            background: #1687ff;
+            border-radius: 50%;
+        }
+
+        .hama-eye.left {
+            left: 15px;
+        }
+
+        .hama-eye.right {
+            right: 15px;
+        }
+
+        .hama-nose {
+            position: absolute;
+            left: 50%;
+            bottom: 7px;
+            transform: translateX(-50%);
+            width: 25px;
+            height: 12px;
+            background: #e9f5ff;
+            border-radius: 14px;
+        }
+
+        .hama-nose::before,
+        .hama-nose::after {
+            content: "";
+            position: absolute;
+            top: 4px;
+            width: 4px;
+            height: 4px;
+            background: #1687ff;
+            border-radius: 50%;
+        }
+
+        .hama-nose::before {
+            left: 7px;
+        }
+
+        .hama-nose::after {
+            right: 7px;
+        }
+
+        /* ===============================
+           하마 챗봇 박스
+        =============================== */
         .chatbot-box {
             display: none;
             position: fixed;
-            right: 30px;
-            bottom: 110px;
-            width: 360px;
-            height: 500px;
-            background-color: white;
-            border-radius: 18px;
-            box-shadow: 0 8px 26px rgba(0, 0, 0, 0.28);
+            right: 32px;
+            bottom: 120px;
+            width: 420px;
+            height: 560px;
+            background: white;
+            border-radius: 26px;
+            box-shadow: 0 18px 45px rgba(0, 52, 110, 0.22);
             overflow: hidden;
             z-index: 1000;
-            border: 1px solid #ddd;
+            border: 1px solid var(--hama-border);
+        }
+
+        .chatbot-box::before,
+        .chatbot-box::after {
+            content: "";
+            position: absolute;
+            top: 48px;
+            width: 34px;
+            height: 34px;
+            background: var(--hama-blue);
+            border-radius: 50%;
+            z-index: 1001;
+        }
+
+        .chatbot-box::before {
+            left: 28px;
+        }
+
+        .chatbot-box::after {
+            right: 28px;
         }
 
         .chatbot-header {
-            height: 56px;
-            background-color: #007bff;
+            position: relative;
+            height: 66px;
+            background: linear-gradient(135deg, #1687ff 0%, #006ce5 100%);
             color: white;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 16px;
+            padding: 0 18px;
             font-weight: bold;
             box-sizing: border-box;
+            z-index: 1002;
+        }
+
+        .chatbot-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chatbot-avatar {
+            position: relative;
+            width: 38px;
+            height: 32px;
+            background: white;
+            border-radius: 45% 45% 50% 50%;
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .chatbot-avatar::before,
+        .chatbot-avatar::after {
+            content: "";
+            position: absolute;
+            top: -5px;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .chatbot-avatar::before {
+            left: 5px;
+        }
+
+        .chatbot-avatar::after {
+            right: 5px;
+        }
+
+        .avatar-eye {
+            position: absolute;
+            top: 11px;
+            width: 4px;
+            height: 4px;
+            background: var(--hama-blue);
+            border-radius: 50%;
+        }
+
+        .avatar-eye.left {
+            left: 12px;
+        }
+
+        .avatar-eye.right {
+            right: 12px;
+        }
+
+        .avatar-nose {
+            position: absolute;
+            left: 50%;
+            bottom: 5px;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 9px;
+            background: #e9f5ff;
+            border-radius: 12px;
+        }
+
+        .chatbot-header-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+        }
+
+        .chatbot-header-text strong {
+            font-size: 15px;
+        }
+
+        .chatbot-header-text span {
+            font-size: 11px;
+            opacity: 0.88;
+            font-weight: normal;
         }
 
         .chatbot-header button {
-            background: none;
+            background: rgba(255, 255, 255, 0.18);
             border: none;
             color: white;
-            font-size: 26px;
+            font-size: 24px;
             cursor: pointer;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            line-height: 1;
+        }
+
+        .chatbot-header button:hover {
+            background: rgba(255, 255, 255, 0.28);
         }
 
         .chatbot-messages {
-            height: 378px;
-            padding: 14px;
+            height: 428px;
+            padding: 18px 16px;
             overflow-y: auto;
-            background-color: #f4f6f8;
+            background:
+                    radial-gradient(circle at top left, rgba(22, 135, 255, 0.08), transparent 34%),
+                    linear-gradient(180deg, #f7fbff 0%, #f1f5f8 100%);
             box-sizing: border-box;
         }
 
         .bot-message,
         .user-message {
-            max-width: 78%;
-            padding: 10px 12px;
-            margin-bottom: 10px;
-            border-radius: 14px;
+            max-width: 88%;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+            border-radius: 18px;
             font-size: 14px;
-            line-height: 1.45;
-            word-break: break-word;
+            line-height: 1.55;
+            white-space: normal;
+            overflow-wrap: break-word;
+            word-break: keep-all;
             box-sizing: border-box;
         }
 
         .bot-message {
-            background-color: white;
-            color: #222;
+            position: relative;
+            background: #ffffff;
+            color: var(--hama-text);
             margin-right: auto;
-            border: 1px solid #e1e1e1;
+            border: 1px solid #dfeaf5;
+            box-shadow: 0 4px 12px rgba(31, 70, 105, 0.08);
+            border-top-left-radius: 8px;
+        }
+
+        .bot-message::before {
+            content: "hama";
+            display: block;
+            font-size: 10px;
+            color: var(--hama-blue);
+            font-weight: bold;
+            margin-bottom: 4px;
+            letter-spacing: 0.2px;
         }
 
         .user-message {
-            background-color: #007bff;
+            background: linear-gradient(135deg, #1687ff, #006ce5);
             color: white;
             margin-left: auto;
+            border-top-right-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.22);
         }
 
         .chatbot-input-area {
             height: 66px;
             display: flex;
-            gap: 8px;
-            padding: 12px;
-            border-top: 1px solid #ddd;
+            gap: 9px;
+            padding: 11px 14px;
+            border-top: 1px solid #d9e6f2;
             box-sizing: border-box;
-            background-color: white;
+            background: white;
         }
 
         .chatbot-input-area input {
             flex: 1;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            padding: 0 12px;
+            border: 1px solid #c9d9e8;
+            border-radius: 16px;
+            padding: 0 14px;
             outline: none;
             font-size: 14px;
+            background: #fbfdff;
         }
 
         .chatbot-input-area input:focus {
-            border-color: #007bff;
+            border-color: var(--hama-blue);
+            box-shadow: 0 0 0 3px rgba(22, 135, 255, 0.12);
         }
 
         .chatbot-input-area button {
-            width: 70px;
+            width: 76px;
             border: none;
-            border-radius: 10px;
-            background-color: #007bff;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #1687ff, #006ce5);
             color: white;
             cursor: pointer;
             font-weight: bold;
+            box-shadow: 0 6px 14px rgba(0, 123, 255, 0.22);
         }
 
         .chatbot-input-area button:hover {
-            background-color: #0056b3;
+            background: linear-gradient(135deg, #087cf7, #005dcc);
         }
 
         .chatbot-item {
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            padding: 10px;
-            margin: 8px 0 10px;
+            background: #ffffff;
+            border: 1px solid #d9e6f2;
+            border-radius: 16px;
+            padding: 12px;
+            margin: 8px 0 12px;
             font-size: 13px;
             line-height: 1.5;
+            box-shadow: 0 4px 12px rgba(31, 70, 105, 0.08);
+        }
+
+        .chatbot-item strong {
+            color: var(--hama-text);
         }
 
         .chatbot-item a {
-            color: #007bff;
+            display: inline-block;
+            margin-top: 6px;
+            color: var(--hama-blue);
             text-decoration: none;
             font-weight: bold;
         }
@@ -209,12 +438,17 @@
             text-decoration: underline;
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 520px) {
             .chatbot-box {
-                right: 16px;
-                left: 16px;
+                right: 14px;
+                left: 14px;
                 width: auto;
-                bottom: 95px;
+                height: 540px;
+                bottom: 105px;
+            }
+
+            .chatbot-messages {
+                height: 408px;
             }
 
             .chatbot-toggle {
@@ -248,21 +482,34 @@
     </div>
 </div>
 
-<!-- 로그인한 사용자에게만 챗봇 표시 -->
 <div sec:authorize="isAuthenticated()">
-    <button id="chatbotToggle" class="chatbot-toggle" type="button">
-        💬
+    <button id="chatbotToggle" class="chatbot-toggle" type="button" aria-label="챗봇 열기">
+        <div class="hama-face">
+            <span class="hama-eye left"></span>
+            <span class="hama-eye right"></span>
+            <span class="hama-nose"></span>
+        </div>
     </button>
 
     <div id="chatbotBox" class="chatbot-box">
         <div class="chatbot-header">
-            <span>중고 가격비교 챗봇</span>
-            <button id="chatbotClose" type="button">×</button>
+            <div class="chatbot-title-wrap">
+                <div class="chatbot-avatar">
+                    <span class="avatar-eye left"></span>
+                    <span class="avatar-eye right"></span>
+                    <span class="avatar-nose"></span>
+                </div>
+                <div class="chatbot-header-text">
+                    <strong>hama 챗봇</strong>
+                    <span>중고 가격비교 도우미</span>
+                </div>
+            </div>
+            <button id="chatbotClose" type="button" aria-label="챗봇 닫기">×</button>
         </div>
 
         <div id="chatbotMessages" class="chatbot-messages">
             <div class="bot-message">
-                안녕하세요! 가격 알림, 찜, 시세, 검색 방법을 물어보실 수 있어요.
+                중고거래 가격비교 사이트 하마입니다. 무엇이든 물어보세요!
             </div>
         </div>
 
@@ -313,7 +560,7 @@
         addMessage(message, "user-message");
         chatbotInput.value = "";
 
-        const loadingMessage = addMessage("답변을 준비하고 있어요...", "bot-message");
+        const loadingMessage = addMessage("하마가 답변을 준비하고 있어요...", "bot-message");
 
         try {
             const response = await fetch("/api/chatbot/message", {
@@ -329,12 +576,26 @@
             loadingMessage.remove();
 
             if (!response.ok) {
+                let errorMessage = "챗봇 응답 중 문제가 발생했습니다.";
+
+                try {
+                    const errorData = await response.json();
+
+                    if (errorData.message) {
+                        errorMessage = errorData.message;
+                    } else if (errorData.error) {
+                        errorMessage = errorData.error;
+                    }
+                } catch (e) {
+                    errorMessage = `서버 오류가 발생했습니다. 상태 코드: ${response.status}`;
+                }
+
                 if (response.status === 401 || response.status === 403) {
                     addMessage("로그인 후 챗봇을 이용할 수 있습니다.", "bot-message");
                     return;
                 }
 
-                addMessage("챗봇 응답 중 문제가 발생했습니다.", "bot-message");
+                addMessage(errorMessage, "bot-message");
                 return;
             }
 
@@ -357,7 +618,13 @@
     function addMessage(text, className) {
         const messageDiv = document.createElement("div");
         messageDiv.className = className;
-        messageDiv.textContent = text;
+
+        const cleanText = String(text || "")
+            .replace(/\u00A0/g, " ")
+            .replace(/[\u200B-\u200D\uFEFF]/g, "")
+            .trim();
+
+        messageDiv.textContent = cleanText;
 
         chatbotMessages.appendChild(messageDiv);
         chatbotMessages.scrollTop = chatbotMessages.scrollHeight;

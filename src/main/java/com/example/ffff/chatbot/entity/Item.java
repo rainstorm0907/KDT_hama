@@ -46,4 +46,10 @@ public class Item {
 
     @Column(name = "CRAWLED_AT")
     private LocalDateTime crawledAt;
+
+    @Column(name = "IS_DELETED", length = 1)
+    private String isDeleted;
+
+    @Column(name = "UPDATED_AT")
+    private LocalDateTime updatedAt;
 }
