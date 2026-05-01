@@ -1,6 +1,5 @@
 package com.example.ffff.chatbot.service;
 
-
 import com.example.ffff.chatbot.dto.ChatAnalysisResult;
 import com.example.ffff.chatbot.dto.ChatMessageRequest;
 import com.example.ffff.chatbot.dto.ChatMessageResponse;
@@ -23,10 +22,10 @@ public class ChatbotService {
     private final ChatHistoryRepository chatHistoryRepository;
 
     @Transactional
-    public ChatMessageResponse handleMessage(ChatMessageRequest request) {
-        Long userId = request.getUserId();
+    public ChatMessageResponse handleMessage(Long userId, ChatMessageRequest request) {
         String userMessage = request.getMessage().trim();
 
+        // 1. FAQ 우선 검색
         var faqAnswer = faqService.findAnswer(userMessage);
 
         if (faqAnswer.isPresent()) {
@@ -43,11 +42,13 @@ public class ChatbotService {
                     .build();
         }
 
+        // 2. Gemini로 의도와 키워드 분석
         ChatAnalysisResult analysis = geminiClientService.analyzeMessage(userMessage);
 
         String intent = safeIntent(analysis.getIntent());
         String keyword = safeKeyword(analysis.getKeyword());
 
+        // 3. 상품 추천
         if ("PRODUCT_RECOMMEND".equals(intent)) {
             List<RecommendedItemDto> items =
                     recommendationService.recommendByKeyword(userId, keyword);
@@ -65,6 +66,7 @@ public class ChatbotService {
                     .build();
         }
 
+        // 4. 가격 비교
         if ("PRICE_COMPARE".equals(intent)) {
             List<RecommendedItemDto> items =
                     recommendationService.recommendByKeyword(userId, keyword);
@@ -82,6 +84,7 @@ public class ChatbotService {
                     .build();
         }
 
+        // 5. 가격 알림 안내
         if ("PRICE_ALERT_GUIDE".equals(intent)) {
             String answer = """
                     가격 알림은 상품을 찜한 뒤 목표 가격을 설정하면 사용할 수 있습니다.
@@ -99,6 +102,7 @@ public class ChatbotService {
                     .build();
         }
 
+        // 6. 일반 질문은 Gemini 답변
         String aiAnswer = geminiClientService.generateGeneralAnswer(userMessage);
 
         saveHistory(userId, userMessage, aiAnswer, intent, "AI");

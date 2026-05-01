@@ -10,9 +10,6 @@ import lombok.Setter;
 @Setter
 public class ChatMessageRequest {
 
-    @NotNull(message = "userId는 필수입니다.")
-    private Long userId;
-
     @NotBlank(message = "message는 필수입니다.")
     private String message;
 }

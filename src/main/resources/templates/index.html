@@ -59,6 +59,169 @@
 
         .btn-logout { background-color: #dc3545; }
         .btn-logout:hover { background-color: #c82333; }
+
+        /* 챗봇 버튼 */
+        .chatbot-toggle {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+            z-index: 1000;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .chatbot-toggle:hover {
+            transform: scale(1.08);
+            background-color: #0056b3;
+        }
+
+        /* 챗봇 창 */
+        .chatbot-box {
+            display: none;
+            position: fixed;
+            right: 30px;
+            bottom: 110px;
+            width: 360px;
+            height: 500px;
+            background-color: white;
+            border-radius: 18px;
+            box-shadow: 0 8px 26px rgba(0, 0, 0, 0.28);
+            overflow: hidden;
+            z-index: 1000;
+            border: 1px solid #ddd;
+        }
+
+        .chatbot-header {
+            height: 56px;
+            background-color: #007bff;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            font-weight: bold;
+            box-sizing: border-box;
+        }
+
+        .chatbot-header button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 26px;
+            cursor: pointer;
+        }
+
+        .chatbot-messages {
+            height: 378px;
+            padding: 14px;
+            overflow-y: auto;
+            background-color: #f4f6f8;
+            box-sizing: border-box;
+        }
+
+        .bot-message,
+        .user-message {
+            max-width: 78%;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.45;
+            word-break: break-word;
+            box-sizing: border-box;
+        }
+
+        .bot-message {
+            background-color: white;
+            color: #222;
+            margin-right: auto;
+            border: 1px solid #e1e1e1;
+        }
+
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .chatbot-input-area {
+            height: 66px;
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            border-top: 1px solid #ddd;
+            box-sizing: border-box;
+            background-color: white;
+        }
+
+        .chatbot-input-area input {
+            flex: 1;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 0 12px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .chatbot-input-area input:focus {
+            border-color: #007bff;
+        }
+
+        .chatbot-input-area button {
+            width: 70px;
+            border: none;
+            border-radius: 10px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .chatbot-input-area button:hover {
+            background-color: #0056b3;
+        }
+
+        .chatbot-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 10px;
+            margin: 8px 0 10px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .chatbot-item a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .chatbot-item a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .chatbot-box {
+                right: 16px;
+                left: 16px;
+                width: auto;
+                bottom: 95px;
+            }
+
+            .chatbot-toggle {
+                right: 20px;
+                bottom: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -67,8 +230,8 @@
 
 <div sec:authorize="isAuthenticated()" style="text-align: center;">
     <div class="welcome-msg">
-            <span style="font-weight: bold; color: #007bff;"
-                  sec:authentication="principal.user.nickname">사용자</span>님 환영합니다!
+        <span style="font-weight: bold; color: #007bff;"
+              sec:authentication="principal.user.nickname">사용자</span>님 환영합니다!
     </div>
     <div class="button-group">
         <form th:action="@{/logout}" method="post">
@@ -84,6 +247,161 @@
         <a th:href="@{/signup}" class="btn btn-signup">회원가입</a>
     </div>
 </div>
+
+<!-- 로그인한 사용자에게만 챗봇 표시 -->
+<div sec:authorize="isAuthenticated()">
+    <button id="chatbotToggle" class="chatbot-toggle" type="button">
+        💬
+    </button>
+
+    <div id="chatbotBox" class="chatbot-box">
+        <div class="chatbot-header">
+            <span>중고 가격비교 챗봇</span>
+            <button id="chatbotClose" type="button">×</button>
+        </div>
+
+        <div id="chatbotMessages" class="chatbot-messages">
+            <div class="bot-message">
+                안녕하세요! 가격 알림, 찜, 시세, 검색 방법을 물어보실 수 있어요.
+            </div>
+        </div>
+
+        <div class="chatbot-input-area">
+            <input
+                    id="chatbotInput"
+                    type="text"
+                    placeholder="메시지를 입력하세요"
+                    autocomplete="off"
+            />
+            <button id="chatbotSend" type="button">전송</button>
+        </div>
+    </div>
+</div>
+
+<script sec:authorize="isAuthenticated()">
+    const chatbotToggle = document.getElementById("chatbotToggle");
+    const chatbotBox = document.getElementById("chatbotBox");
+    const chatbotClose = document.getElementById("chatbotClose");
+    const chatbotInput = document.getElementById("chatbotInput");
+    const chatbotSend = document.getElementById("chatbotSend");
+    const chatbotMessages = document.getElementById("chatbotMessages");
+
+    chatbotToggle.addEventListener("click", () => {
+        chatbotBox.style.display = "block";
+        chatbotInput.focus();
+    });
+
+    chatbotClose.addEventListener("click", () => {
+        chatbotBox.style.display = "none";
+    });
+
+    chatbotSend.addEventListener("click", sendChatbotMessage);
+
+    chatbotInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            sendChatbotMessage();
+        }
+    });
+
+    async function sendChatbotMessage() {
+        const message = chatbotInput.value.trim();
+
+        if (!message) {
+            return;
+        }
+
+        addMessage(message, "user-message");
+        chatbotInput.value = "";
+
+        const loadingMessage = addMessage("답변을 준비하고 있어요...", "bot-message");
+
+        try {
+            const response = await fetch("/api/chatbot/message", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: message
+                })
+            });
+
+            loadingMessage.remove();
+
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    addMessage("로그인 후 챗봇을 이용할 수 있습니다.", "bot-message");
+                    return;
+                }
+
+                addMessage("챗봇 응답 중 문제가 발생했습니다.", "bot-message");
+                return;
+            }
+
+            const data = await response.json();
+
+            addMessage(data.answer || "답변을 받지 못했습니다.", "bot-message");
+
+            if (data.items && data.items.length > 0) {
+                data.items.forEach(item => {
+                    addItemMessage(item);
+                });
+            }
+
+        } catch (error) {
+            loadingMessage.remove();
+            addMessage("서버와 연결할 수 없습니다.", "bot-message");
+        }
+    }
+
+    function addMessage(text, className) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = className;
+        messageDiv.textContent = text;
+
+        chatbotMessages.appendChild(messageDiv);
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+        return messageDiv;
+    }
+
+    function addItemMessage(item) {
+        const itemDiv = document.createElement("div");
+        itemDiv.className = "chatbot-item";
+
+        itemDiv.innerHTML = `
+            <strong>${escapeHtml(item.title || "상품명 없음")}</strong><br>
+            가격: ${formatPrice(item.currentPrice)}<br>
+            ${item.recommendReason ? escapeHtml(item.recommendReason) + "<br>" : ""}
+            ${item.itemUrl ? `<a href="${escapeAttribute(item.itemUrl)}" target="_blank">상품 보러가기</a>` : ""}
+        `;
+
+        chatbotMessages.appendChild(itemDiv);
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    }
+
+    function formatPrice(price) {
+        if (price === null || price === undefined || price === "") {
+            return "가격 정보 없음";
+        }
+
+        return Number(price).toLocaleString() + "원";
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeAttribute(text) {
+        return String(text)
+            .replaceAll("&", "&amp;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;");
+    }
+</script>
 
 </body>
 </html>

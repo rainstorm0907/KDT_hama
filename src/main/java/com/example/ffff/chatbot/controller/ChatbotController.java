@@ -1,16 +1,14 @@
 package com.example.ffff.chatbot.controller;
 
-
 import com.example.ffff.chatbot.dto.ChatMessageRequest;
 import com.example.ffff.chatbot.dto.ChatMessageResponse;
 import com.example.ffff.chatbot.service.ChatbotService;
+import com.example.ffff.chatbot.service.LoginUserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/chatbot")
@@ -18,12 +16,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class ChatbotController {
 
     private final ChatbotService chatbotService;
+    private final LoginUserService loginUserService;
 
     @PostMapping("/message")
     public ResponseEntity<ChatMessageResponse> sendMessage(
-            @Valid @RequestBody ChatMessageRequest request
+            @Valid @RequestBody ChatMessageRequest request,
+            Authentication authentication
     ) {
-        ChatMessageResponse response = chatbotService.handleMessage(request);
+        Long loginUserId = loginUserService.getLoginUserId(authentication);
+
+        ChatMessageResponse response =
+                chatbotService.handleMessage(loginUserId, request);
+
         return ResponseEntity.ok(response);
     }
 }

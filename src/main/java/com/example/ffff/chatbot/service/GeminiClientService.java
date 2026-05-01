@@ -23,6 +23,10 @@ public class GeminiClientService {
     @Value("${gemini.model}")
     private String model;
 
+    public String testConnection() {
+        return generateText("Gemini API 연결 성공");
+    }
+
     public ChatAnalysisResult analyzeMessage(String message) {
         String prompt = """
                 너는 중고거래 가격 비교 서비스의 챗봇 라우터다.
@@ -78,6 +82,10 @@ public class GeminiClientService {
     }
 
     private String generateText(String prompt) {
+
+        System.out.println("🚀 [Gemini API 호출됨] 현재 시간: " + java.time.LocalTime.now() +
+                " | 프롬프트 일부: " + prompt.substring(0, Math.min(prompt.length(), 30)).replace("\n", " "));
+
         Map<String, Object> requestBody = Map.of(
                 "contents", List.of(
                         Map.of(
@@ -87,7 +95,7 @@ public class GeminiClientService {
                         )
                 ),
                 "generationConfig", Map.of(
-                        "temperature", 0.3,
+                        "temperature", 0.1,
                         "maxOutputTokens", 512
                 )
         );
@@ -105,7 +113,7 @@ public class GeminiClientService {
 
     private String extractText(JsonNode response) {
         if (response == null) {
-            return "현재 답변을 생성하지 못했습니다.";
+            return "Gemini API 응답이 비어 있습니다.";
         }
 
         JsonNode candidates = response.path("candidates");
@@ -124,7 +132,7 @@ public class GeminiClientService {
             }
         }
 
-        return "현재 답변을 생성하지 못했습니다.";
+        return "Gemini API 응답에서 텍스트를 찾지 못했습니다.";
     }
 
     private String cleanJson(String text) {
