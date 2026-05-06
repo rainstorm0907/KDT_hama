@@ -5,6 +5,7 @@
 ## 사용 방법
 
 - 실제 기능 코드가 작성된 파일은 `[x]`로 체크합니다.
+- 체크된 항목의 날짜는 실제 코드 파일이 Git에 처음 기록된 날짜를 기준으로 작성합니다.
 - 폴더만 있고 `.gitkeep`만 있는 경우는 아직 구현 파일이 없는 상태이므로 `[ ]`로 둡니다.
 - 새 파일을 만들면 올바른 위치에 있는지 확인한 뒤 체크 항목을 추가합니다.
 - 기능 코드가 들어간 폴더의 `.gitkeep`은 삭제해도 됩니다.
@@ -12,12 +13,12 @@
 ## 전체 진행 상태
 
 - [ ] Backend Java 기본 구조 구현
-- [x] Backend Python 크롤링 파일 작성
+- [x] Backend Python 크롤링 파일 작성 (작성일: 2026-04-21 ~ 2026-04-29)
 - [ ] Backend Python 전처리 파일 작성
-- [x] Frontend Hama Vite 실행 진입 파일 구성
-- [x] Frontend 기본 App 컴포넌트 작성
-- [x] Frontend 홈 화면 공통 컴포넌트 작성
-- [x] Frontend 목 데이터와 타입 파일 작성
+- [x] Frontend Hama Vite 실행 진입 파일 구성 (작성일: 2026-04-30)
+- [x] Frontend 기본 App 컴포넌트 작성 (작성일: 2026-04-30)
+- [x] Frontend 홈 화면 공통 컴포넌트 작성 (작성일: 2026-04-30)
+- [x] Frontend 목 데이터와 타입 파일 작성 (작성일: 2026-04-30)
 - [ ] Frontend API, 훅, 라우팅, 전역 상태 관리 파일 작성
 
 ## Backend Java
@@ -149,7 +150,7 @@
 
 기준 위치: `code/backend/src/main/resources`
 
-- [x] `application.yml`: Spring Boot 설정 파일 생성
+- [x] `application.yml`: Spring Boot 설정 파일 생성 (작성일: 2026-04-29)
 - [ ] DB 연결 정보 환경 변수 처리 확인
 - [ ] JWT Secret 등 민감 정보 직접 기입 여부 확인
 
@@ -159,9 +160,9 @@
 
 ### `crawling`
 
-- [x] `crawling_20260429.py`: 크롤링 스크립트 작성
-- [x] `keyword_list.csv`: 크롤링 키워드 목록 작성
-- [x] `archive/integrated_crawling_initial.py`: 초기 크롤링 코드 보관
+- [x] `crawling_20260429.py`: 크롤링 스크립트 작성 (작성일: 2026-04-29)
+- [x] `keyword_list.csv`: 크롤링 키워드 목록 작성 (작성일: 2026-04-29)
+- [x] `archive/integrated_crawling_initial.py`: 초기 크롤링 코드 보관 (작성일: 2026-04-21)
 - [ ] 크롤링 결과 저장 방식 정리
 - [ ] DB 저장 연동 방식 정리
 
@@ -177,7 +178,7 @@
 
 ### Python 의존성
 
-- [x] `requirements.txt`: Python 패키지 목록 파일 생성
+- [x] `requirements.txt`: Python 패키지 목록 파일 생성 (작성일: 2026-04-29)
 - [ ] 실제 실행에 필요한 패키지 목록 최신화
 
 ## Frontend
@@ -186,57 +187,57 @@
 
 ### Vite 실행 기본 파일
 
-- [x] `package.json`: 프론트엔드 의존성 및 실행 스크립트
-- [x] `package-lock.json`: npm 의존성 잠금 파일
-- [x] `index.html`: Vite HTML 진입 파일
-- [x] `src/main.tsx`: React 렌더링 진입 파일
-- [x] `vite.config.ts`: Vite 설정 파일
-- [x] `tsconfig.json`: TypeScript 공통 설정 파일
-- [x] `tsconfig.app.json`: 앱 빌드용 TypeScript 설정 파일
-- [x] `tsconfig.node.json`: Node/Vite 설정용 TypeScript 설정 파일
-- [x] `eslint.config.js`: ESLint 설정 파일
+- [x] `package.json`: 프론트엔드 의존성 및 실행 스크립트 (작성일: 2026-04-30)
+- [x] `package-lock.json`: npm 의존성 잠금 파일 (작성일: 2026-04-30)
+- [x] `index.html`: Vite HTML 진입 파일 (작성일: 2026-04-30)
+- [x] `src/main.tsx`: React 렌더링 진입 파일 (작성일: 2026-04-30)
+- [x] `vite.config.ts`: Vite 설정 파일 (작성일: 2026-04-30)
+- [x] `tsconfig.json`: TypeScript 공통 설정 파일 (작성일: 2026-04-30)
+- [x] `tsconfig.app.json`: 앱 빌드용 TypeScript 설정 파일 (작성일: 2026-04-30)
+- [x] `tsconfig.node.json`: Node/Vite 설정용 TypeScript 설정 파일 (작성일: 2026-04-30)
+- [x] `eslint.config.js`: ESLint 설정 파일 (작성일: 2026-04-30)
 
 ### `src/App.tsx`
 
-- [x] `src/App.tsx`: 앱 최상위 컴포넌트 작성
-- [x] 검색 패널 열림/닫힘 상태 관리
-- [x] 선택된 카테고리 상태 관리
-- [x] Header, SearchPanel, HeroBanner, CategoryGrid, ProductGrid, Footer 연결
+- [x] `src/App.tsx`: 앱 최상위 컴포넌트 작성 (작성일: 2026-04-30)
+- [x] 검색 패널 열림/닫힘 상태 관리 (작성일: 2026-04-30)
+- [x] 선택된 카테고리 상태 관리 (작성일: 2026-04-30)
+- [x] Header, SearchPanel, HeroBanner, CategoryGrid, ProductGrid, Footer 연결 (작성일: 2026-04-30)
 - [ ] API 연동 후 목 데이터 의존성 제거 또는 fixture 분리
 
 ### `src/components`
 
-- [x] `Header.tsx`: 상단 로고와 메뉴 영역
-- [x] `SearchPanel.tsx`: 검색 입력창과 최근 검색어 패널
-- [x] `HeroBanner.tsx`: 홈 배너 영역
-- [x] `CategoryGrid.tsx`: 카테고리 선택 그리드
-- [x] `ProductGrid.tsx`: 추천 상품 목록 그리드
-- [x] `Footer.tsx`: 하단 정보 영역
+- [x] `Header.tsx`: 상단 로고와 메뉴 영역 (작성일: 2026-04-30)
+- [x] `SearchPanel.tsx`: 검색 입력창과 최근 검색어 패널 (작성일: 2026-04-30)
+- [x] `HeroBanner.tsx`: 홈 배너 영역 (작성일: 2026-04-30)
+- [x] `CategoryGrid.tsx`: 카테고리 선택 그리드 (작성일: 2026-04-30)
+- [x] `ProductGrid.tsx`: 추천 상품 목록 그리드 (작성일: 2026-04-30)
+- [x] `Footer.tsx`: 하단 정보 영역 (작성일: 2026-04-30)
 - [ ] 로그인/회원가입 UI가 필요하면 별도 컴포넌트 또는 페이지로 추가
 - [ ] 마이페이지 UI가 필요하면 별도 컴포넌트 또는 페이지로 추가
 
 ### `src/data`
 
-- [x] `catalog.ts`: 카테고리, 추천 상품, 최근 검색어 목 데이터
+- [x] `catalog.ts`: 카테고리, 추천 상품, 최근 검색어 목 데이터 (작성일: 2026-04-30)
 - [ ] 백엔드 API 연동 시 데이터 대체 방식 정리
 
 ### `src/types`
 
-- [x] `catalog.ts`: `Category`, `Product` 타입 정의
+- [x] `catalog.ts`: `Category`, `Product` 타입 정의 (작성일: 2026-04-30)
 - [ ] API 응답 타입 추가 필요 여부 확인
 
 ### 스타일 파일
 
-- [x] `src/index.css`: 전역 스타일
-- [x] `src/App.css`: 앱 화면 스타일
+- [x] `src/index.css`: 전역 스타일 (작성일: 2026-04-30)
+- [x] `src/App.css`: 앱 화면 스타일 (작성일: 2026-04-30)
 - [ ] 디자인 토큰 또는 공통 변수 분리 필요 여부 확인
 
 ### 정적 파일
 
-- [x] `public/hamalogo.png`: 서비스 로고
-- [x] `public/hama_lowban1.jpg`: 홈 배너 이미지
-- [x] `public/favicon.svg`: 파비콘
-- [x] `public/icons.svg`: 아이콘 리소스
+- [x] `public/hamalogo.png`: 서비스 로고 (작성일: 2026-04-30)
+- [x] `public/hama_lowban1.jpg`: 홈 배너 이미지 (작성일: 2026-04-30)
+- [x] `public/favicon.svg`: 파비콘 (작성일: 2026-04-30)
+- [x] `public/icons.svg`: 아이콘 리소스 (작성일: 2026-04-30)
 
 ### 아직 없는 기능/폴더
 

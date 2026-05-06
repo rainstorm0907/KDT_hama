@@ -5,40 +5,43 @@
 ## 전체 구조
 
 ```text
-code
-├── backend
-│   └── src/main
-│       ├── java/com/used/service
-│       │   ├── config
-│       │   ├── controller
-│       │   ├── service
-│       │   ├── repository
-│       │   ├── dto
-│       │   ├── entity
-│       │   ├── scheduler
-│       │   ├── notification
-│       │   ├── chatbot
-│       │   └── exception
-│       ├── python
-│       │   ├── crawling
-│       │   ├── preprocessing
-│       │   └── requirements.txt
-│       └── resources
-├── frontend
-│   └── Hama
-│       ├── public
-│       ├── src
-│       │   ├── components
-│       │   ├── data
-│       │   ├── types
-│       │   ├── App.css
-│       │   ├── App.tsx
-│       │   ├── index.css
-│       │   └── main.tsx
-│       ├── package.json
-│       ├── tsconfig.json
-│       └── vite.config.ts
+kdtproject
+├── README.md
+├── code
+│   ├── backend
+│   │   └── src/main
+│   │       ├── java/com/used/service
+│   │       │   ├── config
+│   │       │   ├── controller
+│   │       │   ├── service
+│   │       │   ├── repository
+│   │       │   ├── dto
+│   │       │   ├── entity
+│   │       │   ├── scheduler
+│   │       │   ├── notification
+│   │       │   ├── chatbot
+│   │       │   └── exception
+│   │       ├── python
+│   │       │   ├── crawling
+│   │       │   ├── preprocessing
+│   │       │   └── requirements.txt
+│   │       └── resources
+│   └── frontend
+│       └── Hama
+│           ├── public
+│           ├── src
+│           │   ├── components
+│           │   ├── data
+│           │   ├── types
+│           │   ├── App.css
+│           │   ├── App.tsx
+│           │   ├── index.css
+│           │   └── main.tsx
+│           ├── package.json
+│           ├── tsconfig.json
+│           └── vite.config.ts
 └── docs
+    ├── project_structure.md
     ├── requirements.md
     ├── document_checklist.md
     ├── api_spec.md
@@ -437,6 +440,10 @@ Vite 프로젝트 설정 파일입니다.
 ## Docs
 
 프로젝트 문서와 데이터베이스 관련 자료를 보관합니다.
+
+### `docs/project_structure.md`
+
+프로젝트 폴더 구조, 폴더별 설명, 참고 문서 링크를 정리합니다.
 
 ### `docs/requirements.md`
 
