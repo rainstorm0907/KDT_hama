@@ -20,13 +20,12 @@ public class ChatbotService {
     private final GeminiClientService geminiClientService;
     private final RecommendationService recommendationService;
     private final ChatHistoryRepository chatHistoryRepository;
+    private final SearchLogService searchLogService;
 
     @Transactional
     public ChatMessageResponse handleMessage(Long userId, ChatMessageRequest request) {
         String userMessage = request.getMessage().trim();
 
-        // 1. FAQ 우선 검색
-        // 가격 알림, 찜 방법, 시세, 검색, 사이트 설명 같은 고정 질문은 Gemini 호출 없이 처리
         var faqAnswer = faqService.findAnswer(userMessage);
 
         if (faqAnswer.isPresent()) {
@@ -43,8 +42,6 @@ public class ChatbotService {
                     .build();
         }
 
-        // 2. GeminiClientService 내부에서 먼저 룰 기반 분석을 하고,
-        // UNKNOWN일 때만 Gemini API를 호출하도록 수정된 구조 기준
         ChatAnalysisResult analysis = geminiClientService.analyzeMessage(userMessage);
 
         String intent = safeIntent(analysis.getIntent());
@@ -55,7 +52,6 @@ public class ChatbotService {
         System.out.println("챗봇 분석 결과 keyword = " + keyword);
         System.out.println("챗봇 분석 결과 maxPrice = " + maxPrice);
 
-        // 3. 인사 처리
         if ("GREETING".equals(intent)) {
             String answer = "안녕하세요! 중고거래 가격 비교 서비스 하마입니다. 상품 검색, 가격 비교, 찜, 시세, 가격 알림에 대해 물어보실 수 있어요.";
 
@@ -70,15 +66,12 @@ public class ChatbotService {
                     .build();
         }
 
-        // 4. 현재 등록 상품 수 안내
         if ("ITEM_COUNT".equals(intent)) {
-            String answer;
+            long count = recommendationService.countAvailableItems();
 
-            if (recommendationService.hasAvailableItems()) {
-                answer = "현재 등록된 상품 데이터가 있습니다. 찾고 싶은 상품명을 입력하면 관련 상품을 추천해드릴 수 있습니다.";
-            } else {
-                answer = "현재 등록된 상품 데이터는 준비 중입니다. 상품 데이터가 수집되면 등록된 상품 수와 추천 결과를 안내해드릴 수 있습니다.";
-            }
+            String answer = count > 0
+                    ? "현재 등록된 상품은 총 " + count + "개입니다. 찾고 싶은 상품명을 입력하면 관련 상품을 추천해드릴 수 있습니다."
+                    : "현재 등록된 상품 데이터는 준비 중입니다. 상품 데이터가 수집되면 추천 결과를 안내해드릴 수 있습니다.";
 
             saveHistory(userId, userMessage, answer, intent, "RULE");
 
@@ -91,8 +84,6 @@ public class ChatbotService {
                     .build();
         }
 
-        // 5. 찜 목록 조회 안내
-        // Wishlists + Items 조회 기능을 붙이기 전까지는 준비 중 응답
         if ("WISHLIST_LIST".equals(intent)) {
             String answer = "현재 찜 목록 조회 기능은 준비 중입니다. 상품 데이터와 찜 데이터가 연결되면 찜한 상품 목록을 보여드릴 수 있습니다.";
 
@@ -107,10 +98,56 @@ public class ChatbotService {
                     .build();
         }
 
-        // 6. 상품 추천
-        // 예: "아이폰 추천해줘"
-        // 예: "아이폰 중에 30만원 이하인 제품 찾아줘"
+        if ("PERSONAL_RECOMMEND".equals(intent)) {
+            if (!recommendationService.hasAvailableItems()) {
+                String answer = "아직 등록된 상품 데이터가 없습니다. 상품 데이터가 수집되면 검색 기록과 클릭 기록을 바탕으로 맞춤 상품을 추천해드릴 수 있습니다.";
+
+                saveHistory(userId, userMessage, answer, intent, "DB_PERSONAL_RECOMMEND");
+
+                return ChatMessageResponse.builder()
+                        .answer(answer)
+                        .intent(intent)
+                        .responseType("DB_PERSONAL_RECOMMEND")
+                        .keyword("")
+                        .items(List.of())
+                        .build();
+            }
+
+            List<RecommendedItemDto> items =
+                    recommendationService.recommendPersonalized(userId);
+
+            String answer = items.isEmpty()
+                    ? "아직 맞춤 추천에 사용할 검색 기록이나 클릭 기록이 부족합니다. 관심 있는 상품을 검색하거나 상품을 확인하면 더 정확한 추천을 받을 수 있습니다."
+                    : "최근 검색 기록과 확인한 상품을 바탕으로 맞춤 상품을 추천해드릴게요.";
+
+            saveHistory(userId, userMessage, answer, intent, "DB_PERSONAL_RECOMMEND");
+
+            return ChatMessageResponse.builder()
+                    .answer(answer)
+                    .intent(intent)
+                    .responseType("DB_PERSONAL_RECOMMEND")
+                    .keyword("")
+                    .items(items)
+                    .build();
+        }
+
         if ("PRODUCT_RECOMMEND".equals(intent)) {
+            if (keyword == null || keyword.isBlank()) {
+                String answer = "찾고 싶은 상품명을 함께 입력해 주세요. 예를 들어 '아이폰 13 보여줘', '아이폰 중에 30만원 이하 상품 보여줘'처럼 물어보실 수 있습니다.";
+
+                saveHistory(userId, userMessage, answer, intent, "GUIDE");
+
+                return ChatMessageResponse.builder()
+                        .answer(answer)
+                        .intent(intent)
+                        .responseType("GUIDE")
+                        .keyword("")
+                        .items(List.of())
+                        .build();
+            }
+
+            searchLogService.saveSearchKeyword(userId, keyword);
+
             if (!recommendationService.hasAvailableItems()) {
                 String answer = "아직 등록된 상품 데이터가 없습니다. 상품 데이터가 수집되면 조건에 맞는 상품을 추천해드릴 수 있습니다.";
 
@@ -146,8 +183,21 @@ public class ChatbotService {
                     .build();
         }
 
-        // 7. 가격 비교
         if ("PRICE_COMPARE".equals(intent)) {
+            if (keyword == null || keyword.isBlank()) {
+                String answer = "시세를 확인할 상품명을 함께 입력해 주세요. 예를 들어 '아이폰 14 시세 알려줘'처럼 물어보실 수 있습니다.";
+
+                saveHistory(userId, userMessage, answer, intent, "GUIDE");
+
+                return ChatMessageResponse.builder()
+                        .answer(answer)
+                        .intent(intent)
+                        .responseType("GUIDE")
+                        .keyword("")
+                        .items(List.of())
+                        .build();
+            }
+
             if (!recommendationService.hasAvailableItems()) {
                 String answer = "아직 등록된 상품 데이터가 없습니다. 상품 데이터가 수집되면 시세와 가격 비교 결과를 보여드릴 수 있습니다.";
 
@@ -161,6 +211,8 @@ public class ChatbotService {
                         .items(List.of())
                         .build();
             }
+
+            searchLogService.saveSearchKeyword(userId, keyword);
 
             List<RecommendedItemDto> items =
                     recommendationService.recommendByKeyword(userId, keyword);
@@ -178,7 +230,6 @@ public class ChatbotService {
                     .build();
         }
 
-        // 8. 가격 알림 안내
         if ("PRICE_ALERT_GUIDE".equals(intent)) {
             String answer = """
                     가격 알림은 상품을 찜한 뒤 목표 가격을 설정하면 사용할 수 있습니다.
@@ -196,7 +247,6 @@ public class ChatbotService {
                     .build();
         }
 
-        // 9. 검색 도움말
         if ("SEARCH_HELP".equals(intent)) {
             String answer = "검색창에 상품명을 입력하면 여러 중고거래 플랫폼의 상품을 한곳에서 비교할 수 있습니다. 예를 들어 '아이폰 14', '갤럭시 S23', '에어팟 프로'처럼 입력하면 됩니다.";
 
@@ -211,8 +261,6 @@ public class ChatbotService {
                     .build();
         }
 
-        // 10. 기본 응답
-        // 여기서 Gemini를 다시 호출하지 않음
         String defaultAnswer = """
                 아직 그 질문은 정확히 이해하지 못했어요.
                 하마에서는 상품 검색, 가격 비교, 찜, 시세, 가격 알림 관련 질문을 도와드릴 수 있습니다.

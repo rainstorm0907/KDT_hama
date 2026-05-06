@@ -54,17 +54,18 @@ public class GeminiClientService {
 
                 intent 값은 아래 중 하나만 사용해라.
                 FAQ, GREETING, ITEM_COUNT, WISHLIST_LIST,
-                PRODUCT_RECOMMEND, PRICE_COMPARE, PRICE_ALERT_GUIDE,
+                PRODUCT_RECOMMEND, PERSONAL_RECOMMEND,
+                PRICE_COMPARE, PRICE_ALERT_GUIDE,
                 SEARCH_HELP, UNKNOWN
 
                 keyword는 상품 검색이나 가격 비교에 사용할 핵심 키워드다.
                 상품 관련 질문이 아니면 keyword는 빈 문자열로 둔다.
 
-                maxPrice는 "30만원 이하", "300000원 이하", "예산 50만원" 같은 가격 상한 조건이 있을 때 숫자 원 단위로 넣어라.
+                maxPrice는 "30만원 이하", "300000원 이하", "예산 50만원", "40만원 아래" 같은 가격 상한 조건이 있을 때 숫자 원 단위로 넣어라.
                 가격 조건이 없으면 maxPrice는 null로 둔다.
 
                 출력 예시:
-                {"intent":"PRODUCT_RECOMMEND","keyword":"아이폰","maxPrice":300000}
+                {"intent":"PRODUCT_RECOMMEND","keyword":"아이폰 13","maxPrice":400000}
 
                 사용자 메시지:
                 %s
@@ -79,7 +80,19 @@ public class GeminiClientService {
                 result.setMaxPrice(extractMaxPrice(message));
             }
 
-            result.setKeyword(cleanKeyword(result.getKeyword()));
+            String geminiKeyword = cleanKeyword(result.getKeyword());
+
+            if (geminiKeyword.isBlank()) {
+                geminiKeyword = extractKeywordByRule(message);
+            } else {
+                String knownKeyword = extractKnownProductKeyword(message);
+
+                if (!knownKeyword.isBlank()) {
+                    geminiKeyword = knownKeyword;
+                }
+            }
+
+            result.setKeyword(geminiKeyword);
 
             return result;
         } catch (Exception e) {
@@ -233,8 +246,8 @@ public class GeminiClientService {
         String lower = message.toLowerCase();
         String normalized = lower.replaceAll("\\s+", "");
         Long maxPrice = extractMaxPrice(message);
+        String keyword = extractKeywordByRule(message);
 
-        // 1. 인사
         if (containsAny(normalized, "안녕", "하이", "반가워", "hello", "hi")) {
             result.setIntent("GREETING");
             result.setKeyword("");
@@ -242,25 +255,6 @@ public class GeminiClientService {
             return result;
         }
 
-        // 2. 찜 목록 조회
-        if (containsAny(normalized, "찜목록", "내찜", "관심상품", "관심목록")
-                || (normalized.contains("찜") && containsAny(normalized, "목록", "보여", "조회", "확인"))
-                || (normalized.contains("관심") && containsAny(normalized, "목록", "보여", "조회", "확인"))) {
-            result.setIntent("WISHLIST_LIST");
-            result.setKeyword(extractKeywordByRule(message));
-            result.setMaxPrice(null);
-            return result;
-        }
-
-        // 3. 현재 등록 상품 수 확인
-        if (normalized.contains("상품") && containsAny(normalized, "개수", "몇개", "등록", "올라와")) {
-            result.setIntent("ITEM_COUNT");
-            result.setKeyword("");
-            result.setMaxPrice(null);
-            return result;
-        }
-
-        // 4. 사이트 설명
         if (isSiteInfoQuestion(normalized)) {
             result.setIntent("FAQ");
             result.setKeyword("");
@@ -268,7 +262,22 @@ public class GeminiClientService {
             return result;
         }
 
-        // 5. 가격 알림 안내
+        if (isPersonalRecommendQuestion(normalized)) {
+            result.setIntent("PERSONAL_RECOMMEND");
+            result.setKeyword("");
+            result.setMaxPrice(null);
+            return result;
+        }
+
+        if (containsAny(normalized, "찜목록", "내찜", "관심상품", "관심목록")
+                || (normalized.contains("찜") && containsAny(normalized, "목록", "보여", "조회", "확인"))
+                || (normalized.contains("관심") && containsAny(normalized, "목록", "보여", "조회", "확인"))) {
+            result.setIntent("WISHLIST_LIST");
+            result.setKeyword(keyword);
+            result.setMaxPrice(null);
+            return result;
+        }
+
         if (containsAny(normalized, "가격알림", "알림설정", "목표가격", "희망가격")) {
             result.setIntent("PRICE_ALERT_GUIDE");
             result.setKeyword("");
@@ -276,7 +285,6 @@ public class GeminiClientService {
             return result;
         }
 
-        // 6. 찜 사용법 안내
         if (normalized.contains("찜") && containsAny(normalized, "방법", "어떻게", "사용법", "하는법", "어케")) {
             result.setIntent("FAQ");
             result.setKeyword("");
@@ -284,47 +292,46 @@ public class GeminiClientService {
             return result;
         }
 
-        // 7. 가격 조건 상품 검색
-        if (maxPrice != null && containsAny(normalized, "이하", "미만", "안쪽", "까지", "예산", "만원", "원")) {
-            result.setIntent("PRODUCT_RECOMMEND");
-            result.setKeyword(extractKeywordByRule(message));
-            result.setMaxPrice(maxPrice);
-            return result;
-        }
-
-        // 8. 시세 / 가격 비교
-        if (containsAny(normalized, "시세", "가격비교", "가격대", "얼마", "최저가")) {
-            result.setIntent("PRICE_COMPARE");
-            result.setKeyword(extractKeywordByRule(message));
+        if (containsAny(normalized, "검색방법", "검색하는법", "검색어떻게", "검색도움")
+                || (normalized.contains("검색") && containsAny(normalized, "방법", "어떻게", "하는법", "도움"))) {
+            result.setIntent("FAQ");
+            result.setKeyword("");
             result.setMaxPrice(null);
             return result;
         }
 
-        // 9. 상품 추천 / 상품 조회
-        if (containsAny(normalized,
-                "추천",
-                "골라",
-                "괜찮은",
-                "저렴한",
-                "싼",
-                "가성비",
-                "찾아",
-                "보여",
-                "제품",
-                "매물",
-                "상품",
-                "게시물",
-                "게시글")) {
+        if (isItemCountQuestion(normalized, keyword)) {
+            result.setIntent("ITEM_COUNT");
+            result.setKeyword("");
+            result.setMaxPrice(null);
+            return result;
+        }
+
+        if (maxPrice != null && !keyword.isBlank()) {
             result.setIntent("PRODUCT_RECOMMEND");
-            result.setKeyword(extractKeywordByRule(message));
+            result.setKeyword(keyword);
             result.setMaxPrice(maxPrice);
             return result;
         }
 
-        // 10. 검색 도움말
-        if (containsAny(normalized, "검색방법", "검색하는법", "검색어떻게", "검색도움")) {
-            result.setIntent("FAQ");
-            result.setKeyword("");
+        if (!keyword.isBlank()
+                && (
+                containsAny(normalized,
+                        "추천", "골라", "괜찮은", "저렴한", "싼", "가성비",
+                        "찾아", "보여", "조회", "검색",
+                        "제품", "매물", "상품", "게시물", "게시글",
+                        "등록된상품", "등록상품", "구매", "사려고", "살려고")
+                        || isLikelyProductKeyword(keyword)
+        )) {
+            result.setIntent("PRODUCT_RECOMMEND");
+            result.setKeyword(keyword);
+            result.setMaxPrice(maxPrice);
+            return result;
+        }
+
+        if (containsAny(normalized, "시세", "가격비교", "가격대", "얼마", "최저가")) {
+            result.setIntent("PRICE_COMPARE");
+            result.setKeyword(keyword);
             result.setMaxPrice(null);
             return result;
         }
@@ -333,6 +340,54 @@ public class GeminiClientService {
         result.setKeyword("");
         result.setMaxPrice(null);
         return result;
+    }
+
+    private boolean isPersonalRecommendQuestion(String normalized) {
+        return containsAny(normalized,
+                "나한테추천",
+                "나에게추천",
+                "내추천",
+                "맞춤추천",
+                "개인추천",
+                "추천해줄만한",
+                "추천할만한",
+                "내가좋아할만한",
+                "좋아할만한상품",
+                "나한테맞는",
+                "나에게맞는");
+    }
+
+    private boolean isItemCountQuestion(String normalized, String keyword) {
+        if (normalized == null || normalized.isBlank()) {
+            return false;
+        }
+
+        boolean countOrExistQuestion =
+                normalized.contains("상품")
+                        && containsAny(normalized, "개수", "몇개", "등록", "올라와", "있어", "있나요", "데이터");
+
+        if (!countOrExistQuestion) {
+            return false;
+        }
+
+        return keyword == null || keyword.isBlank();
+    }
+
+    private boolean isLikelyProductKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return false;
+        }
+
+        String normalizedKeyword = keyword.replaceAll("\\s+", "").toLowerCase();
+
+        if (containsAny(normalizedKeyword,
+                "아이폰", "갤럭시", "에어팟", "맥북", "아이패드",
+                "애플워치", "닌텐도", "플스", "노트북", "모니터",
+                "키보드", "마우스", "카메라")) {
+            return true;
+        }
+
+        return normalizedKeyword.matches(".*\\d+.*");
     }
 
     private boolean isSiteInfoQuestion(String normalized) {
@@ -360,24 +415,38 @@ public class GeminiClientService {
             return null;
         }
 
-        String normalized = message.replaceAll("\\s+", "").replace(",", "");
+        String text = message
+                .replace(",", "")
+                .toLowerCase()
+                .trim();
 
-        Pattern manwonPattern = Pattern.compile("(\\d+)만원");
-        Matcher manwonMatcher = manwonPattern.matcher(normalized);
+        Pattern manwonPattern = Pattern.compile("(\\d{1,4})\\s*만원");
+        Matcher manwonMatcher = manwonPattern.matcher(text);
 
-        if (manwonMatcher.find()) {
+        Long matchedPrice = null;
+
+        while (manwonMatcher.find()) {
             long value = Long.parseLong(manwonMatcher.group(1));
-            return value * 10_000;
+
+            if (value >= 1 && value <= 500) {
+                matchedPrice = value * 10_000;
+            }
         }
 
-        Pattern wonPattern = Pattern.compile("(\\d{4,})원");
-        Matcher wonMatcher = wonPattern.matcher(normalized);
-
-        if (wonMatcher.find()) {
-            return Long.parseLong(wonMatcher.group(1));
+        if (matchedPrice != null) {
+            return matchedPrice;
         }
 
-        return null;
+        Pattern wonPattern = Pattern.compile("(\\d{4,})\\s*원");
+        Matcher wonMatcher = wonPattern.matcher(text);
+
+        Long wonPrice = null;
+
+        while (wonMatcher.find()) {
+            wonPrice = Long.parseLong(wonMatcher.group(1));
+        }
+
+        return wonPrice;
     }
 
     private boolean containsAny(String text, String... keywords) {
@@ -395,15 +464,19 @@ public class GeminiClientService {
             return "";
         }
 
+        String productKeyword = extractKnownProductKeyword(message);
+
+        if (!productKeyword.isBlank()) {
+            return productKeyword;
+        }
+
         String keyword = message;
 
         keyword = keyword
-                // 가격 조건 제거
-                .replaceAll("\\d+\\s*만원\\s*(이하인|이하|미만인|미만|이상인|이상|까지|안쪽|대)?", "")
-                .replaceAll("\\d{1,3}(,\\d{3})+\\s*원\\s*(이하인|이하|미만인|미만|이상인|이상|까지|안쪽|대)?", "")
-                .replaceAll("\\d+\\s*원\\s*(이하인|이하|미만인|미만|이상인|이상|까지|안쪽|대)?", "")
+                .replaceAll("\\d+\\s*만원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|까지|안쪽|대)?", "")
+                .replaceAll("\\d{1,3}(,\\d{3})+\\s*원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|까지|안쪽|대)?", "")
+                .replaceAll("\\d+\\s*원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|까지|안쪽|대)?", "")
 
-                // 요청 동사 제거
                 .replace("추천해줘", "")
                 .replace("추천", "")
                 .replace("골라줘", "")
@@ -421,7 +494,6 @@ public class GeminiClientService {
                 .replace("확인", "")
                 .replace("해줘", "")
 
-                // 상품 관련 일반 단어 제거
                 .replace("상품들", "")
                 .replace("상품", "")
                 .replace("제품들", "")
@@ -434,7 +506,6 @@ public class GeminiClientService {
                 .replace("것들", "")
                 .replace("것", "")
 
-                // 가격/조건 관련 표현 제거
                 .replace("시세", "")
                 .replace("가격", "")
                 .replace("비교", "")
@@ -451,6 +522,8 @@ public class GeminiClientService {
                 .replace("괜찮은", "")
                 .replace("이하인", "")
                 .replace("이하", "")
+                .replace("아래인", "")
+                .replace("아래", "")
                 .replace("미만인", "")
                 .replace("미만", "")
                 .replace("이상인", "")
@@ -459,7 +532,6 @@ public class GeminiClientService {
                 .replace("안쪽", "")
                 .replace("예산", "")
 
-                // 문장 filler 제거
                 .replace("현재", "")
                 .replace("지금", "")
                 .replace("혹시", "")
@@ -475,7 +547,6 @@ public class GeminiClientService {
                 .replace("있음", "")
                 .replace("좀", "")
 
-                // 문장부호 제거
                 .replace("?", "")
                 .replace("!", "")
                 .replace(".", "")
@@ -483,10 +554,159 @@ public class GeminiClientService {
                 .replace("'", "")
                 .replace("\"", "")
 
+                .replace("등록된", "")
+                .replace("등록되어있는", "")
+                .replace("등록되어", "")
+                .replace("등록", "")
+                .replace("올라온", "")
+                .replace("올라와있는", "")
+                .replace("올라와", "")
+
+                .replace("중에서", "")
+                .replace("중에", "")
+
+                .replace("구매하려고 하는데", "")
+                .replace("구매하려고", "")
+                .replace("구매하고 싶은데", "")
+                .replace("구매하고싶은데", "")
+                .replace("사려고 하는데", "")
+                .replace("사려고", "")
+                .replace("살려고 하는데", "")
+                .replace("살려고", "")
+                .replace("사고 싶은데", "")
+                .replace("사고싶은데", "")
+                .replace("구매", "")
+                .replace("제품 있을까", "")
+                .replace("있을까", "")
+                .replace("있나요", "")
+                .replace("있어?", "")
+                .replace("있어", "")
+
                 .replaceAll("\\s+", " ")
                 .trim();
 
         return cleanKeyword(keyword);
+    }
+
+    private String extractKnownProductKeyword(String message) {
+        if (message == null || message.isBlank()) {
+            return "";
+        }
+
+        String normalized = message
+                .toLowerCase()
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        Pattern iphonePattern = Pattern.compile("(아이폰)\\s*(\\d{1,2})?\\s*(프로맥스|프로\\s*맥스|프로|max|미니|mini|plus|플러스)?");
+        Matcher iphoneMatcher = iphonePattern.matcher(normalized);
+
+        if (iphoneMatcher.find()) {
+            String base = iphoneMatcher.group(1);
+            String number = iphoneMatcher.group(2);
+            String model = iphoneMatcher.group(3);
+
+            StringBuilder keyword = new StringBuilder(base);
+
+            if (number != null && !number.isBlank()) {
+                keyword.append(" ").append(number);
+            }
+
+            if (model != null && !model.isBlank()) {
+                model = model.replace("프로 맥스", "프로맥스");
+                model = model.replace("max", "프로맥스");
+                model = model.replace("mini", "미니");
+                model = model.replace("plus", "플러스");
+                keyword.append(" ").append(model);
+            }
+
+            return keyword.toString().trim();
+        }
+
+        Pattern galaxyPattern = Pattern.compile("(갤럭시)\\s*(s\\d{1,2}|z\\s*플립\\d*|z\\s*폴드\\d*|플립\\d*|폴드\\d*|노트\\d*)?");
+        Matcher galaxyMatcher = galaxyPattern.matcher(normalized);
+
+        if (galaxyMatcher.find()) {
+            String base = galaxyMatcher.group(1);
+            String model = galaxyMatcher.group(2);
+
+            if (model != null && !model.isBlank()) {
+                model = model.replaceAll("\\s+", " ");
+                return (base + " " + model).trim();
+            }
+
+            return base;
+        }
+
+        if (normalized.contains("에어팟")) {
+            if (normalized.contains("프로")) {
+                return "에어팟 프로";
+            }
+
+            if (normalized.contains("맥스")) {
+                return "에어팟 맥스";
+            }
+
+            if (normalized.contains("2세대")) {
+                return "에어팟 2세대";
+            }
+
+            if (normalized.contains("3세대")) {
+                return "에어팟 3세대";
+            }
+
+            return "에어팟";
+        }
+
+        if (normalized.contains("맥북")) {
+            if (normalized.contains("프로")) {
+                return "맥북 프로";
+            }
+
+            if (normalized.contains("에어")) {
+                return "맥북 에어";
+            }
+
+            return "맥북";
+        }
+
+        if (normalized.contains("아이패드")) {
+            if (normalized.contains("프로")) {
+                return "아이패드 프로";
+            }
+
+            if (normalized.contains("에어")) {
+                return "아이패드 에어";
+            }
+
+            if (normalized.contains("미니")) {
+                return "아이패드 미니";
+            }
+
+            return "아이패드";
+        }
+
+        if (normalized.contains("애플워치")) {
+            return "애플워치";
+        }
+
+        String[] productWords = {
+                "닌텐도",
+                "플스",
+                "노트북",
+                "모니터",
+                "키보드",
+                "마우스",
+                "카메라"
+        };
+
+        for (String productWord : productWords) {
+            if (normalized.contains(productWord)) {
+                return productWord;
+            }
+        }
+
+        return "";
     }
 
     private String cleanKeyword(String keyword) {

@@ -640,11 +640,20 @@
             <strong>${escapeHtml(item.title || "상품명 없음")}</strong><br>
             가격: ${formatPrice(item.currentPrice)}<br>
             ${item.recommendReason ? escapeHtml(item.recommendReason) + "<br>" : ""}
-            ${item.itemUrl ? `<a href="${escapeAttribute(item.itemUrl)}" target="_blank">상품 보러가기</a>` : ""}
+            ${item.itemUrl ? `<a href="${escapeAttribute(item.itemUrl)}"
+   target="_blank"
+   onclick="logItemClick(${item.itemId}, '${escapeAttribute(item.title || '')}')">
+   상품 보러가기
+</a>` : ""}
         `;
 
         chatbotMessages.appendChild(itemDiv);
         chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    }
+    function logItemClick(itemId, keyword) {
+    fetch(`/api/chatbot/items/${itemId}/click?keyword=${encodeURIComponent(keyword)}`, {
+        method: "POST"
+    }).catch(() => {});
     }
 
     function formatPrice(price) {

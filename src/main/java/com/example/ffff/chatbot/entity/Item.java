@@ -52,4 +52,22 @@ public class Item {
 
     @Column(name = "UPDATED_AT")
     private LocalDateTime updatedAt;
+
+    @Column(name = "NORMALIZED_TITLE", length = 500)
+    private String normalizedTitle;
+
+    @Column(name = "BRAND", length = 100)
+    private String brand;
+
+    @Column(name = "MODEL_NAME", length = 200)
+    private String modelName;
+
+    @Column(name = "PRODUCT_TYPE", length = 50)
+    private String productType;
+
+    @Column(name = "IS_ACCESSORY", length = 1)
+    private String isAccessory;
+
+    @Column(name = "STORAGE_GB")
+    private Integer storageGb;
 }

@@ -15,8 +15,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RecommendationService {
 
+    private static final String RECOMMEND_TYPE_CHATBOT = "CHATBOT_RECOMMEND";
+
     private final ItemRepository itemRepository;
     private final RecommendedItemRepository recommendedItemRepository;
+
+
 
     @Transactional
     public List<RecommendedItemDto> recommendByKeyword(Long userId, String keyword) {
@@ -60,18 +64,45 @@ public class RecommendationService {
 
     @Transactional(readOnly = true)
     public boolean hasAvailableItems() {
-        return itemRepository.countByIsDeleted("N") > 0;
+        return countAvailableItems() > 0;
+    }
+
+    @Transactional(readOnly = true)
+    public long countAvailableItems() {
+        return itemRepository.countByIsDeleted("N");
+    }
+
+    @Transactional
+    public List<RecommendedItemDto> recommendPersonalized(Long userId) {
+        if (userId == null) {
+            return List.of();
+        }
+
+        List<RecommendedItemProjection> results =
+                itemRepository.findPersonalRecommendedItems(userId, 10);
+
+        saveRecommendedItems(userId, results);
+
+        return results.stream()
+                .map(this::toDto)
+                .toList();
     }
 
     private void saveRecommendedItems(Long userId, List<RecommendedItemProjection> results) {
-        String recommendType = "CHATBOT_RECOMMEND";
+        if (userId == null || results == null || results.isEmpty()) {
+            return;
+        }
 
         for (RecommendedItemProjection item : results) {
+            if (item == null || item.getItemId() == null) {
+                continue;
+            }
+
             boolean alreadyExists =
                     recommendedItemRepository.existsByUserIdAndItemIdAndRecommendType(
                             userId,
                             item.getItemId(),
-                            recommendType
+                            RECOMMEND_TYPE_CHATBOT
                     );
 
             if (alreadyExists) {
@@ -82,7 +113,7 @@ public class RecommendationService {
             recommendedItem.setUserId(userId);
             recommendedItem.setItemId(item.getItemId());
             recommendedItem.setScore(item.getScore());
-            recommendedItem.setRecommendType(recommendType);
+            recommendedItem.setRecommendType(RECOMMEND_TYPE_CHATBOT);
 
             recommendedItemRepository.save(recommendedItem);
         }
