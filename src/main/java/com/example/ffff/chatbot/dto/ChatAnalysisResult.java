@@ -1,6 +1,5 @@
 package com.example.ffff.chatbot.dto;
 
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +12,15 @@ public class ChatAnalysisResult {
     private String intent;
     private String keyword;
 
+    private Long minPrice;
     private Long maxPrice;
 
+    private String productType;
+    private String useCase;
+
+    private String gameName;
+    private String performanceLevel;
+
+    private Boolean excludeAccessory;
+    private String tradeStatus;
 }

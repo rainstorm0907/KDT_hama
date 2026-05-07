@@ -11,10 +11,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.OracleDialect
 
   thymeleaf:
@@ -27,3 +27,13 @@ gemini:
   api-key: ${GEMINI_API_KEY}
   base-url: https://generativelanguage.googleapis.com
   model: gemini-2.5-flash
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    com.example.ffff: INFO

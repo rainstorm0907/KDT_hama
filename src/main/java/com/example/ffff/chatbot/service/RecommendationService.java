@@ -1,5 +1,6 @@
 package com.example.ffff.chatbot.service;
 
+import com.example.ffff.chatbot.dto.ChatAnalysisResult;
 import com.example.ffff.chatbot.dto.RecommendedItemDto;
 import com.example.ffff.chatbot.entity.RecommendedItem;
 import com.example.ffff.chatbot.repository.ItemRepository;
@@ -20,7 +21,42 @@ public class RecommendationService {
     private final ItemRepository itemRepository;
     private final RecommendedItemRepository recommendedItemRepository;
 
+    @Transactional
+    public List<RecommendedItemDto> recommendByAnalysisResult(
+            Long userId,
+            ChatAnalysisResult analysis
+    ) {
+        if (analysis == null) {
+            return List.of();
+        }
 
+        String keyword = normalizeKeyword(analysis.getKeyword());
+        Long minPrice = normalizePrice(analysis.getMinPrice());
+        Long maxPrice = normalizePrice(analysis.getMaxPrice());
+        String productType = normalizeText(analysis.getProductType());
+        String useCase = normalizeText(analysis.getUseCase());
+
+        if (keyword.isBlank()) {
+            return List.of();
+        }
+
+        List<RecommendedItemProjection> results =
+                itemRepository.findItemsByCondition(
+                        keyword,
+                        minPrice,
+                        maxPrice,
+                        productType,
+                        useCase,
+                        normalizeText(analysis.getPerformanceLevel()),
+                        10
+                );
+
+        saveRecommendedItems(userId, results);
+
+        return results.stream()
+                .map(this::toDto)
+                .toList();
+    }
 
     @Transactional
     public List<RecommendedItemDto> recommendByKeyword(Long userId, String keyword) {
@@ -157,5 +193,21 @@ public class RecommendationService {
                 .replace("\"", "")
                 .replace("'", "")
                 .trim();
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value.trim().toLowerCase();
+    }
+
+    private Long normalizePrice(Long price) {
+        if (price == null || price <= 0) {
+            return null;
+        }
+
+        return price;
     }
 }

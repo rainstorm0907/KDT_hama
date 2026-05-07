@@ -24,6 +24,7 @@ public class GeminiClientService {
 
     private final WebClient geminiWebClient;
     private final ObjectMapper objectMapper;
+    private final GamePerformanceResolver gamePerformanceResolver;
 
     @Value("${gemini.model}")
     private String model;
@@ -35,19 +36,47 @@ public class GeminiClientService {
     public ChatAnalysisResult analyzeMessage(String message) {
         ChatAnalysisResult quickResult = fallbackAnalyze(message);
 
-        if (!"UNKNOWN".equals(quickResult.getIntent())) {
-            System.out.println("⚡ [로컬 라우터 작동] API 호출 없이 의도 파악 완료: "
-                    + quickResult.getIntent()
-                    + " / keyword: "
-                    + quickResult.getKeyword()
-                    + " / maxPrice: "
-                    + quickResult.getMaxPrice());
+        if (isClearDirectSearch(message, quickResult)) {
+            quickResult.setUseCase(null);
+            quickResult.setGameName(null);
+            quickResult.setPerformanceLevel(null);
+
+            System.out.println("1. 제미나이 분석 필요: N");
+            System.out.println("2. 제미나이 호출 여부: N");
 
             return quickResult;
         }
 
+        boolean needGemini = shouldUseGeminiForSearch(message, quickResult)
+                || "UNKNOWN".equals(safeIntent(quickResult.getIntent()));
+
+        System.out.println("1. 제미나이 분석 필요: " + (needGemini ? "Y" : "N"));
+
+        if (!needGemini) {
+            System.out.println("2. 제미나이 호출 여부: N");
+            return quickResult;
+        }
+
+        System.out.println("2. 제미나이 호출 여부: Y");
+
+        ChatAnalysisResult geminiResult = analyzeMessageWithGemini(message);
+
+        if ("UNKNOWN".equals(safeIntent(geminiResult.getIntent()))) {
+            return quickResult;
+        }
+
+        if (isClearDirectSearch(message, geminiResult)) {
+            geminiResult.setUseCase(null);
+            geminiResult.setGameName(null);
+            geminiResult.setPerformanceLevel(null);
+        }
+
+        return geminiResult;
+    }
+
+    public ChatAnalysisResult analyzeMessageWithGemini(String message) {
         String prompt = """
-                너는 중고거래 가격 비교 서비스의 챗봇 라우터다.
+                너는 중고거래 가격 비교 서비스의 검색 조건 분석기다.
 
                 사용자의 메시지를 분석해서 반드시 JSON만 출력해라.
                 설명 문장, 마크다운, 코드블록은 출력하지 마라.
@@ -58,50 +87,217 @@ public class GeminiClientService {
                 PRICE_COMPARE, PRICE_ALERT_GUIDE,
                 SEARCH_HELP, UNKNOWN
 
-                keyword는 상품 검색이나 가격 비교에 사용할 핵심 키워드다.
-                상품 관련 질문이 아니면 keyword는 빈 문자열로 둔다.
+                keyword는 DB 상품 검색에 사용할 핵심 상품명이다.
+                절대 사용자 문장 전체를 keyword로 넣지 마라.
 
-                maxPrice는 "30만원 이하", "300000원 이하", "예산 50만원", "40만원 아래" 같은 가격 상한 조건이 있을 때 숫자 원 단위로 넣어라.
-                가격 조건이 없으면 maxPrice는 null로 둔다.
+                예:
+                - "롤 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "롤", performanceLevel: "LOW"
+                - "배그 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "배그", performanceLevel: "MID"
+                - "에이펙스레전드 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "MID"
+                - "에이펙스레전드 144hz 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "ULTRA"
+                - "사이버펑크 가능한 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "VERY_HIGH"
+                - "사이버펑크 울트라옵션 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "EXTREME"
+                - "노트북 50만원에서 100만원 사이" → keyword: "노트북", productType: "laptop", minPrice: 500000, maxPrice: 1000000
+                - "컴퓨터 30만원 아래" → keyword: "컴퓨터", productType: "desktop", maxPrice: 300000
+                - "아이폰 13 30만원 이하" → keyword: "아이폰 13", productType: "smartphone", maxPrice: 300000
+                - "아이폰 상품들 중에 중학교 1학년이 사용할만한 폰" → keyword: "아이폰", productType: "smartphone", useCase: "student"
 
-                출력 예시:
-                {"intent":"PRODUCT_RECOMMEND","keyword":"아이폰 13","maxPrice":400000}
+                가격 규칙:
+                - "30만원 이하", "30만원 아래", "30만원까지"는 maxPrice = 300000
+                - "50만원 이상", "50만원부터"는 minPrice = 500000
+                - "50만원에서 100만원 사이", "50만원 이상 100만원 이하"는 minPrice = 500000, maxPrice = 1000000
+                - 가격 조건이 없으면 null
+
+                productType 규칙:
+                - 컴퓨터, 데스크탑, 본체, PC → "desktop"
+                - 노트북, 랩탑 → "laptop"
+                - 스마트폰, 휴대폰, 아이폰, 갤럭시 → "smartphone"
+                - 그 외는 null
+
+                useCase 규칙:
+                - 롤, 배그, 게임, 게이밍, 잘 돌아가는, 가능한, 플레이 → "gaming"
+                - 중학생, 중학교, 초등학생, 고등학생, 학생, 입문용, 처음 쓰는, 사용할만한, 쓸만한, 자녀, 아이 → "student"
+                - 사무용, 문서작업 → "office"
+                - 코딩, 개발 → "coding"
+                - 영상편집, 디자인 → "creative"
+                - 그 외는 null
+
+                게임명 / 성능 등급 규칙:
+                - 롤, 리그오브레전드 → gameName: "롤", performanceLevel: "LOW"
+                - 메이플, 피파, 서든, 스타크래프트 → performanceLevel: "LOW"
+                - 발로란트, 오버워치, 로스트아크 → performanceLevel: "MID"
+                - 배그, 배틀그라운드 → gameName: "배그", performanceLevel: "MID"
+                - 배그 + 144hz, 높은프레임, 고프레임, 쾌적, 상옵, 풀옵 → performanceLevel: "ULTRA"
+                - 에이펙스, 에이펙스레전드, apex → gameName: "에이펙스레전드", performanceLevel: "MID"
+                - 에이펙스 + 144hz, 높은프레임, 고프레임, 쾌적, 상옵, 풀옵 → performanceLevel: "ULTRA"
+                - GTA, GTA5, 엘든링, 디아블로4, 레데리, 레드데드, 호그와트, 몬스터헌터 → performanceLevel: "HIGH"
+                - 사이버펑크, 사이버펑크2077, 스타필드, 앨런웨이크2, 최신 AAA 게임, 고사양 게임 → performanceLevel: "VERY_HIGH"
+                - QHD, 144Hz, 울트라옵션, 울트라, 풀옵션 → performanceLevel: "ULTRA"
+                - 4K, 레이트레이싱, RT, 풀옵, 최상옵, 극상옵 → performanceLevel: "EXTREME"
+
+                performanceLevel은 아래 중 하나만 사용해라.
+                LOW, MID, HIGH, VERY_HIGH, ULTRA, EXTREME, UNKNOWN
+
+                excludeAccessory는 항상 true로 둔다.
+                tradeStatus는 항상 "SALE"로 둔다.
+
+                출력 형식:
+                {
+                  "intent": "PRODUCT_RECOMMEND",
+                  "keyword": "컴퓨터",
+                  "minPrice": null,
+                  "maxPrice": null,
+                  "productType": "desktop",
+                  "useCase": "gaming",
+                  "gameName": "사이버펑크",
+                  "performanceLevel": "VERY_HIGH",
+                  "excludeAccessory": true,
+                  "tradeStatus": "SALE"
+                }
 
                 사용자 메시지:
                 %s
                 """.formatted(message);
 
         try {
-            String resultText = generateText(prompt, 128);
+            String resultText = generateText(prompt, 256);
+
             ChatAnalysisResult result =
                     objectMapper.readValue(cleanJson(resultText), ChatAnalysisResult.class);
 
-            if (result.getMaxPrice() == null) {
-                result.setMaxPrice(extractMaxPrice(message));
-            }
-
-            String geminiKeyword = cleanKeyword(result.getKeyword());
-
-            if (geminiKeyword.isBlank()) {
-                geminiKeyword = extractKeywordByRule(message);
-            } else {
-                String knownKeyword = extractKnownProductKeyword(message);
-
-                if (!knownKeyword.isBlank()) {
-                    geminiKeyword = knownKeyword;
-                }
-            }
-
-            result.setKeyword(geminiKeyword);
+            applyFallbackValues(message, result);
 
             return result;
+
         } catch (Exception e) {
             ChatAnalysisResult errorResult = new ChatAnalysisResult();
             errorResult.setIntent("UNKNOWN");
             errorResult.setKeyword("");
+            errorResult.setMinPrice(null);
             errorResult.setMaxPrice(null);
+            errorResult.setProductType(null);
+            errorResult.setUseCase(null);
+            errorResult.setGameName(null);
+            errorResult.setPerformanceLevel(null);
+            errorResult.setExcludeAccessory(true);
+            errorResult.setTradeStatus("SALE");
+
             return errorResult;
         }
+    }
+
+    public boolean shouldUseGeminiForSearch(String message, ChatAnalysisResult result) {
+        if (isClearDirectSearch(message, result)) {
+            return false;
+        }
+
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+
+        if (result == null) {
+            return true;
+        }
+
+        String intent = safeIntent(result.getIntent());
+
+        if (!"PRODUCT_RECOMMEND".equals(intent)
+                && !"PRICE_COMPARE".equals(intent)
+                && !"UNKNOWN".equals(intent)) {
+            return false;
+        }
+
+        String normalized = message
+                .toLowerCase()
+                .replaceAll("\\s+", "");
+
+        boolean hasUseCaseExpression = containsAny(
+                normalized,
+                "롤",
+                "배그",
+                "배틀그라운드",
+                "에이펙스",
+                "에이펙스레전드",
+                "apex",
+                "사이버펑크",
+                "사이버펑크2077",
+                "엘든링",
+                "gta",
+                "레데리",
+                "레드데드",
+                "스타필드",
+                "앨런웨이크",
+                "게임",
+                "게이밍",
+                "가능",
+                "잘돌아",
+                "돌아가는",
+                "플레이",
+                "고사양",
+                "최신게임",
+                "aaa",
+                "144hz",
+                "qhd",
+                "4k",
+                "울트라",
+                "풀옵",
+                "레이트레이싱",
+                "사무용",
+                "대학생",
+                "중학생",
+                "중학교",
+                "초등학생",
+                "고등학생",
+                "학생",
+                "입문용",
+                "처음쓰",
+                "처음사용",
+                "사용할만한",
+                "쓸만한",
+                "부모님",
+                "아이",
+                "자녀",
+                "선물",
+                "코딩",
+                "개발용",
+                "영상편집",
+                "디자인",
+                "가성비"
+        );
+
+        boolean hasPriceRangeExpression = containsAny(
+                normalized,
+                "사이",
+                "부터",
+                "에서",
+                "이상",
+                "이하"
+        ) && countPriceExpressions(message) >= 2;
+
+        String keyword = result.getKeyword();
+
+        boolean keywordLooksLikeSentence =
+                keyword != null
+                        && keyword.trim().contains(" ")
+                        && keyword.trim().length() >= 8
+                        && containsAny(keyword.replaceAll("\\s+", ""),
+                        "가능",
+                        "가성비",
+                        "잘돌아",
+                        "대학생",
+                        "중학생",
+                        "중학교",
+                        "학생",
+                        "사용할만한",
+                        "쓸만한",
+                        "입문용",
+                        "부모님",
+                        "아이",
+                        "자녀",
+                        "선물",
+                        "사무용");
+
+        return hasUseCaseExpression || hasPriceRangeExpression || keywordLooksLikeSentence;
     }
 
     public String generateGeneralAnswer(String message) {
@@ -128,11 +324,6 @@ public class GeminiClientService {
     }
 
     private String generateText(String prompt, int maxOutputTokens) {
-        System.out.println("🚀 [Gemini API 호출됨] 현재 시간: "
-                + java.time.LocalTime.now()
-                + " | 프롬프트 일부: "
-                + prompt.substring(0, Math.min(prompt.length(), 40)).replace("\n", " "));
-
         Map<String, Object> requestBody = Map.of(
                 "contents", List.of(
                         Map.of(
@@ -142,7 +333,7 @@ public class GeminiClientService {
                         )
                 ),
                 "generationConfig", Map.of(
-                        "temperature", 0.2,
+                        "temperature", 0.1,
                         "maxOutputTokens", maxOutputTokens
                 )
         );
@@ -159,36 +350,31 @@ public class GeminiClientService {
             return extractText(response);
 
         } catch (WebClientResponseException.TooManyRequests e) {
-            return "현재 Gemini API 요청 제한에 걸렸습니다. 잠시 후 다시 시도해 주세요.";
+            return "{}";
 
         } catch (WebClientResponseException.ServiceUnavailable e) {
-            return "현재 Gemini API 서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.";
+            return "{}";
 
         } catch (WebClientResponseException.NotFound e) {
-            return "Gemini 모델명을 찾을 수 없습니다. application.yml의 gemini.model 값을 확인해 주세요.";
+            return "{}";
 
         } catch (WebClientResponseException e) {
-            return "Gemini API 호출 중 문제가 발생했습니다. 상태 코드: " + e.getStatusCode();
+            return "{}";
 
         } catch (Exception e) {
-            return "챗봇 응답 생성 중 문제가 발생했습니다.";
+            return "{}";
         }
     }
 
     private String extractText(JsonNode response) {
         if (response == null) {
-            return "Gemini API 응답이 비어 있습니다.";
+            return "{}";
         }
 
         JsonNode candidates = response.path("candidates");
 
         if (candidates.isArray() && !candidates.isEmpty()) {
             JsonNode firstCandidate = candidates.get(0);
-
-            String finishReason = firstCandidate.path("finishReason").asText();
-            if (!finishReason.isBlank()) {
-                System.out.println("Gemini finishReason = " + finishReason);
-            }
 
             JsonNode parts = firstCandidate
                     .path("content")
@@ -219,12 +405,22 @@ public class GeminiClientService {
             }
         }
 
-        return "Gemini API 응답에서 텍스트를 찾지 못했습니다.";
+        return "{}";
     }
 
     private String cleanJson(String text) {
-        if (text == null) {
+        if (text == null || text.isBlank()) {
             return "{}";
+        }
+
+        int start = text.indexOf("{");
+        int end = text.lastIndexOf("}");
+
+        if (start >= 0 && end > start) {
+            return text.substring(start, end + 1)
+                    .replace("```json", "")
+                    .replace("```", "")
+                    .trim();
         }
 
         return text
@@ -239,18 +435,21 @@ public class GeminiClientService {
         if (message == null || message.isBlank()) {
             result.setIntent("UNKNOWN");
             result.setKeyword("");
+            result.setMinPrice(null);
             result.setMaxPrice(null);
             return result;
         }
 
         String lower = message.toLowerCase();
         String normalized = lower.replaceAll("\\s+", "");
+        Long minPrice = extractMinPrice(message);
         Long maxPrice = extractMaxPrice(message);
         String keyword = extractKeywordByRule(message);
 
         if (containsAny(normalized, "안녕", "하이", "반가워", "hello", "hi")) {
             result.setIntent("GREETING");
             result.setKeyword("");
+            result.setMinPrice(null);
             result.setMaxPrice(null);
             return result;
         }
@@ -258,6 +457,7 @@ public class GeminiClientService {
         if (isSiteInfoQuestion(normalized)) {
             result.setIntent("FAQ");
             result.setKeyword("");
+            result.setMinPrice(null);
             result.setMaxPrice(null);
             return result;
         }
@@ -265,6 +465,7 @@ public class GeminiClientService {
         if (isPersonalRecommendQuestion(normalized)) {
             result.setIntent("PERSONAL_RECOMMEND");
             result.setKeyword("");
+            result.setMinPrice(null);
             result.setMaxPrice(null);
             return result;
         }
@@ -274,6 +475,7 @@ public class GeminiClientService {
                 || (normalized.contains("관심") && containsAny(normalized, "목록", "보여", "조회", "확인"))) {
             result.setIntent("WISHLIST_LIST");
             result.setKeyword(keyword);
+            result.setMinPrice(null);
             result.setMaxPrice(null);
             return result;
         }
@@ -281,6 +483,7 @@ public class GeminiClientService {
         if (containsAny(normalized, "가격알림", "알림설정", "목표가격", "희망가격")) {
             result.setIntent("PRICE_ALERT_GUIDE");
             result.setKeyword("");
+            result.setMinPrice(null);
             result.setMaxPrice(null);
             return result;
         }
@@ -288,6 +491,7 @@ public class GeminiClientService {
         if (normalized.contains("찜") && containsAny(normalized, "방법", "어떻게", "사용법", "하는법", "어케")) {
             result.setIntent("FAQ");
             result.setKeyword("");
+            result.setMinPrice(null);
             result.setMaxPrice(null);
             return result;
         }
@@ -296,6 +500,7 @@ public class GeminiClientService {
                 || (normalized.contains("검색") && containsAny(normalized, "방법", "어떻게", "하는법", "도움"))) {
             result.setIntent("FAQ");
             result.setKeyword("");
+            result.setMinPrice(null);
             result.setMaxPrice(null);
             return result;
         }
@@ -303,14 +508,8 @@ public class GeminiClientService {
         if (isItemCountQuestion(normalized, keyword)) {
             result.setIntent("ITEM_COUNT");
             result.setKeyword("");
+            result.setMinPrice(null);
             result.setMaxPrice(null);
-            return result;
-        }
-
-        if (maxPrice != null && !keyword.isBlank()) {
-            result.setIntent("PRODUCT_RECOMMEND");
-            result.setKeyword(keyword);
-            result.setMaxPrice(maxPrice);
             return result;
         }
 
@@ -325,21 +524,236 @@ public class GeminiClientService {
         )) {
             result.setIntent("PRODUCT_RECOMMEND");
             result.setKeyword(keyword);
+            result.setMinPrice(minPrice);
             result.setMaxPrice(maxPrice);
+            result.setProductType(guessProductType(message, keyword));
+            result.setUseCase(guessUseCase(message));
+            result.setGameName(gamePerformanceResolver.resolveGameName(message));
+            result.setPerformanceLevel(gamePerformanceResolver.resolveByMessage(message));
+            result.setExcludeAccessory(true);
+            result.setTradeStatus("SALE");
             return result;
         }
 
         if (containsAny(normalized, "시세", "가격비교", "가격대", "얼마", "최저가")) {
             result.setIntent("PRICE_COMPARE");
             result.setKeyword(keyword);
-            result.setMaxPrice(null);
+            result.setMinPrice(minPrice);
+            result.setMaxPrice(maxPrice);
+            result.setProductType(guessProductType(message, keyword));
+            result.setUseCase(guessUseCase(message));
+            result.setGameName(gamePerformanceResolver.resolveGameName(message));
+            result.setPerformanceLevel(gamePerformanceResolver.resolveByMessage(message));
+            result.setExcludeAccessory(true);
+            result.setTradeStatus("SALE");
             return result;
         }
 
         result.setIntent("UNKNOWN");
         result.setKeyword("");
+        result.setMinPrice(null);
         result.setMaxPrice(null);
         return result;
+    }
+
+    private void applyFallbackValues(String message, ChatAnalysisResult result) {
+        if (result == null) {
+            return;
+        }
+
+        String intent = safeIntent(result.getIntent());
+
+        if ("UNKNOWN".equals(intent) || intent.isBlank()) {
+            result.setIntent("PRODUCT_RECOMMEND");
+        }
+
+        Long ruleMinPrice = extractMinPrice(message);
+        Long ruleMaxPrice = extractMaxPrice(message);
+
+        if (result.getMinPrice() == null) {
+            result.setMinPrice(ruleMinPrice);
+        }
+
+        if (result.getMaxPrice() == null) {
+            result.setMaxPrice(ruleMaxPrice);
+        }
+
+        String keyword = cleanKeyword(result.getKeyword());
+
+        if (keyword.isBlank()) {
+            keyword = extractKeywordByRule(message);
+        }
+
+        if (keyword.isBlank()) {
+            keyword = extractKnownProductKeyword(message);
+        }
+
+        if (keyword.isBlank()) {
+            keyword = "상품";
+        }
+
+        result.setKeyword(keyword);
+
+        String productType = result.getProductType();
+
+        if (productType == null || productType.isBlank()) {
+            result.setProductType(guessProductType(message, keyword));
+        }
+
+        String useCase = result.getUseCase();
+
+        if (useCase == null || useCase.isBlank()) {
+            result.setUseCase(guessUseCase(message));
+        }
+
+        String gameName = result.getGameName();
+
+        if (gameName == null || gameName.isBlank()) {
+            result.setGameName(gamePerformanceResolver.resolveGameName(message));
+        }
+
+        String performanceLevel = result.getPerformanceLevel();
+
+        if (performanceLevel == null || performanceLevel.isBlank()) {
+            result.setPerformanceLevel(gamePerformanceResolver.resolveByMessage(message));
+        }
+
+        if (result.getExcludeAccessory() == null) {
+            result.setExcludeAccessory(true);
+        }
+
+        if (result.getTradeStatus() == null || result.getTradeStatus().isBlank()) {
+            result.setTradeStatus("SALE");
+        }
+    }
+
+    private Long extractMinPrice(String message) {
+        if (message == null || message.isBlank()) {
+            return null;
+        }
+
+        List<Long> prices = extractAllPrices(message);
+        String normalized = message.replaceAll("\\s+", "");
+
+        if (prices.size() >= 2 && containsAny(normalized, "사이", "에서", "부터")) {
+            return prices.get(0);
+        }
+
+        if (containsAny(normalized, "이상", "부터")) {
+            return prices.isEmpty() ? null : prices.get(0);
+        }
+
+        return null;
+    }
+
+    private Long extractMaxPrice(String message) {
+        if (message == null || message.isBlank()) {
+            return null;
+        }
+
+        List<Long> prices = extractAllPrices(message);
+        String normalized = message.replaceAll("\\s+", "");
+
+        if (prices.isEmpty()) {
+            return null;
+        }
+
+        if (prices.size() >= 2 && containsAny(normalized, "사이", "에서", "부터")) {
+            return prices.get(1);
+        }
+
+        if (containsAny(normalized, "이하", "미만", "아래", "까지", "예산", "안쪽")) {
+            return prices.get(prices.size() - 1);
+        }
+
+        if (prices.size() == 1 && !containsAny(normalized, "이상", "부터")) {
+            return prices.get(0);
+        }
+
+        return null;
+    }
+
+    private List<Long> extractAllPrices(String message) {
+        String text = message
+                .replace(",", "")
+                .toLowerCase()
+                .trim();
+
+        java.util.ArrayList<Long> prices = new java.util.ArrayList<>();
+
+        Pattern manwonPattern = Pattern.compile("(\\d{1,4})\\s*만원");
+        Matcher manwonMatcher = manwonPattern.matcher(text);
+
+        while (manwonMatcher.find()) {
+            long value = Long.parseLong(manwonMatcher.group(1));
+
+            if (value >= 1 && value <= 5000) {
+                prices.add(value * 10_000);
+            }
+        }
+
+        Pattern wonPattern = Pattern.compile("(\\d{4,})\\s*원");
+        Matcher wonMatcher = wonPattern.matcher(text);
+
+        while (wonMatcher.find()) {
+            prices.add(Long.parseLong(wonMatcher.group(1)));
+        }
+
+        return prices;
+    }
+
+    private int countPriceExpressions(String message) {
+        return extractAllPrices(message).size();
+    }
+
+    private String guessProductType(String message, String keyword) {
+        String text = ((message == null ? "" : message) + " " + (keyword == null ? "" : keyword))
+                .toLowerCase()
+                .replaceAll("\\s+", "");
+
+        if (containsAny(text, "노트북", "랩탑")) {
+            return "laptop";
+        }
+
+        if (containsAny(text, "컴퓨터", "데스크탑", "본체", "pc")) {
+            return "desktop";
+        }
+
+        if (containsAny(text, "아이폰", "갤럭시", "스마트폰", "휴대폰")) {
+            return "smartphone";
+        }
+
+        return null;
+    }
+
+    private String guessUseCase(String message) {
+        if (message == null || message.isBlank()) {
+            return null;
+        }
+
+        String normalized = message.toLowerCase().replaceAll("\\s+", "");
+
+        if (containsAny(normalized, "롤", "배그", "에이펙스", "사이버펑크", "게임", "게이밍", "잘돌아", "가능", "플레이")) {
+            return "gaming";
+        }
+
+        if (containsAny(normalized, "중학생", "중학교", "초등학생", "고등학생", "학생", "입문용", "처음쓰", "사용할만한", "쓸만한", "아이", "자녀")) {
+            return "student";
+        }
+
+        if (containsAny(normalized, "사무용", "문서작업", "업무용")) {
+            return "office";
+        }
+
+        if (containsAny(normalized, "코딩", "개발용", "프로그래밍")) {
+            return "coding";
+        }
+
+        if (containsAny(normalized, "영상편집", "디자인", "포토샵")) {
+            return "creative";
+        }
+
+        return null;
     }
 
     private boolean isPersonalRecommendQuestion(String normalized) {
@@ -383,7 +797,7 @@ public class GeminiClientService {
         if (containsAny(normalizedKeyword,
                 "아이폰", "갤럭시", "에어팟", "맥북", "아이패드",
                 "애플워치", "닌텐도", "플스", "노트북", "모니터",
-                "키보드", "마우스", "카메라")) {
+                "키보드", "마우스", "카메라", "컴퓨터", "데스크탑", "본체", "pc")) {
             return true;
         }
 
@@ -410,46 +824,11 @@ public class GeminiClientService {
         );
     }
 
-    private Long extractMaxPrice(String message) {
-        if (message == null || message.isBlank()) {
-            return null;
-        }
-
-        String text = message
-                .replace(",", "")
-                .toLowerCase()
-                .trim();
-
-        Pattern manwonPattern = Pattern.compile("(\\d{1,4})\\s*만원");
-        Matcher manwonMatcher = manwonPattern.matcher(text);
-
-        Long matchedPrice = null;
-
-        while (manwonMatcher.find()) {
-            long value = Long.parseLong(manwonMatcher.group(1));
-
-            if (value >= 1 && value <= 500) {
-                matchedPrice = value * 10_000;
-            }
-        }
-
-        if (matchedPrice != null) {
-            return matchedPrice;
-        }
-
-        Pattern wonPattern = Pattern.compile("(\\d{4,})\\s*원");
-        Matcher wonMatcher = wonPattern.matcher(text);
-
-        Long wonPrice = null;
-
-        while (wonMatcher.find()) {
-            wonPrice = Long.parseLong(wonMatcher.group(1));
-        }
-
-        return wonPrice;
-    }
-
     private boolean containsAny(String text, String... keywords) {
+        if (text == null) {
+            return false;
+        }
+
         for (String keyword : keywords) {
             if (text.contains(keyword)) {
                 return true;
@@ -473,9 +852,9 @@ public class GeminiClientService {
         String keyword = message;
 
         keyword = keyword
-                .replaceAll("\\d+\\s*만원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|까지|안쪽|대)?", "")
-                .replaceAll("\\d{1,3}(,\\d{3})+\\s*원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|까지|안쪽|대)?", "")
-                .replaceAll("\\d+\\s*원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|까지|안쪽|대)?", "")
+                .replaceAll("\\d+\\s*만원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|부터|까지|안쪽|대|사이)?", "")
+                .replaceAll("\\d{1,3}(,\\d{3})+\\s*원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|부터|까지|안쪽|대|사이)?", "")
+                .replaceAll("\\d+\\s*원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|부터|까지|안쪽|대|사이)?", "")
 
                 .replace("추천해줘", "")
                 .replace("추천", "")
@@ -518,8 +897,6 @@ public class GeminiClientService {
                 .replace("싼거", "")
                 .replace("싼 거", "")
                 .replace("싼", "")
-                .replace("가성비", "")
-                .replace("괜찮은", "")
                 .replace("이하인", "")
                 .replace("이하", "")
                 .replace("아래인", "")
@@ -528,6 +905,7 @@ public class GeminiClientService {
                 .replace("미만", "")
                 .replace("이상인", "")
                 .replace("이상", "")
+                .replace("부터", "")
                 .replace("까지", "")
                 .replace("안쪽", "")
                 .replace("예산", "")
@@ -564,6 +942,8 @@ public class GeminiClientService {
 
                 .replace("중에서", "")
                 .replace("중에", "")
+                .replace("에서", "")
+                .replace("사이", "")
 
                 .replace("구매하려고 하는데", "")
                 .replace("구매하려고", "")
@@ -576,11 +956,6 @@ public class GeminiClientService {
                 .replace("사고 싶은데", "")
                 .replace("사고싶은데", "")
                 .replace("구매", "")
-                .replace("제품 있을까", "")
-                .replace("있을까", "")
-                .replace("있나요", "")
-                .replace("있어?", "")
-                .replace("있어", "")
 
                 .replaceAll("\\s+", " ")
                 .trim();
@@ -598,13 +973,25 @@ public class GeminiClientService {
                 .replaceAll("\\s+", " ")
                 .trim();
 
-        Pattern iphonePattern = Pattern.compile("(아이폰)\\s*(\\d{1,2})?\\s*(프로맥스|프로\\s*맥스|프로|max|미니|mini|plus|플러스)?");
+        Pattern iphonePattern = Pattern.compile(
+                "(아이폰)\\s*(\\d{1,2})?\\s*(프로맥스|프로\\s*맥스|프로|max|미니|mini|plus|플러스)?\\s*(?!만원|원)"
+        );
+
         Matcher iphoneMatcher = iphonePattern.matcher(normalized);
 
         if (iphoneMatcher.find()) {
             String base = iphoneMatcher.group(1);
             String number = iphoneMatcher.group(2);
             String model = iphoneMatcher.group(3);
+
+            if (number != null && !number.isBlank()) {
+                int modelNumber = Integer.parseInt(number);
+
+                if (modelNumber < 4 || modelNumber > 16) {
+                    number = null;
+                    model = null;
+                }
+            }
 
             StringBuilder keyword = new StringBuilder(base);
 
@@ -697,11 +1084,19 @@ public class GeminiClientService {
                 "모니터",
                 "키보드",
                 "마우스",
-                "카메라"
+                "카메라",
+                "컴퓨터",
+                "데스크탑",
+                "본체",
+                "pc"
         };
 
         for (String productWord : productWords) {
             if (normalized.contains(productWord)) {
+                if ("데스크탑".equals(productWord) || "본체".equals(productWord) || "pc".equals(productWord)) {
+                    return "컴퓨터";
+                }
+
                 return productWord;
             }
         }
@@ -753,5 +1148,80 @@ public class GeminiClientService {
         }
 
         return cleaned;
+    }
+
+    private String safeIntent(String intent) {
+        if (intent == null || intent.isBlank()) {
+            return "UNKNOWN";
+        }
+
+        return intent.trim().toUpperCase();
+    }
+
+    private boolean isClearDirectSearch(String message, ChatAnalysisResult result) {
+        if (message == null || message.isBlank() || result == null) {
+            return false;
+        }
+
+        String intent = safeIntent(result.getIntent());
+
+        if (!"PRODUCT_RECOMMEND".equals(intent)
+                && !"PRICE_COMPARE".equals(intent)) {
+            return false;
+        }
+
+        String keyword = result.getKeyword();
+
+        if (keyword == null || keyword.isBlank()) {
+            return false;
+        }
+
+        boolean hasPriceCondition =
+                result.getMinPrice() != null || result.getMaxPrice() != null;
+
+        boolean hasKnownProduct =
+                result.getProductType() != null && !result.getProductType().isBlank();
+
+        if (!hasPriceCondition || !hasKnownProduct) {
+            return false;
+        }
+
+        String normalized = message
+                .toLowerCase()
+                .replaceAll("\\s+", "");
+
+        boolean hasRealUseCaseExpression = containsAny(
+                normalized,
+                "사용할만한",
+                "사용할만",
+                "쓸만한",
+                "쓸만",
+                "입문용",
+                "학생",
+                "중학생",
+                "중학교",
+                "초등학생",
+                "고등학생",
+                "부모님",
+                "아이",
+                "자녀",
+                "선물",
+                "게임",
+                "게이밍",
+                "롤",
+                "배그",
+                "배틀그라운드",
+                "에이펙스",
+                "사이버펑크",
+                "사무용",
+                "코딩",
+                "영상편집",
+                "디자인",
+                "가성비",
+                "괜찮은",
+                "좋은"
+        );
+
+        return !hasRealUseCaseExpression;
     }
 }

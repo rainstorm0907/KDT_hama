@@ -27,8 +27,6 @@ from pathlib import Path
 # =========================================================
 # 1. DB 설정
 # =========================================================
-# application.yml의 DB 정보와 같게 맞추세요.
-# 예: jdbc:oracle:thin:@localhost:15210/XEPDB1
 DB_USER = os.getenv("DB_USER", "insurance")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "1234")
 DB_DSN = os.getenv("DB_DSN", "localhost:15210/XEPDB1")
@@ -57,7 +55,6 @@ keywords = [keyword for keyword in keywords if keyword]
 if not keywords:
     raise ValueError(f"{keyword_file.name} 파일에 조회할 키워드가 없습니다.")
 
-# 최근 며칠 이내 상품만 수집할지
 days_limit = 3
 limit_date = datetime.now() - timedelta(days=days_limit)
 
@@ -77,6 +74,12 @@ result_columns = [
     "product_type",
     "is_accessory",
     "storage_gb",
+    "trade_status",
+    "cpu_name",
+    "gpu_name",
+    "ram_gb",
+    "ssd_gb",
+    "performance_level",
 ]
 
 headers = {
@@ -114,6 +117,20 @@ def to_int_price(value):
         return None
 
 
+def normalize_compact_text(text):
+    if not text:
+        return ""
+
+    return (
+        str(text)
+        .lower()
+        .replace(" ", "")
+        .replace("-", "")
+        .replace("_", "")
+        .strip()
+    )
+
+
 def normalize_title(title):
     if not title:
         return ""
@@ -124,7 +141,7 @@ def normalize_title(title):
         "판매합니다", "판매", "급처", "급매", "팝니다", "팔아요",
         "정품", "미개봉", "풀박", "택포", "상태좋음", "상태 좋음",
         "깨끗", "새상품", "새 상품", "거의새것", "거의 새것",
-        "쿨거", "쿨거래", "네고", "가능", "직거래", "택배",
+        "쿨거", "쿨거래", "네고", "직거래", "택배",
         "삽니다", "구매합니다"
     ]
 
@@ -162,11 +179,11 @@ def extract_brand(title):
 def extract_model_name(title):
     text = normalize_title(title)
 
-    # 아이폰 13, 아이폰13, 아이폰 13 프로, 아이폰13프로맥스 등
     iphone_match = re.search(
         r"아이폰\s*(\d{1,2})\s*(프로맥스|프로\s*맥스|프로|max|미니|mini|plus|플러스)?",
         text
     )
+
     if iphone_match:
         number = iphone_match.group(1)
         model = iphone_match.group(2)
@@ -182,11 +199,11 @@ def extract_model_name(title):
 
         return result.strip()
 
-    # 갤럭시 S23, 갤럭시S24, 갤럭시 Z플립, 갤럭시 폴드 등
     galaxy_match = re.search(
         r"갤럭시\s*(s\d{1,2}|z\s*플립\d*|z\s*폴드\d*|플립\d*|폴드\d*|노트\d*)",
         text
     )
+
     if galaxy_match:
         model = galaxy_match.group(1)
         model = re.sub(r"\s+", " ", model)
@@ -231,11 +248,173 @@ def extract_storage_gb(title):
     match = re.search(r"(\d{2,4})\s*(gb|기가)", text)
 
     if match:
-        return int(match.group(1))
+        value = int(match.group(1))
+
+        if 16 <= value <= 4096:
+            return value
 
     return None
 
 
+# =========================================================
+# 4. PC 사양 추출 / 성능 등급
+# =========================================================
+def extract_cpu_name(title):
+    if not title:
+        return None
+
+    text = str(title).lower()
+
+    patterns = [
+        r"i[3579][-\s]?\d{3,5}[a-z]*",
+        r"ryzen\s?[3579]\s?\d{3,4}[a-z]*",
+        r"라이젠\s?[3579]\s?\d{3,4}[a-z]*",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+
+        if match:
+            cpu = match.group(0)
+            cpu = re.sub(r"\s+", " ", cpu).strip()
+            cpu = cpu.replace("라이젠", "Ryzen")
+            return cpu.upper()
+
+    return None
+
+
+def extract_gpu_name(title):
+    if not title:
+        return None
+
+    text = str(title).lower()
+
+    patterns = [
+        r"rtx\s?\d{4}\s?ti",
+        r"rtx\s?\d{4}",
+        r"gtx\s?\d{4}\s?ti",
+        r"gtx\s?\d{4}",
+        r"rx\s?\d{3,4}\s?xt",
+        r"rx\s?\d{3,4}",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+
+        if match:
+            return match.group(0).upper().replace(" ", "")
+
+    if "내장그래픽" in text:
+        return "내장그래픽"
+
+    if "그래픽카드 없음" in text or "그래픽 없음" in text:
+        return "그래픽카드 없음"
+
+    return None
+
+
+def extract_ram_gb(title):
+    if not title:
+        return None
+
+    text = str(title).lower().replace(" ", "")
+
+    patterns = [
+        r"ram(\d{1,3})gb",
+        r"램(\d{1,3})gb",
+        r"메모리(\d{1,3})gb",
+        r"(\d{1,3})gb램",
+        r"(\d{1,3})g램",
+        r"(\d{1,3})기가램",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text)
+
+        if match:
+            value = int(match.group(1))
+
+            if 1 <= value <= 256:
+                return value
+
+    return None
+
+
+def extract_ssd_gb(title):
+    if not title:
+        return None
+
+    text = str(title).lower().replace(" ", "")
+
+    ssd_match = re.search(r"ssd(\d{2,4})gb", text)
+
+    if ssd_match:
+        value = int(ssd_match.group(1))
+
+        if 64 <= value <= 8192:
+            return value
+
+    tb_match = re.search(r"(\d{1,2})tb", text)
+
+    if tb_match:
+        return int(tb_match.group(1)) * 1024
+
+    return None
+
+
+def resolve_performance_level(cpu_name, gpu_name, ram_gb):
+    gpu = normalize_compact_text(gpu_name or "")
+    cpu = normalize_compact_text(cpu_name or "")
+    ram = ram_gb or 0
+
+    ultra_gpus = [
+        "rtx4090", "rtx4080", "rtx4070ti", "rtx4070",
+        "rtx3090", "rtx3080ti", "rtx3080",
+        "rx7900xtx", "rx7900xt", "rx7800xt"
+    ]
+
+    high_gpus = [
+        "rtx4060ti", "rtx4060", "rtx3070", "rtx3060ti", "rtx3060",
+        "rtx2080", "rtx2070", "rtx2060",
+        "rx6700xt", "rx6600xt", "rx6600"
+    ]
+
+    mid_gpus = [
+        "gtx1660ti", "gtx1660super", "gtx1660",
+        "gtx1650super", "gtx1650",
+        "gtx1060", "gtx1050ti",
+        "rx580", "rx570"
+    ]
+
+    if any(g in gpu for g in ultra_gpus):
+        return "ULTRA" if ram >= 32 else "HIGH"
+
+    if any(g in gpu for g in high_gpus):
+        return "HIGH" if ram >= 16 else "MID"
+
+    if any(g in gpu for g in mid_gpus):
+        return "MID" if ram >= 16 else "LOW"
+
+    if any(word in gpu for word in ["내장그래픽", "uhd", "iris", "vega"]):
+        return "LOW"
+
+    if not gpu:
+        weak_cpus = [
+            "i52500", "i52500k", "i56400", "i54460",
+            "i34130", "i36100", "셀러론", "펜티엄"
+        ]
+
+        if any(c in cpu for c in weak_cpus):
+            return "LOW"
+
+        return "UNKNOWN"
+
+    return "UNKNOWN"
+
+
+# =========================================================
+# 5. 상품 분류 / 거래 상태
+# =========================================================
 def classify_product(title):
     text = normalize_title(title)
 
@@ -257,7 +436,10 @@ def classify_product(title):
         ("스트랩", "STRAP"),
         ("맥세이프", "ACCESSORY"),
 
-        ("공기계아님", "ETC"),
+        ("쿨러", "PARTS"),
+        ("파워", "PARTS"),
+        ("메인보드", "PARTS"),
+        ("그래픽카드 단품", "PARTS"),
         ("부품용", "PARTS"),
         ("부품", "PARTS"),
         ("고장", "PARTS"),
@@ -269,6 +451,13 @@ def classify_product(title):
         ("상자", "BOX"),
         ("교환권", "ETC"),
         ("필톡", "ACCESSORY"),
+        ("수리", "SERVICE"),
+        ("설치", "SERVICE"),
+        ("세팅", "SERVICE"),
+        ("os세팅", "SERVICE"),
+        ("윈도우설치", "SERVICE"),
+        ("책상", "FURNITURE"),
+        ("의자", "FURNITURE"),
     ]
 
     for keyword, product_type in accessory_rules:
@@ -278,34 +467,40 @@ def classify_product(title):
                 "product_type": product_type
             }
 
-    if "아이폰" in text or "갤럭시" in text:
+    if "아이폰" in text or "갤럭시" in text or "스마트폰" in text or "휴대폰" in text:
         return {
             "is_accessory": "N",
-            "product_type": "PHONE"
+            "product_type": "smartphone"
         }
 
     if "에어팟" in text:
         return {
             "is_accessory": "N",
-            "product_type": "EARPHONE"
+            "product_type": "earphone"
         }
 
-    if "맥북" in text or "노트북" in text:
+    if "맥북" in text or "노트북" in text or "랩탑" in text:
         return {
             "is_accessory": "N",
-            "product_type": "LAPTOP"
+            "product_type": "laptop"
+        }
+
+    if "컴퓨터" in text or "데스크탑" in text or "본체" in text or "pc" in text:
+        return {
+            "is_accessory": "N",
+            "product_type": "desktop"
         }
 
     if "아이패드" in text or "태블릿" in text:
         return {
             "is_accessory": "N",
-            "product_type": "TABLET"
+            "product_type": "tablet"
         }
 
     if "애플워치" in text:
         return {
             "is_accessory": "N",
-            "product_type": "WATCH"
+            "product_type": "watch"
         }
 
     return {
@@ -314,10 +509,34 @@ def classify_product(title):
     }
 
 
+def detect_trade_status_from_status(status):
+    if status in ["판매완료", "거래완료", "거래완료됨"]:
+        return "SOLD"
+
+    if status in ["예약중", "거래중"]:
+        return "RESERVED"
+
+    return "SALE"
+
+
+def normalize_is_deleted(status):
+    if status in ["판매완료", "거래완료", "거래완료됨"]:
+        return "Y"
+
+    return "N"
+
+
 def enrich_item(item):
     title = item.get("name")
+    status = item.get("status")
 
     classification = classify_product(title)
+
+    cpu_name = extract_cpu_name(title)
+    gpu_name = extract_gpu_name(title)
+    ram_gb = extract_ram_gb(title)
+    ssd_gb = extract_ssd_gb(title)
+    performance_level = resolve_performance_level(cpu_name, gpu_name, ram_gb)
 
     item["normalized_title"] = normalize_title(title)
     item["brand"] = extract_brand(title)
@@ -325,6 +544,13 @@ def enrich_item(item):
     item["product_type"] = classification["product_type"]
     item["is_accessory"] = classification["is_accessory"]
     item["storage_gb"] = extract_storage_gb(title)
+
+    item["trade_status"] = detect_trade_status_from_status(status)
+    item["cpu_name"] = cpu_name
+    item["gpu_name"] = gpu_name
+    item["ram_gb"] = ram_gb
+    item["ssd_gb"] = ssd_gb
+    item["performance_level"] = performance_level
 
     return item
 
@@ -339,13 +565,6 @@ def parse_crawled_at(date_text):
         return datetime.now()
 
 
-def normalize_is_deleted(status):
-    if status in ["판매완료", "거래완료", "거래완료됨"]:
-        return "Y"
-
-    return "N"
-
-
 def get_connection():
     return oracledb.connect(
         user=DB_USER,
@@ -355,10 +574,6 @@ def get_connection():
 
 
 def deduplicate_items(items):
-    """
-    같은 플랫폼의 같은 상품 pid는 하나만 남긴다.
-    기준: platform + pid
-    """
     if not items:
         return []
 
@@ -372,15 +587,13 @@ def deduplicate_items(items):
             continue
 
         key = (platform, str(pid))
-
-        # 같은 상품이 있으면 마지막 데이터를 남김
         unique_map[key] = item
 
     return list(unique_map.values())
 
 
 # =========================================================
-# 4. 플랫폼 / 상품 DB 저장 함수
+# 6. 플랫폼 / 상품 DB 저장 함수
 # =========================================================
 def get_or_create_platform_id(cursor, platform_name):
     cursor.execute("""
@@ -443,7 +656,6 @@ def insert_price_history(cursor, item_id, price):
     if item_id is None or price is None:
         return
 
-    # 같은 상품의 가장 최근 가격 확인
     cursor.execute("""
                    SELECT price
                    FROM (
@@ -459,7 +671,6 @@ def insert_price_history(cursor, item_id, price):
 
     row = cursor.fetchone()
 
-    # 최근 가격과 같으면 가격 이력 추가하지 않음
     if row and row[0] == price:
         return
 
@@ -503,6 +714,7 @@ def save_items_to_db(items):
             thumbnail_url = item.get("image_url")
             item_url = item.get("link")
             crawled_at = parse_crawled_at(item.get("date"))
+
             is_deleted = normalize_is_deleted(item.get("status"))
 
             normalized_title = item.get("normalized_title")
@@ -511,6 +723,13 @@ def save_items_to_db(items):
             product_type = item.get("product_type")
             is_accessory = item.get("is_accessory") or "N"
             storage_gb = item.get("storage_gb")
+
+            trade_status = item.get("trade_status") or "SALE"
+            cpu_name = item.get("cpu_name")
+            gpu_name = item.get("gpu_name")
+            ram_gb = item.get("ram_gb")
+            ssd_gb = item.get("ssd_gb")
+            performance_level = item.get("performance_level") or "UNKNOWN"
 
             if not platform_name or not original_id or not title or current_price is None or not item_url:
                 skipped_count += 1
@@ -535,7 +754,13 @@ def save_items_to_db(items):
                         :model_name AS model_name,
                         :product_type AS product_type,
                         :is_accessory AS is_accessory,
-                        :storage_gb AS storage_gb
+                        :storage_gb AS storage_gb,
+                        :trade_status AS trade_status,
+                        :cpu_name AS cpu_name,
+                        :gpu_name AS gpu_name,
+                        :ram_gb AS ram_gb,
+                        :ssd_gb AS ssd_gb,
+                        :performance_level AS performance_level
                     FROM dual
                 ) src
                 ON (
@@ -557,6 +782,12 @@ def save_items_to_db(items):
                         i.product_type = src.product_type,
                         i.is_accessory = src.is_accessory,
                         i.storage_gb = src.storage_gb,
+                        i.trade_status = src.trade_status,
+                        i.cpu_name = src.cpu_name,
+                        i.gpu_name = src.gpu_name,
+                        i.ram_gb = src.ram_gb,
+                        i.ssd_gb = src.ssd_gb,
+                        i.performance_level = src.performance_level,
                         i.lowest_price =
                             CASE
                                 WHEN i.lowest_price IS NULL THEN src.current_price
@@ -582,7 +813,13 @@ def save_items_to_db(items):
                         model_name,
                         product_type,
                         is_accessory,
-                        storage_gb
+                        storage_gb,
+                        trade_status,
+                        cpu_name,
+                        gpu_name,
+                        ram_gb,
+                        ssd_gb,
+                        performance_level
                     ) VALUES (
                         item_seq.NEXTVAL,
                         src.platform_id,
@@ -601,7 +838,13 @@ def save_items_to_db(items):
                         src.model_name,
                         src.product_type,
                         src.is_accessory,
-                        src.storage_gb
+                        src.storage_gb,
+                        src.trade_status,
+                        src.cpu_name,
+                        src.gpu_name,
+                        src.ram_gb,
+                        src.ssd_gb,
+                        src.performance_level
                     )
             """, {
                 "platform_id": platform_id,
@@ -617,7 +860,13 @@ def save_items_to_db(items):
                 "model_name": model_name,
                 "product_type": product_type,
                 "is_accessory": is_accessory,
-                "storage_gb": storage_gb
+                "storage_gb": storage_gb,
+                "trade_status": trade_status,
+                "cpu_name": cpu_name,
+                "gpu_name": gpu_name,
+                "ram_gb": ram_gb,
+                "ssd_gb": ssd_gb,
+                "performance_level": performance_level
             })
 
             item_id = find_item_id(cursor, platform_id, original_id)
@@ -644,7 +893,7 @@ def save_items_to_db(items):
 
 
 # =========================================================
-# 5. 번개장터 크롤링
+# 7. 번개장터 크롤링
 # =========================================================
 def get_bunjang_status(status):
     status_map = {
@@ -715,7 +964,7 @@ def get_bunjang_data(keyword):
 
 
 # =========================================================
-# 6. 중고나라 크롤링
+# 8. 중고나라 크롤링
 # =========================================================
 def decode_joongna_text(value):
     try:
@@ -820,7 +1069,7 @@ def get_joongna_web_data(keyword):
 
 
 # =========================================================
-# 7. 실행부
+# 9. 실행부
 # =========================================================
 def main():
     now = datetime.now().strftime("%Y%m%d_%H%M")
