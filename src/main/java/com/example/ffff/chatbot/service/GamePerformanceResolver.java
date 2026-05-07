@@ -16,6 +16,50 @@ public class GamePerformanceResolver {
             return "롤";
         }
 
+        if (containsAny(text, "발로란트", "valorant")) {
+            return "발로란트";
+        }
+
+        if (containsAny(text, "배그", "배틀그라운드", "pubg")) {
+            return "배그";
+        }
+
+        if (containsAny(text, "에이펙스", "에이펙스레전드", "에이팩스", "에이팩스레전드", "apex")) {
+            return "에이펙스레전드";
+        }
+
+        if (containsAny(text, "오버워치", "오버워치2", "overwatch")) {
+            return "오버워치2";
+        }
+
+        if (containsAny(text, "로스트아크", "로아", "lostark")) {
+            return "로스트아크";
+        }
+
+        if (containsAny(text, "엘든링", "eldenring")) {
+            return "엘든링";
+        }
+
+        if (containsAny(text, "사이버펑크", "사이버펑크2077", "cyberpunk")) {
+            return "사이버펑크";
+        }
+
+        if (containsAny(text, "gta", "gta5")) {
+            return "GTA5";
+        }
+
+        if (containsAny(text, "디아블로4", "diablo4")) {
+            return "디아블로4";
+        }
+
+        if (containsAny(text, "레데리", "레드데드", "reddead")) {
+            return "레드데드리뎀션2";
+        }
+
+        if (containsAny(text, "스타필드", "starfield")) {
+            return "스타필드";
+        }
+
         if (containsAny(text, "메이플", "메이플스토리", "maplestory")) {
             return "메이플스토리";
         }
@@ -32,66 +76,6 @@ public class GamePerformanceResolver {
             return "스타크래프트";
         }
 
-        if (containsAny(text, "발로란트", "valorant")) {
-            return "발로란트";
-        }
-
-        if (containsAny(text, "오버워치", "오버워치2", "overwatch")) {
-            return "오버워치2";
-        }
-
-        if (containsAny(text, "로스트아크", "로아", "lostark")) {
-            return "로스트아크";
-        }
-
-        if (containsAny(text, "배그", "배틀그라운드", "pubg")) {
-            return "배그";
-        }
-
-        if (containsAny(text, "에이펙스", "에이펙스레전드", "apex")) {
-            return "에이펙스레전드";
-        }
-
-        if (containsAny(text, "gta", "gta5")) {
-            return "GTA5";
-        }
-
-        if (containsAny(text, "엘든링", "eldenring")) {
-            return "엘든링";
-        }
-
-        if (containsAny(text, "디아블로4", "diablo4")) {
-            return "디아블로4";
-        }
-
-        if (containsAny(text, "몬헌", "몬스터헌터", "monsterhunter")) {
-            return "몬스터헌터";
-        }
-
-        if (containsAny(text, "호그와트", "호그와트레거시", "hogwarts")) {
-            return "호그와트 레거시";
-        }
-
-        if (containsAny(text, "사이버펑크", "사이버펑크2077", "cyberpunk")) {
-            return "사이버펑크";
-        }
-
-        if (containsAny(text, "레데리", "레드데드", "reddead")) {
-            return "레드데드리뎀션2";
-        }
-
-        if (containsAny(text, "스타필드", "starfield")) {
-            return "스타필드";
-        }
-
-        if (containsAny(text, "앨런웨이크", "앨런웨이크2", "alanwake")) {
-            return "앨런 웨이크 2";
-        }
-
-        if (containsAny(text, "호라이즌", "horizon")) {
-            return "호라이즌";
-        }
-
         return null;
     }
 
@@ -106,78 +90,89 @@ public class GamePerformanceResolver {
 
         String text = normalize(message);
 
-        if (containsAny(text, "4k", "레이트레이싱", "raytracing", "rt", "풀옵션", "풀옵", "최상옵", "극상옵")) {
+        /*
+         * 옵션 키워드 우선.
+         * 같은 게임이라도 4K/RT/풀옵이면 공식 권장 사양보다 높은 등급으로 본다.
+         */
+        if (containsAny(text,
+                "4k",
+                "레이트레이싱",
+                "raytracing",
+                "rt",
+                "오버드라이브",
+                "overdrive",
+                "풀옵션",
+                "풀옵",
+                "최상옵",
+                "극상옵")) {
             return "EXTREME";
         }
 
-        if (containsAny(text, "qhd", "144hz", "고프레임", "높은프레임", "울트라", "울트라옵션")) {
-            return "ULTRA";
+        if (containsAny(text,
+                "qhd",
+                "144hz",
+                "고프레임",
+                "높은프레임",
+                "울트라",
+                "울트라옵션",
+                "쾌적",
+                "상옵",
+                "고옵",
+                "고옵션",
+                "높은옵션")) {
+            return "HIGH";
         }
 
-        if (containsAny(
-                text,
+        /*
+         * 공식 권장 사양 기준.
+         */
+        if (containsAny(text,
                 "사이버펑크",
                 "사이버펑크2077",
                 "cyberpunk",
-                "스타필드",
-                "starfield",
-                "앨런웨이크",
-                "앨런웨이크2",
-                "alanwake",
-                "최신aaa",
-                "aaa게임",
-                "최신게임",
-                "고사양"
-        )) {
-            return "VERY_HIGH";
-        }
-
-        if (containsAny(
-                text,
-                "gta",
-                "gta5",
                 "엘든링",
                 "eldenring",
+                "gta",
+                "gta5",
                 "디아블로4",
                 "diablo4",
                 "레데리",
                 "레드데드",
                 "reddead",
-                "호그와트",
-                "hogwarts",
-                "몬헌",
-                "몬스터헌터",
-                "monsterhunter"
-        )) {
+                "스타필드",
+                "starfield",
+                "최신aaa",
+                "aaa게임",
+                "최신게임",
+                "고사양")) {
             return "HIGH";
         }
 
-        if (containsAny(
-                text,
+        if (containsAny(text,
                 "배그",
                 "배틀그라운드",
                 "pubg",
                 "에이펙스",
                 "에이펙스레전드",
+                "에이팩스",
+                "에이팩스레전드",
                 "apex",
                 "오버워치",
                 "오버워치2",
                 "overwatch",
                 "로스트아크",
                 "로아",
-                "lostark",
-                "발로란트",
-                "valorant"
-        )) {
+                "lostark")) {
             return "MID";
         }
 
-        if (containsAny(
-                text,
+        if (containsAny(text,
                 "롤",
                 "리그오브레전드",
                 "leagueoflegends",
                 "lol",
+                "발로란트",
+                "valorant",
                 "메이플",
                 "메이플스토리",
                 "피파",
@@ -187,8 +182,7 @@ public class GamePerformanceResolver {
                 "서든",
                 "서든어택",
                 "스타",
-                "스타크래프트"
-        )) {
+                "스타크래프트")) {
             return "LOW";
         }
 
@@ -201,80 +195,105 @@ public class GamePerformanceResolver {
 
     public String resolveBySpecs(String gpuName, String cpuName, Integer ramGb) {
         String gpu = normalize(gpuName);
-        String cpu = normalize(cpuName);
         int ram = ramGb == null ? 0 : ramGb;
 
-        if (containsAny(
-                gpu,
+        /*
+         * EXTREME:
+         * 4K / RT / 풀옵 후보.
+         * Cyberpunk 2077 RT Overdrive 공식 기준 RTX 4080급.
+         */
+        if (containsAny(gpu,
                 "rtx4090",
+                "rtx4080super",
                 "rtx4080",
-                "rtx4070ti",
                 "rx7900xtx",
-                "rx7900xt"
-        )) {
-            return ram >= 32 ? "EXTREME" : "ULTRA";
+                "rx7900xt")) {
+            return "EXTREME";
         }
 
-        if (containsAny(
-                gpu,
+        /*
+         * HIGH:
+         * 고사양 게임 공식 권장 사양 이상.
+         * Cyberpunk 2077 1080p High: RTX 2060 Super / RX 5700 XT급.
+         * Cyberpunk 2077 4K Ultra: RTX 3080급.
+         * 따라서 RTX 2060super 이상 RTX 4070 계열까지는 HIGH로 둔다.
+         */
+        if (containsAny(gpu,
+                "rtx4070ti",
+                "rtx4070super",
                 "rtx4070",
                 "rtx3090",
                 "rtx3080ti",
                 "rtx3080",
-                "rx7800xt",
-                "rx6900xt",
-                "rx6800xt"
-        )) {
-            return ram >= 32 ? "ULTRA" : "VERY_HIGH";
-        }
-
-        if (containsAny(
-                gpu,
                 "rtx4060ti",
                 "rtx4060",
+                "rtx3070ti",
                 "rtx3070",
                 "rtx3060ti",
                 "rtx3060",
+                "rtx2080ti",
                 "rtx2080",
+                "rtx2070super",
                 "rtx2070",
                 "rtx2060super",
-                "rtx2060",
+                "rx7800xt",
+                "rx6900xt",
+                "rx6800xt",
+                "rx7700xt",
+                "rx6750xt",
                 "rx6700xt",
                 "rx6650xt",
                 "rx6600xt",
                 "rx6600",
+                "rx5700xt",
                 "arc770",
-                "arca770"
-        )) {
+                "arca770")) {
             return ram >= 16 ? "HIGH" : "MID";
         }
 
-        if (containsAny(
-                gpu,
+        /*
+         * MID:
+         * PUBG 공식 권장 GTX 1060/RX580,
+         * Apex 공식 권장 GTX970/R9 290급.
+         */
+        if (containsAny(gpu,
+                "rtx2060",
                 "gtx1660ti",
                 "gtx1660super",
                 "gtx1660",
                 "gtx1650super",
                 "gtx1650",
+                "gtx1080ti",
+                "gtx1080",
+                "gtx1070ti",
                 "gtx1070",
                 "gtx1060",
+                "gtx970",
                 "rx590",
                 "rx580",
                 "rx570",
-                "gtx970",
-                "r9290"
-        )) {
-            return ram >= 16 ? "MID" : "LOW";
+                "r9290")) {
+            return ram >= 8 ? "MID" : "LOW";
         }
 
-        if (containsAny(
-                gpu,
+        /*
+         * LOW:
+         * 롤, 발로란트 60FPS, 메이플, 피파 등 저사양 게임 후보.
+         */
+        if (containsAny(gpu,
                 "gtx1050ti",
                 "gtx1050",
                 "gtx950",
+                "gt730",
+                "gtx730",
                 "rx560",
-                "rx550"
-        )) {
+                "rx550",
+                "r7240",
+                "hd6950",
+                "hd6570",
+                "uhd630",
+                "hd4600",
+                "hd7790")) {
             return "LOW";
         }
 
@@ -283,20 +302,6 @@ public class GamePerformanceResolver {
         }
 
         if (gpu.isBlank()) {
-            if (containsAny(
-                    cpu,
-                    "i52500",
-                    "i52500k",
-                    "i56400",
-                    "i54460",
-                    "i34130",
-                    "i36100",
-                    "셀러론",
-                    "펜티엄"
-            )) {
-                return "LOW";
-            }
-
             return "UNKNOWN";
         }
 
@@ -323,9 +328,7 @@ public class GamePerformanceResolver {
             case "LOW" -> 1;
             case "MID" -> 2;
             case "HIGH" -> 3;
-            case "VERY_HIGH" -> 4;
-            case "ULTRA" -> 5;
-            case "EXTREME" -> 6;
+            case "EXTREME" -> 4;
             default -> -1;
         };
     }
@@ -340,6 +343,7 @@ public class GamePerformanceResolver {
                 .replaceAll("\\s+", "")
                 .replace("_", "")
                 .replace("-", "")
+                .replace("/", "")
                 .trim();
     }
 

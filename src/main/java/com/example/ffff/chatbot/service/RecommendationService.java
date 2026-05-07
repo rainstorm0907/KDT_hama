@@ -35,10 +35,19 @@ public class RecommendationService {
         Long maxPrice = normalizePrice(analysis.getMaxPrice());
         String productType = normalizeText(analysis.getProductType());
         String useCase = normalizeText(analysis.getUseCase());
+        String performanceLevel = normalizePerformanceLevel(analysis.getPerformanceLevel());
 
         if (keyword.isBlank()) {
             return List.of();
         }
+
+        System.out.println("[추천 검색 조건] "
+                + "keyword=" + keyword
+                + ", minPrice=" + minPrice
+                + ", maxPrice=" + maxPrice
+                + ", productType=" + productType
+                + ", useCase=" + useCase
+                + ", performanceLevel=" + performanceLevel);
 
         List<RecommendedItemProjection> results =
                 itemRepository.findItemsByCondition(
@@ -47,7 +56,7 @@ public class RecommendationService {
                         maxPrice,
                         productType,
                         useCase,
-                        normalizeText(analysis.getPerformanceLevel()),
+                        performanceLevel,
                         10
                 );
 
@@ -201,6 +210,19 @@ public class RecommendationService {
         }
 
         return value.trim().toLowerCase();
+    }
+
+    private String normalizePerformanceLevel(String performanceLevel) {
+        if (performanceLevel == null || performanceLevel.isBlank()) {
+            return "";
+        }
+
+        String normalized = performanceLevel.trim().toUpperCase();
+
+        return switch (normalized) {
+            case "LOW", "MID", "HIGH", "EXTREME", "UNKNOWN" -> normalized;
+            default -> "";
+        };
     }
 
     private Long normalizePrice(Long price) {

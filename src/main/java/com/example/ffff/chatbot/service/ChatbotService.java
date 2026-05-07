@@ -187,19 +187,13 @@ public class ChatbotService {
             List<RecommendedItemDto> items =
                     recommendationService.recommendByAnalysisResult(userId, analysis);
 
-            if (items.isEmpty() && geminiClientService.shouldUseGeminiForSearch(userMessage, analysis)) {
-                ChatAnalysisResult aiAnalysis =
-                        geminiClientService.analyzeMessageWithGemini(userMessage);
-
-                analysis = aiAnalysis;
-                keyword = safeKeyword(aiAnalysis.getKeyword());
-
-                if (!keyword.isBlank()) {
-                    searchLogService.saveSearchKeyword(userId, keyword);
-                }
-
-                items = recommendationService.recommendByAnalysisResult(userId, aiAnalysis);
-            }
+            /*
+             * 중요:
+             * 여기서 Gemini를 다시 호출하지 않는다.
+             * analyzeMessage() 단계에서 이미 Gemini 분석이 끝났기 때문에,
+             * 검색 결과가 없다고 다시 analyzeMessageWithGemini()를 호출하면
+             * keyword가 빈 값으로 덮이거나 조건이 흔들릴 수 있다.
+             */
 
             String answer = makeRecommendationAnswer(
                     keyword,
@@ -334,7 +328,7 @@ public class ChatbotService {
             List<RecommendedItemDto> items
     ) {
         if (keyword == null || keyword.isBlank()) {
-            return "추천할 상품명을 함께 입력해 주세요. 예를 들어 '아이폰 13 추천해줘'처럼 물어보실 수 있습니다.";
+            return "찾고 싶은 상품명을 함께 입력해 주세요. 예를 들어 '아이폰 13 보여줘', '배그 가능한 컴퓨터 보여줘'처럼 물어보실 수 있습니다.";
         }
 
         boolean isGaming = "gaming".equalsIgnoreCase(useCase);
@@ -346,7 +340,7 @@ public class ChatbotService {
                         + normalizeGameLabel(gameName)
                         + " 플레이 후보를 "
                         + performanceLevelToKorean(performanceLevel)
-                        + " 기준으로 찾지 못했습니다. 상품 제목에 사양 정보가 부족하거나 조건에 맞는 상품이 없을 수 있습니다.";
+                        + " 기준으로 찾지 못했습니다. 현재 상품 제목에 사양 정보가 부족하거나 조건에 맞는 상품이 없을 수 있습니다.";
             }
 
             if (isStudent) {

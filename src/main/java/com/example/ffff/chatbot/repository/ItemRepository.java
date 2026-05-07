@@ -52,85 +52,101 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         END
                         +
                         CASE
+                            /*
+                             * 4단계 게임 추천 점수:
+                             * LOW / MID / HIGH / EXTREME
+                             *
+                             * 핵심:
+                             * 무조건 최고 사양을 먼저 보여주는 게 아니라,
+                             * 사용자가 요청한 게임 등급에 가까운 충분한 사양을 우선한다.
+                             */
+
                             WHEN :useCase = 'gaming'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
-                            THEN 120
-                            WHEN :useCase = 'gaming'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'ULTRA'
-                            THEN 110
-                            WHEN :useCase = 'gaming'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'VERY_HIGH'
-                            THEN 100
-                            WHEN :useCase = 'gaming'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'HIGH'
-                            THEN 90
-                            WHEN :useCase = 'gaming'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'MID'
-                            THEN 75
-                            WHEN :useCase = 'gaming'
+                             AND :performanceLevel = 'LOW'
                              AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'LOW'
-                            THEN 35
+                            THEN 150
+                            WHEN :useCase = 'gaming'
+                             AND :performanceLevel = 'LOW'
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'MID'
+                            THEN 125
+                            WHEN :useCase = 'gaming'
+                             AND :performanceLevel = 'LOW'
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'HIGH'
+                            THEN 95
+                            WHEN :useCase = 'gaming'
+                             AND :performanceLevel = 'LOW'
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
+                            THEN 70
+
+                            WHEN :useCase = 'gaming'
+                             AND :performanceLevel = 'MID'
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'MID'
+                            THEN 160
+                            WHEN :useCase = 'gaming'
+                             AND :performanceLevel = 'MID'
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'HIGH'
+                            THEN 135
+                            WHEN :useCase = 'gaming'
+                             AND :performanceLevel = 'MID'
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
+                            THEN 85
+
+                            WHEN :useCase = 'gaming'
+                             AND :performanceLevel = 'HIGH'
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'HIGH'
+                            THEN 165
+                            WHEN :useCase = 'gaming'
+                             AND :performanceLevel = 'HIGH'
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
+                            THEN 130
+
+                            WHEN :useCase = 'gaming'
+                             AND :performanceLevel = 'EXTREME'
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
+                            THEN 180
+
+                            /*
+                             * performanceLevel이 비어 있는 gaming 질문일 때만
+                             * 일반 게임용 후보를 넓게 점수화한다.
+                             */
+                            WHEN :useCase = 'gaming'
+                             AND (:performanceLevel IS NULL OR :performanceLevel = '')
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'MID'
+                            THEN 130
+                            WHEN :useCase = 'gaming'
+                             AND (:performanceLevel IS NULL OR :performanceLevel = '')
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'HIGH'
+                            THEN 125
+                            WHEN :useCase = 'gaming'
+                             AND (:performanceLevel IS NULL OR :performanceLevel = '')
+                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
+                            THEN 100
+
                             ELSE 0
                         END
                         +
                         CASE
-                            WHEN :useCase = 'gaming'
-                             AND (
-                                  LOWER(i.TITLE) LIKE '%rtx 4090%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx4090%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx 4080%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx4080%'
-                                  OR LOWER(i.TITLE) LIKE '%4070ti%'
-                                  OR LOWER(i.TITLE) LIKE '%4070 ti%'
-                             )
-                            THEN 120
-                            WHEN :useCase = 'gaming'
-                             AND (
-                                  LOWER(i.TITLE) LIKE '%rtx 4070%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx4070%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx 3080%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx3080%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx 3090%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx3090%'
-                             )
-                            THEN 105
-                            WHEN :useCase = 'gaming'
-                             AND (
-                                  LOWER(i.TITLE) LIKE '%rtx 4060%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx4060%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx 3070%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx3070%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx 3060%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx3060%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx 2060%'
-                                  OR LOWER(i.TITLE) LIKE '%rtx2060%'
-                             )
-                            THEN 90
-                            WHEN :useCase = 'gaming'
-                             AND (
-                                  LOWER(i.TITLE) LIKE '%gtx 1660%'
-                                  OR LOWER(i.TITLE) LIKE '%gtx1660%'
-                                  OR LOWER(i.TITLE) LIKE '%gtx 1650%'
-                                  OR LOWER(i.TITLE) LIKE '%gtx1650%'
-                                  OR LOWER(i.TITLE) LIKE '%gtx 1060%'
-                                  OR LOWER(i.TITLE) LIKE '%gtx1060%'
-                                  OR LOWER(i.TITLE) LIKE '%rx 580%'
-                                  OR LOWER(i.TITLE) LIKE '%rx580%'
-                                  OR LOWER(i.TITLE) LIKE '%rx 570%'
-                                  OR LOWER(i.TITLE) LIKE '%rx570%'
-                             )
-                            THEN 70
+                            /*
+                             * 제목 기반 보조 점수.
+                             * PERFORMANCE_LEVEL이 들어간 상품이 우선이고,
+                             * 제목 단서는 약하게만 보정한다.
+                             */
                             WHEN :useCase = 'gaming'
                              AND (
                                   LOWER(i.TITLE) LIKE '%게이밍%'
+                                  OR LOWER(i.TITLE) LIKE '%게임%'
                                   OR LOWER(i.TITLE) LIKE '%배그%'
+                                  OR LOWER(i.TITLE) LIKE '%배틀그라운드%'
+                                  OR LOWER(i.TITLE) LIKE '%에이펙스%'
+                                  OR LOWER(i.TITLE) LIKE '%에이팩스%'
+                                  OR LOWER(i.TITLE) LIKE '%사이버펑크%'
                                   OR LOWER(i.TITLE) LIKE '%그래픽카드%'
                                   OR LOWER(i.TITLE) LIKE '%그래픽%'
                                   OR LOWER(i.TITLE) LIKE '%rtx%'
                                   OR LOWER(i.TITLE) LIKE '%gtx%'
                                   OR LOWER(i.TITLE) LIKE '%rx%'
                              )
-                            THEN 50
+                            THEN 25
                             ELSE 0
                         END
                         +
@@ -247,23 +263,15 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         OR :performanceLevel = ''
                         OR (
                             :performanceLevel = 'LOW'
-                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('LOW', 'MID', 'HIGH', 'VERY_HIGH', 'ULTRA', 'EXTREME')
+                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('LOW', 'MID', 'HIGH', 'EXTREME')
                         )
                         OR (
                             :performanceLevel = 'MID'
-                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('MID', 'HIGH', 'VERY_HIGH', 'ULTRA', 'EXTREME')
+                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('MID', 'HIGH', 'EXTREME')
                         )
                         OR (
                             :performanceLevel = 'HIGH'
-                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('HIGH', 'VERY_HIGH', 'ULTRA', 'EXTREME')
-                        )
-                        OR (
-                            :performanceLevel = 'VERY_HIGH'
-                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('VERY_HIGH', 'ULTRA', 'EXTREME')
-                        )
-                        OR (
-                            :performanceLevel = 'ULTRA'
-                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('ULTRA', 'EXTREME')
+                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('HIGH', 'EXTREME')
                         )
                         OR (
                             :performanceLevel = 'EXTREME'
@@ -276,9 +284,14 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         OR :useCase = ''
                         OR :useCase <> 'gaming'
                         OR (
-                            NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('MID', 'HIGH', 'VERY_HIGH', 'ULTRA', 'EXTREME')
+                            NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('MID', 'HIGH', 'EXTREME')
                             OR LOWER(i.TITLE) LIKE '%게이밍%'
+                            OR LOWER(i.TITLE) LIKE '%게임%'
                             OR LOWER(i.TITLE) LIKE '%배그%'
+                            OR LOWER(i.TITLE) LIKE '%배틀그라운드%'
+                            OR LOWER(i.TITLE) LIKE '%에이펙스%'
+                            OR LOWER(i.TITLE) LIKE '%에이팩스%'
+                            OR LOWER(i.TITLE) LIKE '%사이버펑크%'
                             OR LOWER(i.TITLE) LIKE '%rtx%'
                             OR LOWER(i.TITLE) LIKE '%gtx%'
                             OR LOWER(i.TITLE) LIKE '%그래픽%'

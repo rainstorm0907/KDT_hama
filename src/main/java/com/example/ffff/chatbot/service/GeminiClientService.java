@@ -36,7 +36,9 @@ public class GeminiClientService {
     public ChatAnalysisResult analyzeMessage(String message) {
         ChatAnalysisResult quickResult = fallbackAnalyze(message);
 
-        if (isClearDirectSearch(message, quickResult)) {
+        if (isClearDirectSearch(message, quickResult)
+                || isSimpleDirectProductSearch(message, quickResult)) {
+
             quickResult.setUseCase(null);
             quickResult.setGameName(null);
             quickResult.setPerformanceLevel(null);
@@ -65,7 +67,9 @@ public class GeminiClientService {
             return quickResult;
         }
 
-        if (isClearDirectSearch(message, geminiResult)) {
+        if (isClearDirectSearch(message, geminiResult)
+                || isSimpleDirectProductSearch(message, geminiResult)) {
+
             geminiResult.setUseCase(null);
             geminiResult.setGameName(null);
             geminiResult.setPerformanceLevel(null);
@@ -91,16 +95,20 @@ public class GeminiClientService {
                 절대 사용자 문장 전체를 keyword로 넣지 마라.
 
                 예:
-                - "롤 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "롤", performanceLevel: "LOW"
-                - "배그 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "배그", performanceLevel: "MID"
-                - "에이펙스레전드 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "MID"
-                - "에이펙스레전드 144hz 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "ULTRA"
-                - "사이버펑크 가능한 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "VERY_HIGH"
-                - "사이버펑크 울트라옵션 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "EXTREME"
-                - "노트북 50만원에서 100만원 사이" → keyword: "노트북", productType: "laptop", minPrice: 500000, maxPrice: 1000000
-                - "컴퓨터 30만원 아래" → keyword: "컴퓨터", productType: "desktop", maxPrice: 300000
+                - "아이폰 14 추천" → keyword: "아이폰 14", productType: "smartphone", useCase: null
                 - "아이폰 13 30만원 이하" → keyword: "아이폰 13", productType: "smartphone", maxPrice: 300000
                 - "아이폰 상품들 중에 중학교 1학년이 사용할만한 폰" → keyword: "아이폰", productType: "smartphone", useCase: "student"
+                - "노트북 50만원에서 100만원 사이" → keyword: "노트북", productType: "laptop", minPrice: 500000, maxPrice: 1000000
+                - "컴퓨터 30만원 아래" → keyword: "컴퓨터", productType: "desktop", maxPrice: 300000
+
+                - "롤 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "롤", performanceLevel: "LOW"
+                - "배그 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "배그", performanceLevel: "MID"
+                - "배그 풀옵 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "배그", performanceLevel: "EXTREME"
+                - "에이펙스레전드 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "MID"
+                - "에이팩스레전드 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "MID"
+                - "에이펙스레전드 144hz 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "HIGH"
+                - "사이버펑크 가능한 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "HIGH"
+                - "사이버펑크 풀옵 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "EXTREME"
 
                 가격 규칙:
                 - "30만원 이하", "30만원 아래", "30만원까지"는 maxPrice = 300000
@@ -120,23 +128,21 @@ public class GeminiClientService {
                 - 사무용, 문서작업 → "office"
                 - 코딩, 개발 → "coding"
                 - 영상편집, 디자인 → "creative"
+                - 단순히 "추천", "보여줘", "상품", "제품"만 있는 경우 useCase는 null
                 - 그 외는 null
 
                 게임명 / 성능 등급 규칙:
                 - 롤, 리그오브레전드 → gameName: "롤", performanceLevel: "LOW"
-                - 메이플, 피파, 서든, 스타크래프트 → performanceLevel: "LOW"
-                - 발로란트, 오버워치, 로스트아크 → performanceLevel: "MID"
+                - 메이플, 피파, 서든, 스타크래프트, 발로란트 → performanceLevel: "LOW"
                 - 배그, 배틀그라운드 → gameName: "배그", performanceLevel: "MID"
-                - 배그 + 144hz, 높은프레임, 고프레임, 쾌적, 상옵, 풀옵 → performanceLevel: "ULTRA"
-                - 에이펙스, 에이펙스레전드, apex → gameName: "에이펙스레전드", performanceLevel: "MID"
-                - 에이펙스 + 144hz, 높은프레임, 고프레임, 쾌적, 상옵, 풀옵 → performanceLevel: "ULTRA"
-                - GTA, GTA5, 엘든링, 디아블로4, 레데리, 레드데드, 호그와트, 몬스터헌터 → performanceLevel: "HIGH"
-                - 사이버펑크, 사이버펑크2077, 스타필드, 앨런웨이크2, 최신 AAA 게임, 고사양 게임 → performanceLevel: "VERY_HIGH"
-                - QHD, 144Hz, 울트라옵션, 울트라, 풀옵션 → performanceLevel: "ULTRA"
-                - 4K, 레이트레이싱, RT, 풀옵, 최상옵, 극상옵 → performanceLevel: "EXTREME"
+                - 에이펙스, 에이펙스레전드, 에이팩스, 에이팩스레전드, apex → gameName: "에이펙스레전드", performanceLevel: "MID"
+                - 오버워치, 로스트아크 → performanceLevel: "MID"
+                - 사이버펑크, 사이버펑크2077, GTA, GTA5, 엘든링, 디아블로4, 레데리, 레드데드, 스타필드, 최신 AAA 게임, 고사양 게임 → performanceLevel: "HIGH"
+                - QHD, 144Hz, 높은프레임, 고프레임, 쾌적, 상옵, 고옵 → performanceLevel: "HIGH"
+                - 4K, 레이트레이싱, RT, 풀옵션, 풀옵, 울트라옵션, 울트라, 최상옵, 극상옵, 오버드라이브 → performanceLevel: "EXTREME"
 
                 performanceLevel은 아래 중 하나만 사용해라.
-                LOW, MID, HIGH, VERY_HIGH, ULTRA, EXTREME, UNKNOWN
+                LOW, MID, HIGH, EXTREME, UNKNOWN
 
                 excludeAccessory는 항상 true로 둔다.
                 tradeStatus는 항상 "SALE"로 둔다.
@@ -150,7 +156,7 @@ public class GeminiClientService {
                   "productType": "desktop",
                   "useCase": "gaming",
                   "gameName": "사이버펑크",
-                  "performanceLevel": "VERY_HIGH",
+                  "performanceLevel": "HIGH",
                   "excludeAccessory": true,
                   "tradeStatus": "SALE"
                 }
@@ -187,7 +193,8 @@ public class GeminiClientService {
     }
 
     public boolean shouldUseGeminiForSearch(String message, ChatAnalysisResult result) {
-        if (isClearDirectSearch(message, result)) {
+        if (isClearDirectSearch(message, result)
+                || isSimpleDirectProductSearch(message, result)) {
             return false;
         }
 
@@ -218,6 +225,8 @@ public class GeminiClientService {
                 "배틀그라운드",
                 "에이펙스",
                 "에이펙스레전드",
+                "에이팩스",
+                "에이팩스레전드",
                 "apex",
                 "사이버펑크",
                 "사이버펑크2077",
@@ -255,14 +264,15 @@ public class GeminiClientService {
                 "사용할만한",
                 "쓸만한",
                 "부모님",
-                "아이",
                 "자녀",
                 "선물",
                 "코딩",
                 "개발용",
                 "영상편집",
                 "디자인",
-                "가성비"
+                "가성비",
+                "괜찮은",
+                "좋은"
         );
 
         boolean hasPriceRangeExpression = containsAny(
@@ -292,7 +302,6 @@ public class GeminiClientService {
                         "쓸만한",
                         "입문용",
                         "부모님",
-                        "아이",
                         "자녀",
                         "선물",
                         "사무용");
@@ -733,11 +742,18 @@ public class GeminiClientService {
 
         String normalized = message.toLowerCase().replaceAll("\\s+", "");
 
-        if (containsAny(normalized, "롤", "배그", "에이펙스", "사이버펑크", "게임", "게이밍", "잘돌아", "가능", "플레이")) {
+        if (containsAny(normalized,
+                "롤", "배그", "배틀그라운드",
+                "에이펙스", "에이팩스",
+                "사이버펑크",
+                "게임", "게이밍")) {
             return "gaming";
         }
 
-        if (containsAny(normalized, "중학생", "중학교", "초등학생", "고등학생", "학생", "입문용", "처음쓰", "사용할만한", "쓸만한", "아이", "자녀")) {
+        if (containsAny(normalized,
+                "중학생", "중학교",
+                "초등학생", "고등학생",
+                "학생", "자녀")) {
             return "student";
         }
 
@@ -822,20 +838,6 @@ public class GeminiClientService {
                 containsAny(normalized, "사이트", "서비스", "하마")
                         && containsAny(normalized, "설명", "소개", "뭐", "무엇", "알려", "대해서")
         );
-    }
-
-    private boolean containsAny(String text, String... keywords) {
-        if (text == null) {
-            return false;
-        }
-
-        for (String keyword : keywords) {
-            if (text.contains(keyword)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private String extractKeywordByRule(String message) {
@@ -1203,7 +1205,6 @@ public class GeminiClientService {
                 "초등학생",
                 "고등학생",
                 "부모님",
-                "아이",
                 "자녀",
                 "선물",
                 "게임",
@@ -1212,6 +1213,7 @@ public class GeminiClientService {
                 "배그",
                 "배틀그라운드",
                 "에이펙스",
+                "에이팩스",
                 "사이버펑크",
                 "사무용",
                 "코딩",
@@ -1223,5 +1225,113 @@ public class GeminiClientService {
         );
 
         return !hasRealUseCaseExpression;
+    }
+
+    private boolean isSimpleDirectProductSearch(String message, ChatAnalysisResult result) {
+        if (message == null || message.isBlank() || result == null) {
+            return false;
+        }
+
+        String intent = safeIntent(result.getIntent());
+
+        if (!"PRODUCT_RECOMMEND".equals(intent)
+                && !"PRICE_COMPARE".equals(intent)) {
+            return false;
+        }
+
+        String keyword = result.getKeyword();
+
+        if (keyword == null || keyword.isBlank()) {
+            return false;
+        }
+
+        String productType = result.getProductType();
+
+        if (productType == null || productType.isBlank()) {
+            return false;
+        }
+
+        String normalized = message
+                .toLowerCase()
+                .replaceAll("\\s+", "");
+
+        boolean hasRealUseCaseExpression = containsAny(
+                normalized,
+                "사용할만한",
+                "사용할만",
+                "쓸만한",
+                "쓸만",
+                "입문용",
+                "학생",
+                "중학생",
+                "중학교",
+                "초등학생",
+                "고등학생",
+                "부모님",
+                "자녀",
+                "선물",
+                "게임",
+                "게이밍",
+                "롤",
+                "배그",
+                "배틀그라운드",
+                "에이펙스",
+                "에이팩스",
+                "사이버펑크",
+                "사무용",
+                "코딩",
+                "영상편집",
+                "디자인",
+                "가성비",
+                "괜찮은",
+                "좋은",
+                "저렴한",
+                "싼",
+                "고사양",
+                "풀옵",
+                "상옵",
+                "쾌적"
+        );
+
+        if (hasRealUseCaseExpression) {
+            return false;
+        }
+
+        boolean hasSimpleRequestWord = containsAny(
+                normalized,
+                "추천",
+                "보여줘",
+                "보여",
+                "찾아줘",
+                "찾아",
+                "검색",
+                "상품",
+                "제품",
+                "매물"
+        );
+
+        boolean isKnownProductSearch =
+                "smartphone".equalsIgnoreCase(productType)
+                        || "desktop".equalsIgnoreCase(productType)
+                        || "laptop".equalsIgnoreCase(productType)
+                        || "tablet".equalsIgnoreCase(productType)
+                        || "earphone".equalsIgnoreCase(productType)
+                        || "watch".equalsIgnoreCase(productType);
+
+        return hasSimpleRequestWord && isKnownProductSearch;
+    }
+
+    private boolean containsAny(String text, String... keywords) {
+        if (text == null) {
+            return false;
+        }
+
+        for (String keyword : keywords) {
+            if (text.contains(keyword)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
