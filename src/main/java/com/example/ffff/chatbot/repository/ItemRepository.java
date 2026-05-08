@@ -52,14 +52,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         END
                         +
                         CASE
-                            /*
-                             * 4단계 게임 추천 점수:
-                             * LOW / MID / HIGH / EXTREME
-                             *
-                             * 무조건 최고 사양을 먼저 보여주는 것이 아니라,
-                             * 사용자가 요청한 게임 등급에 가까운 충분한 사양을 우선한다.
-                             */
-
                             WHEN :useCase = 'gaming'
                              AND :performanceLevel = 'LOW'
                              AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'LOW'
@@ -121,9 +113,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         END
                         +
                         CASE
-                            /*
-                             * 제목 기반 게임용 보조 점수.
-                             */
                             WHEN :useCase = 'gaming'
                              AND (
                                   LOWER(i.TITLE) LIKE '%게이밍%'
@@ -159,11 +148,33 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         END
                         +
                         CASE
-                            /*
-                             * 게임기 본체 검색 보정 점수.
-                             * 닌텐도 스위치 / 플스5 / 스팀덱 검색 시
-                             * 게임칩이나 타이틀보다 본체, 콘솔, 풀박스 상품을 우선 노출한다.
-                             */
+                            WHEN :useCase = 'office'
+                             AND :productType = 'laptop'
+                             AND (
+                                  LOWER(i.TITLE) LIKE '%사무용%'
+                                  OR LOWER(i.TITLE) LIKE '%업무용%'
+                                  OR LOWER(i.TITLE) LIKE '%문서%'
+                                  OR LOWER(i.TITLE) LIKE '%인강%'
+                                  OR LOWER(i.TITLE) LIKE '%가벼운%'
+                                  OR LOWER(i.TITLE) LIKE '%그램%'
+                                  OR LOWER(i.TITLE) LIKE '%갤럭시북%'
+                                  OR LOWER(i.TITLE) LIKE '%씽크패드%'
+                                  OR LOWER(i.TITLE) LIKE '%thinkpad%'
+                                  OR LOWER(i.TITLE) LIKE '%i3%'
+                                  OR LOWER(i.TITLE) LIKE '%i5%'
+                                  OR LOWER(i.TITLE) LIKE '%라이젠3%'
+                                  OR LOWER(i.TITLE) LIKE '%라이젠5%'
+                                  OR LOWER(i.TITLE) LIKE '%ryzen 3%'
+                                  OR LOWER(i.TITLE) LIKE '%ryzen 5%'
+                                  OR LOWER(i.TITLE) LIKE '%8gb%'
+                                  OR LOWER(i.TITLE) LIKE '%16gb%'
+                                  OR LOWER(i.TITLE) LIKE '%ssd%'
+                             )
+                            THEN 70
+                            ELSE 0
+                        END
+                        +
+                        CASE
                             WHEN :productType = 'game_console'
                              AND (
                                   LOWER(i.TITLE) LIKE '%본체%'
@@ -201,6 +212,22 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         END
                         +
                         CASE
+                            WHEN :productType = 'smartphone'
+                             AND (
+                                  LOWER(i.TITLE) LIKE '%128gb%'
+                                  OR LOWER(i.TITLE) LIKE '%256gb%'
+                                  OR LOWER(i.TITLE) LIKE '%512gb%'
+                                  OR LOWER(i.TITLE) LIKE '%자급제%'
+                                  OR LOWER(i.TITLE) LIKE '%정상해지%'
+                                  OR LOWER(i.TITLE) LIKE '%공기계%'
+                                  OR LOWER(i.TITLE) LIKE '%풀박스%'
+                                  OR LOWER(i.TITLE) LIKE '%박스%'
+                             )
+                            THEN 45
+                            ELSE 0
+                        END
+                        +
+                        CASE
                             WHEN i.LOWEST_PRICE IS NOT NULL
                              AND i.LOWEST_PRICE > 0
                              AND i.CURRENT_PRICE <= i.LOWEST_PRICE THEN 30
@@ -222,9 +249,61 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                     ) AS SCORE
                 FROM ITEMS i
                 WHERE NVL(i.IS_DELETED, 'N') = 'N'
-                  AND NVL(i.IS_ACCESSORY, 'N') = 'N'
                   AND NVL(i.TRADE_STATUS, 'SALE') = 'SALE'
-                  AND i.CURRENT_PRICE >= 50000
+
+                  AND (
+                        NVL(i.IS_ACCESSORY, 'N') = 'N'
+                        OR LOWER(:keyword) LIKE '%케이스%'
+                        OR LOWER(:keyword) LIKE '%필름%'
+                        OR LOWER(:keyword) LIKE '%충전기%'
+                        OR LOWER(:keyword) LIKE '%어댑터%'
+                        OR LOWER(:keyword) LIKE '%파우치%'
+                        OR LOWER(:keyword) LIKE '%커버%'
+                        OR LOWER(:keyword) LIKE '%보호필름%'
+                        OR LOWER(:keyword) LIKE '%맥세이프%'
+                        OR LOWER(:keyword) LIKE '%카드지갑%'
+                        OR LOWER(:keyword) LIKE '%스트랩%'
+                  )
+
+                  AND (
+                        (
+                            (
+                                LOWER(:keyword) LIKE '%케이스%'
+                                OR LOWER(:keyword) LIKE '%필름%'
+                                OR LOWER(:keyword) LIKE '%충전기%'
+                                OR LOWER(:keyword) LIKE '%어댑터%'
+                                OR LOWER(:keyword) LIKE '%파우치%'
+                                OR LOWER(:keyword) LIKE '%커버%'
+                                OR LOWER(:keyword) LIKE '%보호필름%'
+                                OR LOWER(:keyword) LIKE '%맥세이프%'
+                                OR LOWER(:keyword) LIKE '%카드지갑%'
+                                OR LOWER(:keyword) LIKE '%스트랩%'
+                            )
+                            AND i.CURRENT_PRICE >= 1000
+                        )
+                        OR (
+                            (
+                                LOWER(:keyword) NOT LIKE '%케이스%'
+                                AND LOWER(:keyword) NOT LIKE '%필름%'
+                                AND LOWER(:keyword) NOT LIKE '%충전기%'
+                                AND LOWER(:keyword) NOT LIKE '%어댑터%'
+                                AND LOWER(:keyword) NOT LIKE '%파우치%'
+                                AND LOWER(:keyword) NOT LIKE '%커버%'
+                                AND LOWER(:keyword) NOT LIKE '%보호필름%'
+                                AND LOWER(:keyword) NOT LIKE '%맥세이프%'
+                                AND LOWER(:keyword) NOT LIKE '%카드지갑%'
+                                AND LOWER(:keyword) NOT LIKE '%스트랩%'
+                            )
+                            AND (
+                                (:productType = 'smartphone' AND i.CURRENT_PRICE >= 100000)
+                                OR (:productType = 'desktop' AND i.CURRENT_PRICE >= 150000)
+                                OR (:productType = 'laptop' AND i.CURRENT_PRICE >= 100000)
+                                OR (:productType = 'game_console' AND i.CURRENT_PRICE >= 120000)
+                                OR ((:productType IS NULL OR :productType = '') AND i.CURRENT_PRICE >= 50000)
+                                OR (:productType NOT IN ('smartphone', 'desktop', 'laptop', 'game_console') AND i.CURRENT_PRICE >= 50000)
+                            )
+                        )
+                  )
 
                   AND (:minPrice IS NULL OR i.CURRENT_PRICE >= :minPrice)
                   AND (:maxPrice IS NULL OR i.CURRENT_PRICE <= :maxPrice)
@@ -394,8 +473,71 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                   )
 
                   AND (
+                        :useCase IS NULL
+                        OR :useCase = ''
+                        OR :useCase <> 'office'
+                        OR (
+                            :productType <> 'laptop'
+                            OR i.CURRENT_PRICE <= 1200000
+                        )
+                  )
+
+                  AND (
+                        :productType IS NULL
+                        OR :productType <> 'smartphone'
+                        OR LOWER(:keyword) LIKE '%케이스%'
+                        OR LOWER(:keyword) LIKE '%필름%'
+                        OR LOWER(:keyword) LIKE '%충전기%'
+                        OR LOWER(:keyword) LIKE '%어댑터%'
+                        OR LOWER(:keyword) LIKE '%파우치%'
+                        OR LOWER(:keyword) LIKE '%커버%'
+                        OR (
+                            LOWER(i.TITLE) NOT LIKE '%케이스%'
+                            AND LOWER(i.TITLE) NOT LIKE '%필름%'
+                            AND LOWER(i.TITLE) NOT LIKE '%보호필름%'
+                            AND LOWER(i.TITLE) NOT LIKE '%액정%'
+                            AND LOWER(i.TITLE) NOT LIKE '%배터리%'
+                            AND LOWER(i.TITLE) NOT LIKE '%부품%'
+                            AND LOWER(i.TITLE) NOT LIKE '%박스만%'
+                            AND LOWER(i.TITLE) NOT LIKE '%충전기%'
+                            AND LOWER(i.TITLE) NOT LIKE '%맥세이프%'
+                            AND LOWER(i.TITLE) NOT LIKE '%카드지갑%'
+                            AND LOWER(i.TITLE) NOT LIKE '%스트랩%'
+                        )
+                  )
+
+                  AND (
+                        :productType IS NULL
+                        OR :productType <> 'laptop'
+                        OR (
+                            LOWER(i.TITLE) NOT LIKE '%가방%'
+                            AND LOWER(i.TITLE) NOT LIKE '%백팩%'
+                            AND LOWER(i.TITLE) NOT LIKE '%크로스백%'
+                            AND LOWER(i.TITLE) NOT LIKE '%클러치%'
+                            AND LOWER(i.TITLE) NOT LIKE '%파우치%'
+                            AND LOWER(i.TITLE) NOT LIKE '%슬리브%'
+                            AND LOWER(i.TITLE) NOT LIKE '%케이스%'
+                            AND LOWER(i.TITLE) NOT LIKE '%충전기%'
+                            AND LOWER(i.TITLE) NOT LIKE '%어댑터%'
+                            AND LOWER(i.TITLE) NOT LIKE '%거치대%'
+                            AND LOWER(i.TITLE) NOT LIKE '%받침대%'
+                            AND LOWER(i.TITLE) NOT LIKE '%스탠드%'
+                            AND LOWER(i.TITLE) NOT LIKE '%키스킨%'
+                            AND LOWER(i.TITLE) NOT LIKE '%보호필름%'
+                            AND LOWER(i.TITLE) NOT LIKE '%액정필름%'
+                            AND LOWER(i.TITLE) NOT LIKE '%부품%'
+                            AND LOWER(i.TITLE) NOT LIKE '%수리%'
+                            AND LOWER(i.TITLE) NOT LIKE '%액정%'
+                        )
+                  )
+
+                  AND (
                         :productType IS NULL
                         OR :productType <> 'game_console'
+                        OR LOWER(:keyword) LIKE '%케이스%'
+                        OR LOWER(:keyword) LIKE '%충전기%'
+                        OR LOWER(:keyword) LIKE '%파우치%'
+                        OR LOWER(:keyword) LIKE '%커버%'
                         OR (
                             LOWER(i.TITLE) NOT LIKE '%게임칩%'
                             AND LOWER(i.TITLE) NOT LIKE '%칩%'
@@ -440,9 +582,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                   AND LOWER(i.TITLE) NOT LIKE '%대행%'
                   AND LOWER(i.TITLE) NOT LIKE '%책상%'
                   AND LOWER(i.TITLE) NOT LIKE '%의자%'
-                  AND LOWER(i.TITLE) NOT LIKE '%사무용%'
-                  AND LOWER(i.TITLE) NOT LIKE '%문서용%'
-                  AND LOWER(i.TITLE) NOT LIKE '%인강용%'
                   AND LOWER(i.TITLE) NOT LIKE '%내장그래픽%'
                   AND LOWER(i.TITLE) NOT LIKE '%그래픽카드 없음%'
                   AND LOWER(i.TITLE) NOT LIKE '%i5-2500%'
@@ -655,9 +794,25 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                     ) AS SCORE
                 FROM ITEMS i
                 WHERE NVL(i.IS_DELETED, 'N') = 'N'
-                  AND NVL(i.IS_ACCESSORY, 'N') = 'N'
                   AND NVL(i.TRADE_STATUS, 'SALE') = 'SALE'
-                  AND i.CURRENT_PRICE >= 50000
+                  AND (
+                        NVL(i.IS_ACCESSORY, 'N') = 'N'
+                        OR LOWER(:keyword) LIKE '%케이스%'
+                        OR LOWER(:keyword) LIKE '%필름%'
+                        OR LOWER(:keyword) LIKE '%충전기%'
+                        OR LOWER(:keyword) LIKE '%어댑터%'
+                        OR LOWER(:keyword) LIKE '%파우치%'
+                        OR LOWER(:keyword) LIKE '%커버%'
+                  )
+                  AND (
+                        i.CURRENT_PRICE >= 50000
+                        OR LOWER(:keyword) LIKE '%케이스%'
+                        OR LOWER(:keyword) LIKE '%필름%'
+                        OR LOWER(:keyword) LIKE '%충전기%'
+                        OR LOWER(:keyword) LIKE '%어댑터%'
+                        OR LOWER(:keyword) LIKE '%파우치%'
+                        OR LOWER(:keyword) LIKE '%커버%'
+                  )
                   AND i.CURRENT_PRICE <= :maxPrice
                   AND (
                         LOWER(i.TITLE) LIKE '%' || LOWER(:keyword) || '%'

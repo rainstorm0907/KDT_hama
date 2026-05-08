@@ -1195,7 +1195,7 @@ public class GeminiClientService {
             if (number != null && !number.isBlank()) {
                 int modelNumber = Integer.parseInt(number);
 
-                if (modelNumber < 4 || modelNumber > 16) {
+                if (modelNumber < 4 || modelNumber > 20) {
                     number = null;
                     model = null;
                 }
