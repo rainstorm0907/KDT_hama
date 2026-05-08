@@ -56,8 +56,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                              * 4단계 게임 추천 점수:
                              * LOW / MID / HIGH / EXTREME
                              *
-                             * 핵심:
-                             * 무조건 최고 사양을 먼저 보여주는 게 아니라,
+                             * 무조건 최고 사양을 먼저 보여주는 것이 아니라,
                              * 사용자가 요청한 게임 등급에 가까운 충분한 사양을 우선한다.
                              */
 
@@ -105,10 +104,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                              AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
                             THEN 180
 
-                            /*
-                             * performanceLevel이 비어 있는 gaming 질문일 때만
-                             * 일반 게임용 후보를 넓게 점수화한다.
-                             */
                             WHEN :useCase = 'gaming'
                              AND (:performanceLevel IS NULL OR :performanceLevel = '')
                              AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'MID'
@@ -127,9 +122,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         +
                         CASE
                             /*
-                             * 제목 기반 보조 점수.
-                             * PERFORMANCE_LEVEL이 들어간 상품이 우선이고,
-                             * 제목 단서는 약하게만 보정한다.
+                             * 제목 기반 게임용 보조 점수.
                              */
                             WHEN :useCase = 'gaming'
                              AND (
@@ -162,6 +155,48 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                   OR LOWER(i.TITLE) LIKE '%128gb%'
                              )
                             THEN 45
+                            ELSE 0
+                        END
+                        +
+                        CASE
+                            /*
+                             * 게임기 본체 검색 보정 점수.
+                             * 닌텐도 스위치 / 플스5 / 스팀덱 검색 시
+                             * 게임칩이나 타이틀보다 본체, 콘솔, 풀박스 상품을 우선 노출한다.
+                             */
+                            WHEN :productType = 'game_console'
+                             AND (
+                                  LOWER(i.TITLE) LIKE '%본체%'
+                                  OR LOWER(i.TITLE) LIKE '%기기%'
+                                  OR LOWER(i.TITLE) LIKE '%콘솔%'
+                                  OR LOWER(i.TITLE) LIKE '%풀박스%'
+                                  OR LOWER(i.TITLE) LIKE '%박스%'
+                                  OR LOWER(i.TITLE) LIKE '%디스크%'
+                                  OR LOWER(i.TITLE) LIKE '%디지털%'
+                                  OR LOWER(i.TITLE) LIKE '%슬림%'
+                                  OR LOWER(i.TITLE) LIKE '%oled%'
+                             )
+                            THEN 80
+
+                            WHEN :productType = 'game_console'
+                             AND (
+                                  LOWER(i.TITLE) LIKE '%닌텐도 스위치%'
+                                  OR LOWER(i.TITLE) LIKE '%닌텐도스위치%'
+                                  OR LOWER(i.TITLE) LIKE '%스위치 oled%'
+                                  OR LOWER(i.TITLE) LIKE '%스위치oled%'
+                                  OR LOWER(i.TITLE) LIKE '%nintendo switch%'
+                                  OR LOWER(i.TITLE) LIKE '%switch oled%'
+                                  OR LOWER(i.TITLE) LIKE '%플스5%'
+                                  OR LOWER(i.TITLE) LIKE '%플레이스테이션5%'
+                                  OR LOWER(i.TITLE) LIKE '%ps5%'
+                                  OR LOWER(i.TITLE) LIKE '%플스4%'
+                                  OR LOWER(i.TITLE) LIKE '%플레이스테이션4%'
+                                  OR LOWER(i.TITLE) LIKE '%ps4%'
+                                  OR LOWER(i.TITLE) LIKE '%스팀덱%'
+                                  OR LOWER(i.TITLE) LIKE '%steamdeck%'
+                             )
+                            THEN 60
+
                             ELSE 0
                         END
                         +
@@ -223,6 +258,27 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                 OR LOWER(i.TITLE) LIKE '%휴대폰%'
                             )
                         )
+                        OR (
+                            :productType = 'game_console'
+                            AND (
+                                LOWER(i.TITLE) LIKE '%닌텐도 스위치%'
+                                OR LOWER(i.TITLE) LIKE '%닌텐도스위치%'
+                                OR LOWER(i.TITLE) LIKE '%스위치 oled%'
+                                OR LOWER(i.TITLE) LIKE '%스위치oled%'
+                                OR LOWER(i.TITLE) LIKE '%nintendo switch%'
+                                OR LOWER(i.TITLE) LIKE '%switch oled%'
+                                OR LOWER(i.TITLE) LIKE '%플스5%'
+                                OR LOWER(i.TITLE) LIKE '%플레이스테이션5%'
+                                OR LOWER(i.TITLE) LIKE '%ps5%'
+                                OR LOWER(i.TITLE) LIKE '%플스4%'
+                                OR LOWER(i.TITLE) LIKE '%플레이스테이션4%'
+                                OR LOWER(i.TITLE) LIKE '%ps4%'
+                                OR LOWER(i.TITLE) LIKE '%xbox%'
+                                OR LOWER(i.TITLE) LIKE '%엑스박스%'
+                                OR LOWER(i.TITLE) LIKE '%스팀덱%'
+                                OR LOWER(i.TITLE) LIKE '%steamdeck%'
+                            )
+                        )
                   )
 
                   AND (
@@ -254,6 +310,27 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                 OR LOWER(i.TITLE) LIKE '%갤럭시%'
                                 OR LOWER(i.TITLE) LIKE '%스마트폰%'
                                 OR LOWER(i.TITLE) LIKE '%휴대폰%'
+                            )
+                        )
+                        OR (
+                            :productType = 'game_console'
+                            AND (
+                                LOWER(i.TITLE) LIKE '%닌텐도 스위치%'
+                                OR LOWER(i.TITLE) LIKE '%닌텐도스위치%'
+                                OR LOWER(i.TITLE) LIKE '%스위치 oled%'
+                                OR LOWER(i.TITLE) LIKE '%스위치oled%'
+                                OR LOWER(i.TITLE) LIKE '%nintendo switch%'
+                                OR LOWER(i.TITLE) LIKE '%switch oled%'
+                                OR LOWER(i.TITLE) LIKE '%플스5%'
+                                OR LOWER(i.TITLE) LIKE '%플레이스테이션5%'
+                                OR LOWER(i.TITLE) LIKE '%ps5%'
+                                OR LOWER(i.TITLE) LIKE '%플스4%'
+                                OR LOWER(i.TITLE) LIKE '%플레이스테이션4%'
+                                OR LOWER(i.TITLE) LIKE '%ps4%'
+                                OR LOWER(i.TITLE) LIKE '%xbox%'
+                                OR LOWER(i.TITLE) LIKE '%엑스박스%'
+                                OR LOWER(i.TITLE) LIKE '%스팀덱%'
+                                OR LOWER(i.TITLE) LIKE '%steamdeck%'
                             )
                         )
                   )
@@ -316,12 +393,44 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         OR i.CURRENT_PRICE <= 500000
                   )
 
+                  AND (
+                        :productType IS NULL
+                        OR :productType <> 'game_console'
+                        OR (
+                            LOWER(i.TITLE) NOT LIKE '%게임칩%'
+                            AND LOWER(i.TITLE) NOT LIKE '%칩%'
+                            AND LOWER(i.TITLE) NOT LIKE '%타이틀%'
+                            AND LOWER(i.TITLE) NOT LIKE '%소프트%'
+                            AND LOWER(i.TITLE) NOT LIKE '%소프트웨어%'
+                            AND LOWER(i.TITLE) NOT LIKE '%게임팩%'
+                            AND LOWER(i.TITLE) NOT LIKE '%팩%'
+                            AND LOWER(i.TITLE) NOT LIKE '%듀얼센스%'
+                            AND LOWER(i.TITLE) NOT LIKE '%듀얼쇼크%'
+                            AND LOWER(i.TITLE) NOT LIKE '%컨트롤러%'
+                            AND LOWER(i.TITLE) NOT LIKE '%조이콘%'
+                            AND LOWER(i.TITLE) NOT LIKE '%프로콘%'
+                            AND LOWER(i.TITLE) NOT LIKE '%케이스%'
+                            AND LOWER(i.TITLE) NOT LIKE '%파우치%'
+                            AND LOWER(i.TITLE) NOT LIKE '%충전기%'
+                            AND LOWER(i.TITLE) NOT LIKE '%거치대%'
+                            AND LOWER(i.TITLE) NOT LIKE '%스킨%'
+                            AND LOWER(i.TITLE) NOT LIKE '%커버%'
+                            AND LOWER(i.TITLE) NOT LIKE '%cd%'
+                            AND LOWER(i.TITLE) NOT LIKE '%dvd%'
+                            AND LOWER(i.TITLE) NOT LIKE '%드래곤 퀘스트%'
+                            AND LOWER(i.TITLE) NOT LIKE '%드래곤퀘스트%'
+                            AND LOWER(i.TITLE) NOT LIKE '%레이맨%'
+                            AND LOWER(i.TITLE) NOT LIKE '%마리오카트%'
+                            AND LOWER(i.TITLE) NOT LIKE '%젤다%'
+                            AND LOWER(i.TITLE) NOT LIKE '%동물의숲%'
+                            AND LOWER(i.TITLE) NOT LIKE '%포켓몬%'
+                        )
+                  )
+
                   AND LOWER(i.TITLE) NOT LIKE '%쿨러%'
-                  AND LOWER(i.TITLE) NOT LIKE '%케이스%'
                   AND LOWER(i.TITLE) NOT LIKE '%파워%'
                   AND LOWER(i.TITLE) NOT LIKE '%메인보드%'
                   AND LOWER(i.TITLE) NOT LIKE '%부품%'
-                  AND LOWER(i.TITLE) NOT LIKE '%충전기%'
                   AND LOWER(i.TITLE) NOT LIKE '%어댑터%'
                   AND LOWER(i.TITLE) NOT LIKE '%세팅%'
                   AND LOWER(i.TITLE) NOT LIKE '%os%'

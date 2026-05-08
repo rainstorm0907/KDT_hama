@@ -109,6 +109,10 @@ public class GeminiClientService {
                 - "에이펙스레전드 144hz 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "HIGH"
                 - "사이버펑크 가능한 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "HIGH"
                 - "사이버펑크 풀옵 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "EXTREME"
+                
+                - "닌텐도스위치 추천" → keyword: "닌텐도 스위치", productType: "game_console", useCase: null
+                - "스위치 OLED 추천" → keyword: "닌텐도 스위치 OLED", productType: "game_console", useCase: null
+                - "플스5 추천" → keyword: "플스5", productType: "game_console", useCase: null
 
                 가격 규칙:
                 - "30만원 이하", "30만원 아래", "30만원까지"는 maxPrice = 300000
@@ -120,6 +124,7 @@ public class GeminiClientService {
                 - 컴퓨터, 데스크탑, 본체, PC → "desktop"
                 - 노트북, 랩탑 → "laptop"
                 - 스마트폰, 휴대폰, 아이폰, 갤럭시 → "smartphone"
+                - 닌텐도, 닌텐도 스위치, 스위치 OLED, 플스, PS5, PS4, XBOX, 스팀덱 → "game_console"
                 - 그 외는 null
 
                 useCase 규칙:
@@ -642,9 +647,20 @@ public class GeminiClientService {
         }
 
         List<Long> prices = extractAllPrices(message);
-        String normalized = message.replaceAll("\\s+", "");
+        String normalized = message
+                .toLowerCase()
+                .replaceAll("\\s+", "");
 
-        if (prices.size() >= 2 && containsAny(normalized, "사이", "에서", "부터")) {
+        if (prices.size() >= 2 && containsAny(
+                normalized,
+                "사이",
+                "에서",
+                "부터",
+                "~",
+                "-",
+                "–",
+                "—"
+        )) {
             return prices.get(0);
         }
 
@@ -661,13 +677,24 @@ public class GeminiClientService {
         }
 
         List<Long> prices = extractAllPrices(message);
-        String normalized = message.replaceAll("\\s+", "");
+        String normalized = message
+                .toLowerCase()
+                .replaceAll("\\s+", "");
 
         if (prices.isEmpty()) {
             return null;
         }
 
-        if (prices.size() >= 2 && containsAny(normalized, "사이", "에서", "부터")) {
+        if (prices.size() >= 2 && containsAny(
+                normalized,
+                "사이",
+                "에서",
+                "부터",
+                "~",
+                "-",
+                "–",
+                "—"
+        )) {
             return prices.get(1);
         }
 
@@ -690,6 +717,67 @@ public class GeminiClientService {
 
         java.util.ArrayList<Long> prices = new java.util.ArrayList<>();
 
+        /*
+         * 50~100만원, 50-100만원, 50 ~ 100만원 처리
+         */
+        Pattern rangeManwonPattern = Pattern.compile("(\\d{1,4})\\s*[~\\-–—]\\s*(\\d{1,4})\\s*만원");
+        Matcher rangeManwonMatcher = rangeManwonPattern.matcher(text);
+
+        while (rangeManwonMatcher.find()) {
+            long first = Long.parseLong(rangeManwonMatcher.group(1));
+            long second = Long.parseLong(rangeManwonMatcher.group(2));
+
+            if (first >= 1 && first <= 5000 && second >= 1 && second <= 5000) {
+                prices.add(first * 10_000);
+                prices.add(second * 10_000);
+            }
+        }
+
+        /*
+         * 이미 50~100만원 같은 범위를 처리했으면 중복 추출 방지
+         */
+        if (!prices.isEmpty()) {
+            return prices;
+        }
+
+        /*
+         * 50만원~100만원, 50만원 - 100만원 처리
+         */
+        Pattern fullRangeManwonPattern = Pattern.compile("(\\d{1,4})\\s*만원\\s*[~\\-–—]\\s*(\\d{1,4})\\s*만원");
+        Matcher fullRangeManwonMatcher = fullRangeManwonPattern.matcher(text);
+
+        while (fullRangeManwonMatcher.find()) {
+            long first = Long.parseLong(fullRangeManwonMatcher.group(1));
+            long second = Long.parseLong(fullRangeManwonMatcher.group(2));
+
+            if (first >= 1 && first <= 5000 && second >= 1 && second <= 5000) {
+                prices.add(first * 10_000);
+                prices.add(second * 10_000);
+            }
+        }
+
+        if (!prices.isEmpty()) {
+            return prices;
+        }
+
+        /*
+         * 500000~1000000원 처리
+         */
+        Pattern rangeWonPattern = Pattern.compile("(\\d{4,})\\s*[~\\-–—]\\s*(\\d{4,})\\s*원");
+        Matcher rangeWonMatcher = rangeWonPattern.matcher(text);
+
+        while (rangeWonMatcher.find()) {
+            prices.add(Long.parseLong(rangeWonMatcher.group(1)));
+            prices.add(Long.parseLong(rangeWonMatcher.group(2)));
+        }
+
+        if (!prices.isEmpty()) {
+            return prices;
+        }
+
+        /*
+         * 기존 단일 가격 처리: 30만원, 100만원
+         */
         Pattern manwonPattern = Pattern.compile("(\\d{1,4})\\s*만원");
         Matcher manwonMatcher = manwonPattern.matcher(text);
 
@@ -701,6 +789,9 @@ public class GeminiClientService {
             }
         }
 
+        /*
+         * 기존 단일 원 단위 처리: 300000원
+         */
         Pattern wonPattern = Pattern.compile("(\\d{4,})\\s*원");
         Matcher wonMatcher = wonPattern.matcher(text);
 
@@ -719,6 +810,33 @@ public class GeminiClientService {
         String text = ((message == null ? "" : message) + " " + (keyword == null ? "" : keyword))
                 .toLowerCase()
                 .replaceAll("\\s+", "");
+
+        /*
+         * 게임기 상품은 "본체"라는 단어가 같이 들어올 수 있다.
+         * 예: "플스5 본체 추천", "닌텐도 스위치 본체"
+         * 따라서 desktop 판단보다 먼저 game_console을 판단해야 한다.
+         */
+        if (containsAny(text,
+                "닌텐도",
+                "닌텐도스위치",
+                "스위치",
+                "스위치oled",
+                "nintendoswitch",
+                "switcholed",
+                "플스",
+                "플스5",
+                "플스4",
+                "플레이스테이션",
+                "플레이스테이션5",
+                "플레이스테이션4",
+                "ps5",
+                "ps4",
+                "xbox",
+                "엑스박스",
+                "스팀덱",
+                "steamdeck")) {
+            return "game_console";
+        }
 
         if (containsAny(text, "노트북", "랩탑")) {
             return "laptop";
@@ -743,7 +861,7 @@ public class GeminiClientService {
         String normalized = message.toLowerCase().replaceAll("\\s+", "");
 
         if (containsAny(normalized,
-                "롤", "배그", "배틀그라운드",
+                "롤", "배그", "배틀그라운드","메이플스토리",
                 "에이펙스", "에이팩스",
                 "사이버펑크",
                 "게임", "게이밍")) {
@@ -812,8 +930,11 @@ public class GeminiClientService {
 
         if (containsAny(normalizedKeyword,
                 "아이폰", "갤럭시", "에어팟", "맥북", "아이패드",
-                "애플워치", "닌텐도", "플스", "노트북", "모니터",
-                "키보드", "마우스", "카메라", "컴퓨터", "데스크탑", "본체", "pc")) {
+                "애플워치",
+                "닌텐도", "스위치", "닌텐도스위치",
+                "플스", "ps5", "ps4", "스팀덱", "xbox", "엑스박스",
+                "노트북", "모니터", "키보드", "마우스", "카메라",
+                "컴퓨터", "데스크탑", "본체", "pc")) {
             return true;
         }
 
@@ -975,6 +1096,91 @@ public class GeminiClientService {
                 .replaceAll("\\s+", " ")
                 .trim();
 
+        String compact = normalized.replaceAll("\\s+", "");
+
+        /*
+         * 게임명 + 컴퓨터 요청은 상품명을 게임기로 오인식하지 않도록 먼저 처리한다.
+         * 예: "메이플스토리 가능한 컴퓨터 추천" 안에 "플스"가 포함되어도 keyword는 "컴퓨터"여야 한다.
+         */
+        boolean hasComputerWord = containsAny(
+                compact,
+                "컴퓨터",
+                "데스크탑",
+                "본체",
+                "pc"
+        );
+
+        boolean hasGameWord = containsAny(
+                compact,
+                "롤",
+                "리그오브레전드",
+                "lol",
+                "메이플",
+                "메이플스토리",
+                "피파",
+                "서든",
+                "스타크래프트",
+                "배그",
+                "배틀그라운드",
+                "pubg",
+                "에이펙스",
+                "에이팩스",
+                "에이펙스레전드",
+                "에이팩스레전드",
+                "apex",
+                "오버워치",
+                "로스트아크",
+                "로아",
+                "발로란트",
+                "사이버펑크",
+                "엘든링",
+                "gta",
+                "디아블로",
+                "스타필드"
+        );
+
+        if (hasComputerWord && hasGameWord) {
+            return "컴퓨터";
+        }
+
+        /*
+         * 게임기 상품명은 일반 상품 키워드보다 먼저 정확히 잡는다.
+         */
+        if (containsAny(compact,
+                "닌텐도스위치oled",
+                "스위치oled",
+                "nintendoswitcholed",
+                "switcholed")) {
+            return "닌텐도 스위치 OLED";
+        }
+
+        if (containsAny(compact,
+                "닌텐도스위치",
+                "닌텐도switch",
+                "nintendoswitch")) {
+            return "닌텐도 스위치";
+        }
+
+        if (containsAny(compact, "닌텐도")) {
+            return "닌텐도";
+        }
+
+        if (containsAny(compact, "플스5", "ps5", "플레이스테이션5")) {
+            return "플스5";
+        }
+
+        if (containsAny(compact, "플스4", "ps4", "플레이스테이션4")) {
+            return "플스4";
+        }
+
+        if (containsAny(compact, "스팀덱", "steamdeck")) {
+            return "스팀덱";
+        }
+
+        if (containsAny(compact, "xbox", "엑스박스")) {
+            return "xbox";
+        }
+
         Pattern iphonePattern = Pattern.compile(
                 "(아이폰)\\s*(\\d{1,2})?\\s*(프로맥스|프로\\s*맥스|프로|max|미니|mini|plus|플러스)?\\s*(?!만원|원)"
         );
@@ -1079,9 +1285,11 @@ public class GeminiClientService {
             return "애플워치";
         }
 
+        /*
+         * 여기서는 "닌텐도", "플스"를 빼야 한다.
+         * 그렇지 않으면 "메이플스토리" 안의 "플스"를 상품명으로 잘못 잡을 수 있다.
+         */
         String[] productWords = {
-                "닌텐도",
-                "플스",
                 "노트북",
                 "모니터",
                 "키보드",
@@ -1273,6 +1481,7 @@ public class GeminiClientService {
                 "게임",
                 "게이밍",
                 "롤",
+                "메이플",
                 "배그",
                 "배틀그라운드",
                 "에이펙스",
@@ -1316,7 +1525,8 @@ public class GeminiClientService {
                         || "laptop".equalsIgnoreCase(productType)
                         || "tablet".equalsIgnoreCase(productType)
                         || "earphone".equalsIgnoreCase(productType)
-                        || "watch".equalsIgnoreCase(productType);
+                        || "watch".equalsIgnoreCase(productType)
+                        || "game_console".equalsIgnoreCase(productType);
 
         return hasSimpleRequestWord && isKnownProductSearch;
     }

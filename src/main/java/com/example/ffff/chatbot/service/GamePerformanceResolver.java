@@ -98,11 +98,9 @@ public class GamePerformanceResolver {
                 "4k",
                 "레이트레이싱",
                 "raytracing",
-                "rt",
                 "오버드라이브",
                 "overdrive",
-                "풀옵션",
-                "풀옵",
+                "165hz",
                 "최상옵",
                 "극상옵")) {
             return "EXTREME";
@@ -111,7 +109,6 @@ public class GamePerformanceResolver {
         if (containsAny(text,
                 "qhd",
                 "144hz",
-                "고프레임",
                 "높은프레임",
                 "울트라",
                 "울트라옵션",
