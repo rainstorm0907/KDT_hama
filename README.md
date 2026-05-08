@@ -1,6 +1,6 @@
 readme
 =======
-- 조이름 : 집에가고싶조
+- 조이름 : 사육사조
 - git : https://github.com/shortKDT
 - notion : https://suave-kip-fd7.notion.site/KDT-350c2695cef080ec881ad5a86bdd8da8
 
