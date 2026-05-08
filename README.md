@@ -78,6 +78,7 @@ readme
   - GIT URL: https://github.com/rlekdm
 - **이준호**
   - 역할
+      - 프로젝트에 참고할 레퍼런스 조사 
       - 백엔드
         - 챗봇 기능 구현(google gemini api 활용)
         - 회원가입 및 로그인 기능 구현
