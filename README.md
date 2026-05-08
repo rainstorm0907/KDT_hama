@@ -79,4 +79,6 @@ readme
 - **이준호**
   - 역할
       - 백엔드
+        - 챗봇 기능 구현(google gemini api 활용)
+        - 회원가입 및 로그인 기능 구현
   - GIT URL: https://github.com/dlwnsgh1130
