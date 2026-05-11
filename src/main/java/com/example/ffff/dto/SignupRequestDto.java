@@ -6,8 +6,18 @@ import lombok.Setter;
 @Getter
 @Setter
 public class SignupRequestDto {
+
+    private String name;
+    private String nickname;
     private String email;
     private String password;
-    private String passwordConfirm; // 비밀번호 확인 필드 추가
-    private String nickname;
+    private String passwordConfirm;
+
+    public String getNickname() {
+        if (nickname != null && !nickname.isBlank()) {
+            return nickname;
+        }
+
+        return name;
+    }
 }

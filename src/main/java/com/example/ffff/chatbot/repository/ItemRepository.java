@@ -941,6 +941,32 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             @Param("userId") Long userId,
             @Param("limit") int limit
     );
+    List<Item> findTop20ByIsDeletedAndTradeStatusAndIsAccessoryOrderByItemIdDesc(
+            String isDeleted,
+            String tradeStatus,
+            String isAccessory
+    );
+    List<Item> findByCategoryNameAndIsDeletedAndTradeStatusAndIsAccessoryOrderByItemIdDesc(
+            String categoryName,
+            String isDeleted,
+            String tradeStatus,
+            String isAccessory
+    );
+
+    List<Item> findByTitleContainingAndIsDeletedAndTradeStatusAndIsAccessoryOrderByItemIdDesc(
+            String keyword,
+            String isDeleted,
+            String tradeStatus,
+            String isAccessory
+    );
+
+    long countByIsDeletedAndTradeStatusAndIsAccessory(
+            String isDeleted,
+            String tradeStatus,
+            String isAccessory
+    );
+
+
 
     long countByIsDeleted(String isDeleted);
 }

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>로그인</title>
+    <style>
+        .container { width: 300px; margin: 50px auto; }
+        .error { color: red; margin-bottom: 10px; }
+        .success { color: blue; margin-bottom: 10px; }
+        input { width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>로그인</h2>
+
+    <div th:if="${loginError}" class="error">
+        이메일 또는 비밀번호가 올바르지 않습니다.
+    </div>
+
+    <div th:if="${signupSuccess}" class="success">
+        회원가입이 완료되었습니다!
+    </div>
+
+    <form th:action="@{/login}" method="post">
+        <input type="email" name="email" placeholder="이메일" required>
+        <input type="password" name="password" placeholder="비밀번호" required>
+        <button type="submit">로그인</button>
+    </form>
+    <p style="text-align: center;">
+        <a th:href="@{/signup}">회원가입 하러가기</a>
+    </p>
+</div>
+</body>
+</html>

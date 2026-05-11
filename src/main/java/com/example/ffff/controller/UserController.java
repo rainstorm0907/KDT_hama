@@ -3,15 +3,18 @@ package com.example.ffff.controller;
 import com.example.ffff.dto.SignupRequestDto;
 import com.example.ffff.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
-@Controller
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173")
+@RequestMapping("/api")
 public class UserController {
 
     private final UserService userService;
@@ -37,32 +40,32 @@ public class UserController {
     }
 
     @PostMapping("/signup")
-    public String signup(@ModelAttribute("signupRequest") SignupRequestDto req, Model model) {
+    // 2. @ModelAttribute 대신 @RequestBody 사용 (JSON 데이터를 받기 위함)
+    // 3. String 대신 ResponseEntity<?> 반환 (상태 코드와 데이터를 함께 보내기 위함)
+    public ResponseEntity<?> signup(@RequestBody SignupRequestDto req) {
 
-        // 1. 비밀번호 일치 확인 (반드시 return이 있어야 아래 코드가 실행 안 됨)
+        // 결과 데이터를 담을 Map (JSON으로 변환됨)
+        Map<String, String> response = new HashMap<>();
+
+        // 1. 비밀번호 일치 확인
         if (!req.getPassword().equals(req.getPasswordConfirm())) {
-            model.addAttribute("errorMessage", "비밀번호가 일치하지 않습니다.");
-            // 입력했던 데이터를 다시 모델에 담아 화면에 유지 (email, nickname 등)
-            model.addAttribute("signupRequest", req);
-            return "signup"; // ◀ 여기서 바로 회원가입 페이지로 다시 돌아가야 함!
+            response.put("message", "비밀번호가 일치하지 않습니다.");
+            return ResponseEntity.badRequest().body(response); // 400 에러와 메시지 전송
         }
 
         try {
-            // 2. 서비스 호출 (중복 이메일 체크 등)
+            // 2. 서비스 호출
             userService.signup(req);
-            return "redirect:/login?success"; // 성공 시에만 로그인 페이지로
+            response.put("message", "회원가입에 성공했습니다.");
+            return ResponseEntity.ok(response); // 200 성공과 메시지 전송
 
         } catch (IllegalArgumentException e) {
-            // 중복 이메일 예외 발생 시
-            model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("signupRequest", req);
-            return "signup";
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
 
         } catch (Exception e) {
-            // 기타 알 수 없는 에러
-            model.addAttribute("errorMessage", "회원가입 중 오류가 발생했습니다.");
-            model.addAttribute("signupRequest", req);
-            return "signup";
+            response.put("message", "회원가입 중 오류가 발생했습니다.");
+            return ResponseEntity.internalServerError().body(response);
         }
     }
 }
