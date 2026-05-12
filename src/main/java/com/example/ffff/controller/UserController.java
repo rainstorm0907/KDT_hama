@@ -4,6 +4,7 @@ import com.example.ffff.dto.SignupRequestDto;
 import com.example.ffff.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -67,5 +68,19 @@ public class UserController {
             response.put("message", "회원가입 중 오류가 발생했습니다.");
             return ResponseEntity.internalServerError().body(response);
         }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> me(Authentication authentication) {
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getName())) {
+            return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "email", authentication.getName(),
+                "authenticated", true
+        ));
     }
 }

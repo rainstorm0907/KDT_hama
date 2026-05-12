@@ -21,12 +21,29 @@ public class ChatbotService {
     private final RecommendationService recommendationService;
     private final ChatHistoryRepository chatHistoryRepository;
     private final SearchLogService searchLogService;
+    private final PriceAdviceService priceAdviceService;
 
     @Transactional
     public ChatMessageResponse handleMessage(Long userId, ChatMessageRequest request) {
         String userMessage = request.getMessage().trim();
 
         var faqAnswer = faqService.findAnswer(userMessage);
+
+        if (isPriceAdviceQuestion(userMessage)) {
+            String answer = priceAdviceService.makePriceAdvice(request.getItemId());
+
+            logUserMessage(userMessage);
+            logBotAnswer(answer);
+            saveHistory(userId, userMessage, answer, "PRICE_ADVICE", "DB_PRICE_ADVICE");
+
+            return ChatMessageResponse.builder()
+                    .answer(answer)
+                    .intent("PRICE_ADVICE")
+                    .responseType("DB_PRICE_ADVICE")
+                    .keyword("")
+                    .items(List.of())
+                    .build();
+        }
 
         if (faqAnswer.isPresent()) {
             String answer = faqAnswer.get();
@@ -509,5 +526,23 @@ public class ChatbotService {
         }
 
         return keyword.trim();
+    }
+    private boolean isPriceAdviceQuestion(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+
+        String normalized = message.replaceAll("\\s+", "");
+
+        return normalized.contains("구매해도")
+                || normalized.contains("사도돼")
+                || normalized.contains("사도되")
+                || normalized.contains("살만해")
+                || normalized.contains("괜찮은가격")
+                || normalized.contains("비싼가")
+                || normalized.contains("싼가")
+                || normalized.contains("적정가")
+                || normalized.contains("살래말래")
+                || normalized.contains("가격괜찮");
     }
 }

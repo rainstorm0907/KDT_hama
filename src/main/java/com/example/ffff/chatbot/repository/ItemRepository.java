@@ -1,6 +1,7 @@
 package com.example.ffff.chatbot.repository;
 
 import com.example.ffff.chatbot.entity.Item;
+import com.example.ffff.chatbot.repository.projection.PriceStatsProjection;
 import com.example.ffff.chatbot.repository.projection.RecommendedItemProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -967,6 +968,76 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     );
 
 
+
+    @Query(value = """
+    SELECT
+        target.CURRENT_PRICE AS currentPrice,
+
+        AVG(
+            CASE
+                WHEN NVL(similar.TRADE_STATUS, 'SALE') = 'SALE'
+                THEN similar.CURRENT_PRICE
+            END
+        ) AS averageListingPrice,
+
+        AVG(
+            CASE
+                WHEN NVL(similar.TRADE_STATUS, 'SALE') IN ('SOLD', '판매완료', '거래완료')
+                THEN similar.CURRENT_PRICE
+            END
+        ) AS averageSoldPrice,
+
+        SUM(
+            CASE
+                WHEN NVL(similar.TRADE_STATUS, 'SALE') = 'SALE'
+                THEN 1
+                ELSE 0
+            END
+        ) AS listingCount,
+
+        SUM(
+            CASE
+                WHEN NVL(similar.TRADE_STATUS, 'SALE') IN ('SOLD', '판매완료', '거래완료')
+                THEN 1
+                ELSE 0
+            END
+        ) AS soldCount
+
+    FROM ITEMS target
+    JOIN ITEMS similar
+      ON NVL(similar.IS_DELETED, 'N') = 'N'
+     AND similar.CURRENT_PRICE IS NOT NULL
+     AND similar.CURRENT_PRICE > 0
+     AND similar.ITEM_ID <> target.ITEM_ID
+     AND (
+            (
+                target.MODEL_NAME IS NOT NULL
+                AND similar.MODEL_NAME IS NOT NULL
+                AND LOWER(similar.MODEL_NAME) = LOWER(target.MODEL_NAME)
+            )
+            OR
+            (
+                target.BRAND IS NOT NULL
+                AND similar.BRAND IS NOT NULL
+                AND LOWER(similar.BRAND) = LOWER(target.BRAND)
+                AND target.PRODUCT_TYPE IS NOT NULL
+                AND similar.PRODUCT_TYPE IS NOT NULL
+                AND LOWER(similar.PRODUCT_TYPE) = LOWER(target.PRODUCT_TYPE)
+            )
+            OR
+            (
+                target.CATEGORY_NAME IS NOT NULL
+                AND similar.CATEGORY_NAME IS NOT NULL
+                AND LOWER(similar.CATEGORY_NAME) = LOWER(target.CATEGORY_NAME)
+                AND target.PRODUCT_TYPE IS NOT NULL
+                AND similar.PRODUCT_TYPE IS NOT NULL
+                AND LOWER(similar.PRODUCT_TYPE) = LOWER(target.PRODUCT_TYPE)
+            )
+         )
+    WHERE target.ITEM_ID = :itemId
+    GROUP BY target.CURRENT_PRICE
+    """, nativeQuery = true)
+    PriceStatsProjection findPriceStatsByItemId(@Param("itemId") Long itemId);
 
     long countByIsDeleted(String isDeleted);
 }

@@ -13,32 +13,33 @@ import java.time.LocalDateTime;
 @Table(name = "USERS")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-// 1. 사용할 시퀀스 생성기를 정의합니다.
 @SequenceGenerator(
         name = "USER_SEQ_GENERATOR",
-        sequenceName = "USER_SEQ", // 실제 오라클 DB에 생성될 시퀀스 이름
+        sequenceName = "USER_SEQ",
         initialValue = 1,
         allocationSize = 1
 )
 public class User {
 
     @Id
-    // 2. 전략을 SEQUENCE로 변경하고 위에서 만든 생성기를 연결합니다.
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "USER_SEQ_GENERATOR")
+    @Column(name = "USER_ID")
     private Long userId;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "EMAIL", unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "PASSWORD", nullable = false)
     private String password;
 
-    @Column(nullable = false)
+    @Column(name = "NICKNAME", nullable = false)
     private String nickname;
 
+    @Column(name = "ACCOUNT_STATUS")
     private String accountStatus = "ACTIVE";
 
     @CreationTimestamp
+    @Column(name = "CREATED_AT")
     private LocalDateTime createdAt;
 
     @Builder
@@ -46,5 +47,14 @@ public class User {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
+        this.accountStatus = "ACTIVE";
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
     }
 }

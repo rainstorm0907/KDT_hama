@@ -4,6 +4,7 @@ import com.example.ffff.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -40,22 +41,31 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
 
                 .authorizeHttpRequests(auth -> auth
-                        // 누구나 접근 가능
                         .requestMatchers("/", "/login", "/signup", "/error").permitAll()
-
-                        // 정적 리소스
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
 
-                        // 프론트에서 로그인 없이 접근 가능한 API
                         .requestMatchers("/api/products/**").permitAll()
                         .requestMatchers("/api/signup").permitAll()
-                        .requestMatchers("/api/gemini/test").permitAll()
 
-                        // 챗봇 API는 로그인 필요
-                        .requestMatchers("/api/chatbot/message").authenticated()
+                        .requestMatchers("/api/me").authenticated()
+                        .requestMatchers("/api/mypage/**").authenticated()
+                        .requestMatchers("/api/chatbot/**").authenticated()
+                        .requestMatchers("/api/gemini/test").authenticated()
 
-                        // 그 외 요청은 로그인 필요
                         .anyRequest().authenticated()
+                )
+
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            if (request.getRequestURI().startsWith("/api/")) {
+                                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                                response.setContentType("application/json;charset=UTF-8");
+                                response.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");
+                                return;
+                            }
+
+                            response.sendRedirect("/login");
+                        })
                 )
 
                 .formLogin(form -> form
@@ -63,13 +73,26 @@ public class SecurityConfig {
                         .loginProcessingUrl("/login")
                         .usernameParameter("email")
                         .passwordParameter("password")
-                        .defaultSuccessUrl("/", true)
+                        .successHandler((request, response, authentication) -> {
+                            response.setStatus(200);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"message\":\"로그인 성공\"}");
+                        })
+                        .failureHandler((request, response, exception) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"message\":\"이메일 또는 비밀번호가 올바르지 않습니다.\"}");
+                        })
                         .permitAll()
                 )
 
                 .logout(logout -> logout
                         .logoutUrl("/logout")
-                        .logoutSuccessUrl("/")
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(200);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"message\":\"로그아웃 성공\"}");
+                        })
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                         .permitAll()
