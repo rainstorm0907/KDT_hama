@@ -5,7 +5,11 @@ import com.example.ffff.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -37,12 +41,46 @@ public class ProductController {
     }
 
     // 상품 검색 API
-    // GET /api/products/search?keyword=노트북
+    // 프론트 요청 예시:
+    // GET /api/products/search?q=아이폰&platforms=번개장터,중고나라&sort=low-price&page=1&limit=20
     @GetMapping("/search")
-    public List<ProductResponseDto> searchProducts(
-            @RequestParam String keyword
+    public Map<String, Object> searchProducts(
+            @RequestParam(name = "q", required = false) String q,
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(required = false, defaultValue = "") String platforms,
+            @RequestParam(required = false, defaultValue = "low-price") String sort,
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "20") int limit
     ) {
-        return productService.searchProducts(keyword);
+        String searchKeyword = resolveSearchKeyword(q, keyword);
+
+        List<ProductResponseDto> searchedProducts =
+                productService.searchProducts(searchKeyword);
+
+        List<ProductResponseDto> filteredProducts =
+                filterByPlatforms(searchedProducts, platforms);
+
+        List<ProductResponseDto> sortedProducts =
+                sortProducts(filteredProducts, sort);
+
+        int total = sortedProducts.size();
+
+        int safePage = Math.max(page, 1);
+        int safeLimit = Math.max(limit, 1);
+
+        int fromIndex = Math.min((safePage - 1) * safeLimit, total);
+        int toIndex = Math.min(fromIndex + safeLimit, total);
+
+        List<ProductResponseDto> pagedItems = sortedProducts.subList(fromIndex, toIndex);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("items", pagedItems);
+        response.put("total", total);
+        response.put("page", safePage);
+        response.put("limit", safeLimit);
+        response.put("summary", buildSummary(filteredProducts));
+
+        return response;
     }
 
     // 상품 상세 API
@@ -52,5 +90,93 @@ public class ProductController {
             @PathVariable Long id
     ) {
         return productService.getProductDetail(id);
+    }
+
+    private String resolveSearchKeyword(String q, String keyword) {
+        if (q != null && !q.isBlank()) {
+            return q.trim();
+        }
+
+        if (keyword != null && !keyword.isBlank()) {
+            return keyword.trim();
+        }
+
+        return "";
+    }
+
+    private List<ProductResponseDto> filterByPlatforms(
+            List<ProductResponseDto> products,
+            String platforms
+    ) {
+        if (platforms == null || platforms.isBlank()) {
+            return products;
+        }
+
+        List<String> platformList = List.of(platforms.split(","))
+                .stream()
+                .map(String::trim)
+                .filter(platform -> !platform.isBlank())
+                .toList();
+
+        if (platformList.isEmpty()) {
+            return products;
+        }
+
+        return products.stream()
+                .filter(product -> platformList.contains(product.getPlatform()))
+                .toList();
+    }
+
+    private List<ProductResponseDto> sortProducts(
+            List<ProductResponseDto> products,
+            String sort
+    ) {
+        if ("recent".equals(sort)) {
+            return products.stream()
+                    .sorted((a, b) -> b.getId().compareTo(a.getId()))
+                    .toList();
+        }
+
+        if ("low-price".equals(sort)) {
+            return products.stream()
+                    .sorted((a, b) -> Long.compare(a.getPrice(), b.getPrice()))
+                    .toList();
+        }
+
+        return products;
+    }
+
+    private Map<String, Object> buildSummary(List<ProductResponseDto> products) {
+        Map<String, Object> summary = new HashMap<>();
+
+        if (products.isEmpty()) {
+            summary.put("lowestPrice", 0);
+            summary.put("averagePrice", 0);
+            summary.put("updatedAt", nowText());
+            return summary;
+        }
+
+        long lowestPrice = products.stream()
+                .mapToLong(ProductResponseDto::getPrice)
+                .min()
+                .orElse(0);
+
+        long averagePrice = Math.round(
+                products.stream()
+                        .mapToLong(ProductResponseDto::getPrice)
+                        .average()
+                        .orElse(0)
+        );
+
+        summary.put("lowestPrice", lowestPrice);
+        summary.put("averagePrice", averagePrice);
+        summary.put("updatedAt", nowText());
+
+        return summary;
+    }
+
+    private String nowText() {
+        return LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"));
     }
 }

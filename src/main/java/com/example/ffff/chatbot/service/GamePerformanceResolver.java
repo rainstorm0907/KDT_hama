@@ -60,6 +60,14 @@ public class GamePerformanceResolver {
             return "스타필드";
         }
 
+        if (containsAny(text, "검은신화", "검은신화오공", "blackmyth", "wukong")) {
+            return "검은신화: 오공";
+        }
+
+        if (containsAny(text, "러스트", "러스크", "rust")) {
+            return "러스트";
+        }
+
         if (containsAny(text, "메이플", "메이플스토리", "maplestory")) {
             return "메이플스토리";
         }
@@ -101,6 +109,10 @@ public class GamePerformanceResolver {
                 "오버드라이브",
                 "overdrive",
                 "165hz",
+                "풀옵",
+                "풀옵션",
+                "울트라",
+                "울트라옵션",
                 "최상옵",
                 "극상옵")) {
             return "EXTREME";
@@ -110,8 +122,7 @@ public class GamePerformanceResolver {
                 "qhd",
                 "144hz",
                 "높은프레임",
-                "울트라",
-                "울트라옵션",
+                "고프레임",
                 "쾌적",
                 "상옵",
                 "고옵",
@@ -121,7 +132,7 @@ public class GamePerformanceResolver {
         }
 
         /*
-         * 공식 권장 사양 기준.
+         * 고사양 게임.
          */
         if (containsAny(text,
                 "사이버펑크",
@@ -138,6 +149,10 @@ public class GamePerformanceResolver {
                 "reddead",
                 "스타필드",
                 "starfield",
+                "검은신화",
+                "검은신화오공",
+                "blackmyth",
+                "wukong",
                 "최신aaa",
                 "aaa게임",
                 "최신게임",
@@ -145,6 +160,9 @@ public class GamePerformanceResolver {
             return "HIGH";
         }
 
+        /*
+         * 중간 사양 게임.
+         */
         if (containsAny(text,
                 "배그",
                 "배틀그라운드",
@@ -159,10 +177,16 @@ public class GamePerformanceResolver {
                 "overwatch",
                 "로스트아크",
                 "로아",
-                "lostark")) {
+                "lostark",
+                "러스트",
+                "러스크",
+                "rust")) {
             return "MID";
         }
 
+        /*
+         * 낮은 사양 게임.
+         */
         if (containsAny(text,
                 "롤",
                 "리그오브레전드",
@@ -183,6 +207,13 @@ public class GamePerformanceResolver {
             return "LOW";
         }
 
+        /*
+         * 등록되지 않은 스팀/최신 게임은 일반 게임보다 높게 본다.
+         */
+        if (containsAny(text, "스팀게임", "steam게임", "최신게임", "aaa게임")) {
+            return "HIGH";
+        }
+
         if (containsAny(text, "게임", "게이밍")) {
             return "MID";
         }
@@ -197,7 +228,6 @@ public class GamePerformanceResolver {
         /*
          * EXTREME:
          * 4K / RT / 풀옵 후보.
-         * Cyberpunk 2077 RT Overdrive 공식 기준 RTX 4080급.
          */
         if (containsAny(gpu,
                 "rtx4090",
@@ -211,9 +241,6 @@ public class GamePerformanceResolver {
         /*
          * HIGH:
          * 고사양 게임 공식 권장 사양 이상.
-         * Cyberpunk 2077 1080p High: RTX 2060 Super / RX 5700 XT급.
-         * Cyberpunk 2077 4K Ultra: RTX 3080급.
-         * 따라서 RTX 2060super 이상 RTX 4070 계열까지는 HIGH로 둔다.
          */
         if (containsAny(gpu,
                 "rtx4070ti",
@@ -250,8 +277,7 @@ public class GamePerformanceResolver {
 
         /*
          * MID:
-         * PUBG 공식 권장 GTX 1060/RX580,
-         * Apex 공식 권장 GTX970/R9 290급.
+         * PUBG, Apex 권장 사양 근처.
          */
         if (containsAny(gpu,
                 "rtx2060",

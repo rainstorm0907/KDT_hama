@@ -34,7 +34,7 @@ public class GeminiClientService {
     }
 
     public ChatAnalysisResult analyzeMessage(String message) {
-        ChatAnalysisResult quickResult = fallbackAnalyze(message);
+        ChatAnalysisResult quickResult = normalizeGamingFallback(message, fallbackAnalyze(message));
 
         if (isClearDirectSearch(message, quickResult)
                 || isSimpleDirectProductSearch(message, quickResult)) {
@@ -56,15 +56,15 @@ public class GeminiClientService {
 
         if (!needGemini) {
             System.out.println("2. 제미나이 호출 여부: N");
-            return quickResult;
+            return normalizeGamingFallback(message, quickResult);
         }
 
         System.out.println("2. 제미나이 호출 여부: Y");
 
-        ChatAnalysisResult geminiResult = analyzeMessageWithGemini(message);
+        ChatAnalysisResult geminiResult = normalizeGamingFallback(message, analyzeMessageWithGemini(message));
 
         if ("UNKNOWN".equals(safeIntent(geminiResult.getIntent()))) {
-            return quickResult;
+            return normalizeGamingFallback(message, quickResult);
         }
 
         if (isClearDirectSearch(message, geminiResult)
@@ -75,7 +75,7 @@ public class GeminiClientService {
             geminiResult.setPerformanceLevel(null);
         }
 
-        return geminiResult;
+        return normalizeGamingFallback(message, geminiResult);
     }
 
     public ChatAnalysisResult analyzeMessageWithGemini(String message) {
@@ -109,7 +109,12 @@ public class GeminiClientService {
                 - "에이펙스레전드 144hz 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "HIGH"
                 - "사이버펑크 가능한 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "HIGH"
                 - "사이버펑크 풀옵 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "EXTREME"
-                
+                - "검은신화 가능한 컴퓨터 추천" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "검은신화: 오공", performanceLevel: "HIGH"
+                - "검은신화 풀옵 컴퓨터 추천" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "검은신화: 오공", performanceLevel: "EXTREME"
+                - "러스트 가능한 컴퓨터 추천" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "러스트", performanceLevel: "MID"
+                - "러스크 가능한 컴퓨터 추천" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "러스트", performanceLevel: "MID"
+                - "모르는 스팀게임 가능한 컴퓨터 추천" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: null, performanceLevel: "HIGH"
+
                 - "닌텐도스위치 추천" → keyword: "닌텐도 스위치", productType: "game_console", useCase: null
                 - "스위치 OLED 추천" → keyword: "닌텐도 스위치 OLED", productType: "game_console", useCase: null
                 - "플스5 추천" → keyword: "플스5", productType: "game_console", useCase: null
@@ -117,7 +122,7 @@ public class GeminiClientService {
                 가격 규칙:
                 - "30만원 이하", "30만원 아래", "30만원까지"는 maxPrice = 300000
                 - "50만원 이상", "50만원부터"는 minPrice = 500000
-                - "50만원에서 100만원 사이", "50만원 이상 100만원 이하"는 minPrice = 500000, maxPrice = 1000000
+                - "50만원에서 100만원 사이", "50만원 이상 100만원 이하", "50~100만원"은 minPrice = 500000, maxPrice = 1000000
                 - 가격 조건이 없으면 null
 
                 productType 규칙:
@@ -128,7 +133,7 @@ public class GeminiClientService {
                 - 그 외는 null
 
                 useCase 규칙:
-                - 롤, 배그, 게임, 게이밍, 잘 돌아가는, 가능한, 플레이 → "gaming"
+                - 롤, 배그, 게임, 게이밍, 잘 돌아가는, 가능한, 플레이, 스팀게임 → "gaming"
                 - 중학생, 중학교, 초등학생, 고등학생, 학생, 입문용, 처음 쓰는, 사용할만한, 쓸만한, 자녀, 아이 → "student"
                 - 사무용, 문서작업 → "office"
                 - 코딩, 개발 → "coding"
@@ -141,8 +146,10 @@ public class GeminiClientService {
                 - 메이플, 피파, 서든, 스타크래프트, 발로란트 → performanceLevel: "LOW"
                 - 배그, 배틀그라운드 → gameName: "배그", performanceLevel: "MID"
                 - 에이펙스, 에이펙스레전드, 에이팩스, 에이팩스레전드, apex → gameName: "에이펙스레전드", performanceLevel: "MID"
-                - 오버워치, 로스트아크 → performanceLevel: "MID"
-                - 사이버펑크, 사이버펑크2077, GTA, GTA5, 엘든링, 디아블로4, 레데리, 레드데드, 스타필드, 최신 AAA 게임, 고사양 게임 → performanceLevel: "HIGH"
+                - 오버워치, 로스트아크, 러스트, 러스크, Rust → performanceLevel: "MID"
+                - 사이버펑크, 사이버펑크2077, GTA, GTA5, 엘든링, 디아블로4, 레데리, 레드데드, 스타필드, 검은신화, 검은신화 오공, Black Myth, Wukong, 최신 AAA 게임, 고사양 게임 → performanceLevel: "HIGH"
+                - 등록되지 않은 게임명이라도 "가능한 컴퓨터", "돌아가는 컴퓨터", "플레이 가능한 컴퓨터", "스팀게임" 표현이 있으면 useCase는 "gaming"이다.
+                - 등록되지 않은 게임의 요구 사양을 확신하기 어려우면 performanceLevel은 "HIGH"로 둔다.
                 - QHD, 144Hz, 높은프레임, 고프레임, 쾌적, 상옵, 고옵 → performanceLevel: "HIGH"
                 - 4K, 레이트레이싱, RT, 풀옵션, 풀옵, 울트라옵션, 울트라, 최상옵, 극상옵, 오버드라이브 → performanceLevel: "EXTREME"
 
@@ -178,7 +185,7 @@ public class GeminiClientService {
 
             applyFallbackValues(message, result);
 
-            return result;
+            return normalizeGamingFallback(message, result);
 
         } catch (Exception e) {
             ChatAnalysisResult errorResult = new ChatAnalysisResult();
@@ -193,7 +200,7 @@ public class GeminiClientService {
             errorResult.setExcludeAccessory(true);
             errorResult.setTradeStatus("SALE");
 
-            return errorResult;
+            return normalizeGamingFallback(message, errorResult);
         }
     }
 
@@ -240,10 +247,20 @@ public class GeminiClientService {
                 "레데리",
                 "레드데드",
                 "스타필드",
+                "검은신화",
+                "검은신화오공",
+                "blackmyth",
+                "wukong",
+                "러스트",
+                "러스크",
+                "rust",
+                "스팀게임",
+                "steam게임",
                 "앨런웨이크",
                 "게임",
                 "게이밍",
                 "가능",
+                "가능한",
                 "잘돌아",
                 "돌아가는",
                 "플레이",
@@ -546,7 +563,7 @@ public class GeminiClientService {
             result.setPerformanceLevel(gamePerformanceResolver.resolveByMessage(message));
             result.setExcludeAccessory(true);
             result.setTradeStatus("SALE");
-            return result;
+            return normalizeGamingFallback(message, result);
         }
 
         if (containsAny(normalized, "시세", "가격비교", "가격대", "얼마", "최저가")) {
@@ -560,14 +577,14 @@ public class GeminiClientService {
             result.setPerformanceLevel(gamePerformanceResolver.resolveByMessage(message));
             result.setExcludeAccessory(true);
             result.setTradeStatus("SALE");
-            return result;
+            return normalizeGamingFallback(message, result);
         }
 
         result.setIntent("UNKNOWN");
         result.setKeyword("");
         result.setMinPrice(null);
         result.setMaxPrice(null);
-        return result;
+        return normalizeGamingFallback(message, result);
     }
 
     private void applyFallbackValues(String message, ChatAnalysisResult result) {
@@ -639,6 +656,8 @@ public class GeminiClientService {
         if (result.getTradeStatus() == null || result.getTradeStatus().isBlank()) {
             result.setTradeStatus("SALE");
         }
+
+        normalizeGamingFallback(message, result);
     }
 
     private Long extractMinPrice(String message) {
@@ -717,9 +736,6 @@ public class GeminiClientService {
 
         java.util.ArrayList<Long> prices = new java.util.ArrayList<>();
 
-        /*
-         * 50~100만원, 50-100만원, 50 ~ 100만원 처리
-         */
         Pattern rangeManwonPattern = Pattern.compile("(\\d{1,4})\\s*[~\\-–—]\\s*(\\d{1,4})\\s*만원");
         Matcher rangeManwonMatcher = rangeManwonPattern.matcher(text);
 
@@ -733,16 +749,10 @@ public class GeminiClientService {
             }
         }
 
-        /*
-         * 이미 50~100만원 같은 범위를 처리했으면 중복 추출 방지
-         */
         if (!prices.isEmpty()) {
             return prices;
         }
 
-        /*
-         * 50만원~100만원, 50만원 - 100만원 처리
-         */
         Pattern fullRangeManwonPattern = Pattern.compile("(\\d{1,4})\\s*만원\\s*[~\\-–—]\\s*(\\d{1,4})\\s*만원");
         Matcher fullRangeManwonMatcher = fullRangeManwonPattern.matcher(text);
 
@@ -760,9 +770,6 @@ public class GeminiClientService {
             return prices;
         }
 
-        /*
-         * 500000~1000000원 처리
-         */
         Pattern rangeWonPattern = Pattern.compile("(\\d{4,})\\s*[~\\-–—]\\s*(\\d{4,})\\s*원");
         Matcher rangeWonMatcher = rangeWonPattern.matcher(text);
 
@@ -775,9 +782,6 @@ public class GeminiClientService {
             return prices;
         }
 
-        /*
-         * 기존 단일 가격 처리: 30만원, 100만원
-         */
         Pattern manwonPattern = Pattern.compile("(\\d{1,4})\\s*만원");
         Matcher manwonMatcher = manwonPattern.matcher(text);
 
@@ -789,9 +793,6 @@ public class GeminiClientService {
             }
         }
 
-        /*
-         * 기존 단일 원 단위 처리: 300000원
-         */
         Pattern wonPattern = Pattern.compile("(\\d{4,})\\s*원");
         Matcher wonMatcher = wonPattern.matcher(text);
 
@@ -811,11 +812,6 @@ public class GeminiClientService {
                 .toLowerCase()
                 .replaceAll("\\s+", "");
 
-        /*
-         * 게임기 상품은 "본체"라는 단어가 같이 들어올 수 있다.
-         * 예: "플스5 본체 추천", "닌텐도 스위치 본체"
-         * 따라서 desktop 판단보다 먼저 game_console을 판단해야 한다.
-         */
         if (containsAny(text,
                 "닌텐도",
                 "닌텐도스위치",
@@ -861,10 +857,31 @@ public class GeminiClientService {
         String normalized = message.toLowerCase().replaceAll("\\s+", "");
 
         if (containsAny(normalized,
-                "롤", "배그", "배틀그라운드","메이플스토리",
-                "에이펙스", "에이팩스",
+                "롤",
+                "배그",
+                "배틀그라운드",
+                "메이플",
+                "메이플스토리",
+                "에이펙스",
+                "에이팩스",
                 "사이버펑크",
-                "게임", "게이밍")) {
+                "엘든링",
+                "검은신화",
+                "검은신화오공",
+                "blackmyth",
+                "wukong",
+                "러스트",
+                "러스크",
+                "rust",
+                "스팀게임",
+                "steam게임",
+                "게임",
+                "게이밍",
+                "가능",
+                "가능한",
+                "돌아가는",
+                "잘돌아",
+                "플레이")) {
             return "gaming";
         }
 
@@ -1098,10 +1115,6 @@ public class GeminiClientService {
 
         String compact = normalized.replaceAll("\\s+", "");
 
-        /*
-         * 게임명 + 컴퓨터 요청은 상품명을 게임기로 오인식하지 않도록 먼저 처리한다.
-         * 예: "메이플스토리 가능한 컴퓨터 추천" 안에 "플스"가 포함되어도 keyword는 "컴퓨터"여야 한다.
-         */
         boolean hasComputerWord = containsAny(
                 compact,
                 "컴퓨터",
@@ -1136,16 +1149,21 @@ public class GeminiClientService {
                 "엘든링",
                 "gta",
                 "디아블로",
-                "스타필드"
+                "스타필드",
+                "검은신화",
+                "검은신화오공",
+                "blackmyth",
+                "wukong",
+                "러스트",
+                "러스크",
+                "rust",
+                "스팀게임"
         );
 
         if (hasComputerWord && hasGameWord) {
             return "컴퓨터";
         }
 
-        /*
-         * 게임기 상품명은 일반 상품 키워드보다 먼저 정확히 잡는다.
-         */
         if (containsAny(compact,
                 "닌텐도스위치oled",
                 "스위치oled",
@@ -1285,10 +1303,6 @@ public class GeminiClientService {
             return "애플워치";
         }
 
-        /*
-         * 여기서는 "닌텐도", "플스"를 빼야 한다.
-         * 그렇지 않으면 "메이플스토리" 안의 "플스"를 상품명으로 잘못 잡을 수 있다.
-         */
         String[] productWords = {
                 "노트북",
                 "모니터",
@@ -1418,11 +1432,21 @@ public class GeminiClientService {
                 "게임",
                 "게이밍",
                 "롤",
+                "메이플",
                 "배그",
                 "배틀그라운드",
                 "에이펙스",
                 "에이팩스",
                 "사이버펑크",
+                "검은신화",
+                "러스트",
+                "러스크",
+                "스팀게임",
+                "가능",
+                "가능한",
+                "돌아가는",
+                "잘돌아",
+                "플레이",
                 "사무용",
                 "코딩",
                 "영상편집",
@@ -1487,6 +1511,15 @@ public class GeminiClientService {
                 "에이펙스",
                 "에이팩스",
                 "사이버펑크",
+                "검은신화",
+                "러스트",
+                "러스크",
+                "스팀게임",
+                "가능",
+                "가능한",
+                "돌아가는",
+                "잘돌아",
+                "플레이",
                 "사무용",
                 "코딩",
                 "영상편집",
@@ -1529,6 +1562,187 @@ public class GeminiClientService {
                         || "game_console".equalsIgnoreCase(productType);
 
         return hasSimpleRequestWord && isKnownProductSearch;
+    }
+
+    private ChatAnalysisResult normalizeGamingFallback(String message, ChatAnalysisResult result) {
+        if (result == null || message == null || message.isBlank()) {
+            return result;
+        }
+
+        String normalized = message
+                .toLowerCase()
+                .replaceAll("\\s+", "");
+
+        boolean asksPlayableComputer =
+                containsAny(normalized,
+                        "가능한컴퓨터",
+                        "가능컴퓨터",
+                        "돌아가는컴퓨터",
+                        "잘돌아가는컴퓨터",
+                        "플레이가능",
+                        "플레이할수있는컴퓨터",
+                        "스팀게임",
+                        "steam게임",
+                        "게임용")
+                        || (
+                        containsAny(normalized,
+                                "가능",
+                                "가능한",
+                                "돌아가",
+                                "잘돌아",
+                                "플레이")
+                                && containsAny(normalized,
+                                "컴퓨터",
+                                "데스크탑",
+                                "본체",
+                                "pc")
+                );
+
+        boolean isDesktopRequest =
+                "desktop".equalsIgnoreCase(result.getProductType())
+                        || containsAny(normalized,
+                        "컴퓨터",
+                        "데스크탑",
+                        "본체",
+                        "pc");
+
+        boolean isGameConsoleRequest =
+                "game_console".equalsIgnoreCase(result.getProductType())
+                        || containsAny(normalized,
+                        "플스",
+                        "ps5",
+                        "ps4",
+                        "닌텐도",
+                        "스위치",
+                        "xbox",
+                        "스팀덱");
+
+        if (!asksPlayableComputer || !isDesktopRequest || isGameConsoleRequest) {
+            return result;
+        }
+
+        result.setIntent("PRODUCT_RECOMMEND");
+        result.setKeyword("컴퓨터");
+        result.setProductType("desktop");
+
+        if (result.getUseCase() == null || result.getUseCase().isBlank()) {
+            result.setUseCase("gaming");
+        }
+
+        String resolvedGameName = gamePerformanceResolver.resolveGameName(message);
+
+        if ((result.getGameName() == null || result.getGameName().isBlank())
+                && resolvedGameName != null && !resolvedGameName.isBlank()) {
+            result.setGameName(resolvedGameName);
+        }
+
+        if (result.getGameName() == null || result.getGameName().isBlank()) {
+            String unknownGameName = extractUnknownGameName(message);
+
+            if (!unknownGameName.isBlank()) {
+                result.setGameName(unknownGameName);
+            }
+        }
+
+        String resolvedLevel = gamePerformanceResolver.resolveByMessage(message);
+        String currentLevel = result.getPerformanceLevel();
+
+        boolean hasKnownGame = resolvedGameName != null && !resolvedGameName.isBlank();
+
+        if (currentLevel == null || currentLevel.isBlank() || "UNKNOWN".equalsIgnoreCase(currentLevel)) {
+            if (resolvedLevel != null && !resolvedLevel.isBlank()) {
+                result.setPerformanceLevel(resolvedLevel);
+            } else {
+                result.setPerformanceLevel("HIGH");
+            }
+        }
+
+        if (!hasKnownGame
+                && "MID".equalsIgnoreCase(result.getPerformanceLevel())
+                && containsAny(normalized, "스팀게임", "steam게임", "가능", "가능한", "돌아가는", "플레이")) {
+            result.setPerformanceLevel("HIGH");
+        }
+
+        if (containsAny(normalized,
+                "4k",
+                "풀옵",
+                "풀옵션",
+                "울트라",
+                "울트라옵션",
+                "최상옵",
+                "극상옵",
+                "레이트레이싱",
+                "raytracing",
+                "오버드라이브")) {
+            result.setPerformanceLevel("EXTREME");
+        }
+
+        result.setExcludeAccessory(true);
+        result.setTradeStatus("SALE");
+
+        return result;
+    }
+
+    private String extractUnknownGameName(String message) {
+        if (message == null || message.isBlank()) {
+            return "";
+        }
+
+        String cleaned = message
+                .replaceAll("(?i)black\\s*myth", "검은신화")
+                .replaceAll("(?i)wukong", "오공")
+                .replaceAll("(?i)rust", "러스트")
+                .replace("스팀게임", "")
+                .replace("steam게임", "")
+                .replace("중에", "")
+                .replace("중에서", "")
+                .replace("가능한", "")
+                .replace("가능", "")
+                .replace("돌아가는", "")
+                .replace("잘돌아가는", "")
+                .replace("플레이", "")
+                .replace("컴퓨터", "")
+                .replace("데스크탑", "")
+                .replace("본체", "")
+                .replace("pc", "")
+                .replace("PC", "")
+                .replace("추천해줘", "")
+                .replace("추천", "")
+                .replace("보여줘", "")
+                .replace("보여", "")
+                .replace("찾아줘", "")
+                .replace("찾아", "")
+                .replace("게임", "")
+                .replace("게이밍", "")
+                .replace("상품", "")
+                .replace("제품", "")
+                .replace("매물", "")
+                .replace("풀옵션", "")
+                .replace("풀옵", "")
+                .replace("울트라옵션", "")
+                .replace("울트라", "")
+                .replace("4k", "")
+                .replace("4K", "")
+                .replace("QHD", "")
+                .replace("qhd", "")
+                .replace("144hz", "")
+                .replace("144Hz", "")
+                .replace("?", "")
+                .replace("!", "")
+                .replace(",", "")
+                .replace(".", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        if (cleaned.length() < 2) {
+            return "";
+        }
+
+        if (cleaned.length() > 20) {
+            return "";
+        }
+
+        return cleaned;
     }
 
     private boolean containsAny(String text, String... keywords) {
