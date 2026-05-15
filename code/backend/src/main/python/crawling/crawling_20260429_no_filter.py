@@ -15,11 +15,18 @@ import requests
 
 # --- 설정 및 입력 ---
 keyword_file = Path(__file__).with_name("keyword_list.csv")
+blacklist_file = Path(__file__).with_name("blacklist_keywords.csv")
 result_dir = Path(__file__).with_name("results")
 keyword_df = pd.read_csv(keyword_file, encoding="utf-8-sig")
 keyword_column = "keyword" if "keyword" in keyword_df.columns else keyword_df.columns[0]
 keywords = keyword_df[keyword_column].dropna().astype(str).str.strip()
 keywords = [keyword for keyword in keywords if keyword]
+blacklist_keywords = []
+if blacklist_file.exists():
+    blacklist_df = pd.read_csv(blacklist_file, encoding="utf-8-sig")
+    blacklist_column = "keyword" if "keyword" in blacklist_df.columns else blacklist_df.columns[0]
+    blacklist_keywords = blacklist_df[blacklist_column].dropna().astype(str).str.strip()
+    blacklist_keywords = [keyword for keyword in blacklist_keywords if keyword]
 
 if not keywords:
     raise ValueError(f"{keyword_file.name} 파일에 조회할 키워드가 없습니다.")
@@ -58,6 +65,11 @@ def normalize_search_text(value):
     text = re.sub(r"\bmax\b", " 맥스 ", text)
     text = re.sub(r"\bultra\b", " 울트라 ", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def contains_blacklist_keyword(title):
+    normalized_title = normalize_search_text(title)
+    return any(normalize_search_text(keyword) in normalized_title for keyword in blacklist_keywords)
 
 
 def polite_delay(delay_range):
@@ -148,11 +160,15 @@ def get_bunjang_data(keyword):
             if updated_at < limit_date:
                 return items
 
+            item_name = item.get("name")
+            if contains_blacklist_keyword(item_name):
+                continue
+
             items.append(
                 {
                     "platform": "번개장터",
                     "pid": item.get("pid"),
-                    "name": item.get("name"),
+                    "name": item_name,
                     "price": item.get("price"),
                     "status": get_bunjang_status(item.get("status")),
                     "description": "",
@@ -190,11 +206,15 @@ def get_joongna_web_data(keyword):
             if item_date and item_date < limit_date:
                 continue
 
+            item_name = item["name"]
+            if contains_blacklist_keyword(item_name):
+                continue
+
             items.append(
                 {
                     "platform": "중고나라",
                     "pid": item["pid"],
-                    "name": item["name"],
+                    "name": item_name,
                     "price": item["price"],
                     "status": item["status"],
                     "description": "",

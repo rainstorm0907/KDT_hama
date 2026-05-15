@@ -7,6 +7,9 @@
 __pycache__/
 *.py[cod]
 
+# Generated crawling/test outputs
+code/backend/src/main/python/TEST/results/
+
 # BlueJ files
 *.ctxt
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""키워드별 CSV 결과를 따로 저장하는 크롤링 스크립트입니다."""
+"""상품명 키워드 검증 필터 없이 수집량 비교용으로 실행하는 크롤링 스크립트입니다."""
 
 import json
 import random
@@ -12,11 +12,15 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+from cluster_by_platform_tokens import run_clustering
+
 
 # --- 설정 및 입력 ---
-keyword_file = Path(__file__).with_name("keyword_list.csv")
-blacklist_file = Path(__file__).with_name("blacklist_keywords.csv")
-result_dir = Path(__file__).with_name("results") / "by_keyword"
+base_dir = Path(__file__).resolve().parent
+keyword_file = base_dir / "keyword_list.csv"
+blacklist_file = base_dir / "blacklist_keywords.csv"
+result_dir = base_dir / "results"
+print(f"키워드 파일 경로: {keyword_file}")
 keyword_df = pd.read_csv(keyword_file, encoding="utf-8-sig")
 keyword_column = "keyword" if "keyword" in keyword_df.columns else keyword_df.columns[0]
 keywords = keyword_df[keyword_column].dropna().astype(str).str.strip()
@@ -39,6 +43,7 @@ BUNJANG_DELAY_RANGE = (1.0, 1.5)
 JOONGNA_DELAY_RANGE = (1.5, 2.5)
 KEYWORD_DELAY_RANGE = (2.0, 3.0)
 JOONGNA_MAX_PAGES = 10
+RUN_CLUSTERING_AFTER_CRAWL = True
 
 result_columns = [
     "platform",
@@ -57,10 +62,6 @@ headers = {
 }
 
 
-def safe_filename(value):
-    return re.sub(r'[\\/:*?"<>|]+', "_", value).strip()
-
-
 def normalize_search_text(value):
     text = str(value).lower()
     text = re.sub(r"(?<=[a-z0-9])plus\b", " 플러스", text)
@@ -74,28 +75,6 @@ def normalize_search_text(value):
 def contains_blacklist_keyword(title):
     normalized_title = normalize_search_text(title)
     return any(normalize_search_text(keyword) in normalized_title for keyword in blacklist_keywords)
-
-
-def keyword_matches_title(keyword, title):
-    normalized_title = normalize_search_text(title)
-    normalized_keyword = normalize_search_text(keyword)
-    keyword_tokens = re.findall(r"[a-z]+[0-9]+|[가-힣]+|[a-z]+|\d+", normalized_keyword)
-
-    for token in keyword_tokens:
-        if re.fullmatch(r"[a-z]+[0-9]+", token):
-            if not re.search(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])", normalized_title):
-                return False
-            continue
-
-        if re.fullmatch(r"\d+", token):
-            if not re.search(rf"(?<!\d){re.escape(token)}(?!\d)", normalized_title):
-                return False
-            continue
-
-        if token not in normalized_title:
-            return False
-
-    return True
 
 
 def polite_delay(delay_range):
@@ -190,9 +169,6 @@ def get_bunjang_data(keyword):
             if contains_blacklist_keyword(item_name):
                 continue
 
-            if not keyword_matches_title(keyword, item_name):
-                continue
-
             items.append(
                 {
                     "platform": "번개장터",
@@ -239,9 +215,6 @@ def get_joongna_web_data(keyword):
             if contains_blacklist_keyword(item_name):
                 continue
 
-            if not keyword_matches_title(keyword, item_name):
-                continue
-
             items.append(
                 {
                     "platform": "중고나라",
@@ -270,6 +243,21 @@ def merge_keywords(values):
     return ", ".join(dict.fromkeys(keywords))
 
 
+def choose_canonical_name(values):
+    keywords = [str(value).strip() for value in values if str(value).strip()]
+    if not keywords:
+        return ""
+
+    unique_values = list(dict.fromkeys(keywords))
+    return max(
+        unique_values,
+        key=lambda value: (
+            len(re.findall(r"[a-z]+[0-9]+|[가-힣]+|[a-z]+|\d+", normalize_search_text(value))),
+            len(normalize_search_text(value)),
+        ),
+    )
+
+
 def keyword_length(value):
     return len(normalize_search_text(value))
 
@@ -281,7 +269,10 @@ def deduplicate_items(df):
     dedupe_columns = ["platform", "pid"]
     keyword_summary = (
         df.groupby(dedupe_columns)["keyword"]
-        .agg(matched_keywords=merge_keywords)
+        .agg(
+            matched_keywords=merge_keywords,
+            canonical_name=choose_canonical_name,
+        )
         .reset_index()
     )
 
@@ -289,14 +280,14 @@ def deduplicate_items(df):
         df.assign(_keyword_length=df["keyword"].apply(keyword_length))
         .sort_values("_keyword_length", ascending=False, kind="mergesort")
         .drop_duplicates(subset=dedupe_columns, keep="first")
-        .drop(columns=["_keyword_length"], errors="ignore")
+        .drop(columns=["canonical_name", "_keyword_length"], errors="ignore")
     )
     return deduplicated_df.merge(keyword_summary, on=dedupe_columns, how="left")
 
 
-# --- 실행 및 키워드별 저장 ---
+# --- 실행 및 합치기 ---
 now = datetime.now().strftime("%Y%m%d_%H%M")
-result_dir.mkdir(parents=True, exist_ok=True)
+all_dfs = []
 
 print("\n조회 키워드 목록")
 for idx, keyword in enumerate(keywords, start=1):
@@ -310,12 +301,37 @@ for keyword in keywords:
     df = pd.DataFrame(bj_data + jn_data, columns=result_columns)
     df.insert(0, "keyword", keyword)
     df.insert(1, "canonical_name", keyword)
-    df = deduplicate_items(df)
+    all_dfs.append(df)
 
-    output_path = result_dir / f"통합조회_{safe_filename(keyword)}_{now}.csv"
-    df.to_csv(output_path, index=False, encoding="utf-8-sig")
-
-    print(f"✅ [{keyword}] 총 {len(df)}개 매물 저장 완료: {output_path}")
+    print(f"✅ [{keyword}] 총 {len(df)}개 매물 수집 완료!")
     print(df.head())
 
     polite_delay(KEYWORD_DELAY_RANGE)
+
+if all_dfs:
+    result_dir.mkdir(parents=True, exist_ok=True)
+    total_df = pd.concat(all_dfs, ignore_index=True)
+    total_count = len(total_df)
+    total_df = deduplicate_items(total_df)
+    output_path = result_dir / f"통합조회_전체_no_filter_{now}.csv"
+    latest_path = result_dir / "latest_crawling_no_filter.csv"
+    total_df.to_csv(output_path, index=False, encoding="utf-8-sig")
+    total_df.to_csv(latest_path, index=False, encoding="utf-8-sig")
+
+    for platform, platform_df in total_df.groupby("platform", dropna=False):
+        safe_platform = re.sub(r"[^0-9A-Za-z가-힣_-]+", "_", str(platform)).strip("_") or "unknown"
+        platform_df.to_csv(
+            result_dir / f"platform_{safe_platform}_no_filter_{now}.csv",
+            index=False,
+            encoding="utf-8-sig",
+        )
+
+    print(f"\n✅ 전체 키워드 총 {total_count}개 매물 수집, 중복 제거 후 {len(total_df)}개 저장 완료!")
+    print(f"저장 파일: {output_path}")
+    print(f"클러스터링 기본 입력 파일: {latest_path}")
+
+    if RUN_CLUSTERING_AFTER_CRAWL:
+        print("\n🔗 저장된 CSV를 읽어서 클러스터링을 실행합니다.")
+        cluster_outputs = run_clustering(input_path=output_path)
+        print(f"클러스터링 상품별 결과: {cluster_outputs['item_output_path']}")
+        print(f"클러스터링 요약 결과: {cluster_outputs['summary_output_path']}")

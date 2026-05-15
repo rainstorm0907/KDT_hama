@@ -173,7 +173,11 @@ PostgreSQL 또는 Supabase DB 접근 코드를 작성합니다.
 - `UserRepository.java`: 사용자 테이블 접근
 - `ItemRepository.java`: 상품 테이블 접근
 - `WishRepository.java`: 찜 테이블 접근
-- `SearchHistoryRepository.java`: 검색 기록 테이블 접근
+- `SearchLogRepository.java`: 기존 검색 로그 테이블 접근
+- `SearchEventRepository.java`: 검색/노출/클릭 이벤트 테이블 접근
+- `ItemSearchMatchRepository.java`: 상품-검색어 매칭 테이블 접근
+- `NotificationRepository.java`: 알림 테이블 접근
+- `ContentPageRepository.java`: 공지사항/약관/개인정보 문서 테이블 접근
 
 작성 기준:
 
@@ -207,10 +211,23 @@ DB 테이블과 매핑되는 JPA Entity 클래스를 작성합니다.
 들어갈 수 있는 파일 예시:
 
 - `User.java`: 사용자 테이블 매핑
+- `Platform.java`: 플랫폼 테이블 매핑
 - `Item.java`: 상품 테이블 매핑
-- `Wish.java`: 찜 테이블 매핑
-- `Category.java`: 카테고리 테이블 매핑
-- `SearchHistory.java`: 검색 기록 테이블 매핑
+- `PriceHistory.java`: 가격 이력 테이블 매핑
+- `Wishlist.java`: 찜 테이블 매핑
+- `SearchLog.java`: 기존 검색 로그 테이블 매핑
+- `SearchEvent.java`: 검색/노출/클릭 이벤트 테이블 매핑
+- `ItemSearchMatch.java`: 상품-검색어 매칭 테이블 매핑
+- `ItemView.java`: 최근 본 상품 테이블 매핑
+- `SearchRanking.java`: 검색 순위 집계 테이블 매핑
+- `PriceStatsDaily.java`: 일별 가격 통계 테이블 매핑
+- `UserPreference.java`: 사용자 선호 태그 테이블 매핑
+- `Banner.java`: 배너 테이블 매핑
+- `ContentPage.java`: 공지사항/약관/개인정보 문서 테이블 매핑
+- `ChatHistory.java`: 챗봇 대화 내역 테이블 매핑
+- `ChatFaq.java`: 챗봇 FAQ 테이블 매핑
+- `Notification.java`: 알림 테이블 매핑
+- `RecommendedItem.java`: 추천 상품 연결 테이블 매핑
 
 작성 기준:
 
@@ -499,7 +516,7 @@ DB 테이블 생성 SQL과 ERD 기준 정보를 정리합니다.
 
 들어갈 내용:
 
-- 11개 테이블 DDL
+- 18개 테이블 DDL
 - Primary Key, Foreign Key
 - 인덱스
 - 테이블 관계 설명
