@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import re
 import zlib
+from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
@@ -13,11 +14,17 @@ from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from hama_data_pipeline import HamaDataPipeline
+from product_matching import ProductMatchIndex
+
 
 BASE_DIR = Path(__file__).resolve().parent
 CRAWLING_DIR = BASE_DIR / "crawling"
 RESULTS_DIR = CRAWLING_DIR / "results"
 BY_KEYWORD_DIR = RESULTS_DIR / "by_keyword"
+LABELS_DIR = RESULTS_DIR / "labels"
+ARCHIVE_TEST_RESULTS_DIR = BASE_DIR / "archive" / "TEST" / "results"
+ARCHIVE_CLUSTER_DIR = ARCHIVE_TEST_RESULTS_DIR / "clusters"
 RESULT_TIMESTAMP_PATTERN = re.compile(r"_(?P<date>\d{8})_(?P<time>\d{4})\.csv$")
 DETAIL_REQUEST_TIMEOUT = 3
 DETAIL_HEADERS = {
@@ -112,9 +119,10 @@ def load_products() -> list[dict[str, object]]:
     for csv_path in result_files():
         rows.extend(read_csv_rows(csv_path))
 
+    pipeline = build_pipeline(rows)
     products_by_key: dict[str, dict[str, object]] = {}
     for row in rows:
-        product = to_product(row)
+        product = to_product(row, pipeline)
         if product is None:
             continue
 
@@ -146,7 +154,25 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(csv_file))
 
 
-def to_product(row: dict[str, str]) -> dict[str, object] | None:
+def build_pipeline(rows: list[dict[str, str]]) -> HamaDataPipeline:
+    reference_rows = [*rows, *read_match_reference_rows()]
+    return HamaDataPipeline(match_index=ProductMatchIndex.from_rows(reference_rows))
+
+
+def read_match_reference_rows() -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    reference_paths = [
+        *sorted(LABELS_DIR.glob("*.csv")),
+        ARCHIVE_CLUSTER_DIR / "latest_token_cluster_items.csv",
+        ARCHIVE_CLUSTER_DIR / "latest_token_cluster_summary.csv",
+    ]
+    for path in reference_paths:
+        if path.exists():
+            rows.extend(read_csv_rows(path))
+    return rows
+
+
+def to_product(row: dict[str, str], pipeline: HamaDataPipeline) -> dict[str, object] | None:
     platform = clean_value(row.get("platform"))
     pid = clean_value(row.get("pid"))
     name = clean_value(row.get("name"))
@@ -160,31 +186,49 @@ def to_product(row: dict[str, str]) -> dict[str, object] | None:
     date = clean_value(row.get("date"))
     link = clean_value(row.get("link"))
     product_id = zlib.crc32(f"{platform}:{pid}".encode("utf-8"))
+    normalized_product = pipeline.run_pipeline(
+        {
+            "platform": platform,
+            "pid": pid,
+            "name": name,
+            "raw_title": name,
+            "price": price,
+            "status": normalize_status(row.get("status")),
+            "description": clean_value(row.get("description")),
+            "imageUrl": image_url,
+            "images": [image_url] if image_url else [],
+            "link": link,
+            "date": date,
+            "keyword": keyword,
+            "source_keyword": keyword,
+            "priceHistory": temporary_price_history(price),
+            "category": clean_value(row.get("category")),
+            "canonical_name": clean_value(row.get("canonical_name")),
+            "matched_keywords": clean_value(row.get("matched_keywords")),
+            "cluster_id": clean_value(row.get("cluster_id")),
+            "cluster_l1_id": clean_value(row.get("cluster_l1_id")),
+            "cluster_l2_id": clean_value(row.get("cluster_l2_id")),
+            "representative_name": clean_value(row.get("representative_name")),
+            "derived_product_name": clean_value(row.get("derived_product_name")),
+            "tree_path_ids": clean_value(row.get("tree_path_ids")),
+        }
+    )
+    product = model_to_dict(normalized_product)
 
-    return {
-        "id": product_id,
-        "platform": platform,
-        "pid": pid,
-        "name": name,
-        "brand": "",
-        "price": price,
-        "status": normalize_status(row.get("status")),
-        "description": clean_value(row.get("description")),
-        "imageUrl": image_url,
-        "images": [image_url] if image_url else [],
-        "link": link,
-        "date": date,
-        "category": keyword,
-        "priceHistory": temporary_price_history(price),
-        "_searchText": " ".join(
-            [
-                name,
-                keyword,
-                clean_value(row.get("keyword")),
-                clean_value(row.get("matched_keywords")),
-            ]
-        ),
-    }
+    product["id"] = product_id
+    product["brand"] = ""
+    product["_searchText"] = " ".join(
+        [
+            name,
+            product.get("category", ""),
+            keyword,
+            clean_value(row.get("keyword")),
+            clean_value(row.get("matched_keywords")),
+            " ".join(product.get("matched_keywords", [])),
+            " ".join(product.get("graphKeywords", [])),
+        ]
+    )
+    return product
 
 
 @lru_cache(maxsize=2048)
@@ -263,6 +307,14 @@ def temporary_price_history(price: int) -> list[dict[str, int | str]]:
         }
         for label, multiplier in zip(labels, multipliers)
     ]
+
+
+def model_to_dict(model: object) -> dict[str, object]:
+    if is_dataclass(model):
+        return asdict(model)
+    if hasattr(model, "model_dump"):
+        return model.model_dump()  # type: ignore[attr-defined]
+    return model.dict()  # type: ignore[attr-defined]
 
 
 def latest_result_timestamp() -> str:
