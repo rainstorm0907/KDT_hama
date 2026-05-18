@@ -217,6 +217,11 @@ def to_product(row: dict[str, str], pipeline: HamaDataPipeline) -> dict[str, obj
 
     product["id"] = product_id
     product["brand"] = ""
+    product_matched_keywords = product.get("matched_keywords", {})
+    if isinstance(product_matched_keywords, dict):
+        matched_keyword_text = " ".join(str(value) for value in product_matched_keywords.values())
+    else:
+        matched_keyword_text = " ".join(str(value) for value in product_matched_keywords)
     product["_searchText"] = " ".join(
         [
             name,
@@ -224,7 +229,7 @@ def to_product(row: dict[str, str], pipeline: HamaDataPipeline) -> dict[str, obj
             keyword,
             clean_value(row.get("keyword")),
             clean_value(row.get("matched_keywords")),
-            " ".join(product.get("matched_keywords", [])),
+            matched_keyword_text,
             " ".join(product.get("graphKeywords", [])),
         ]
     )

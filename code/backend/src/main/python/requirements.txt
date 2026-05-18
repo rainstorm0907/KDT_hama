@@ -4,3 +4,4 @@ beautifulsoup4
 fastapi
 pydantic
 uvicorn[standard]
+pyahocorasick

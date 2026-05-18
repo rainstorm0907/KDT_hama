@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import logging
+import re
+import csv
+from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
+from pathlib import Path
+from statistics import median
 from typing import Any, Literal
 
+import ahocorasick  # type: ignore[import-not-found]
 from pydantic import BaseModel, Field
 
 from product_matching import (
@@ -19,6 +25,10 @@ from product_matching import (
 logger = logging.getLogger(__name__)
 
 ProductStatus = Literal["판매중", "예약중", "판매완료"]
+DEFAULT_CONFIG_DIR = Path(__file__).resolve().parent / "config"
+DEFAULT_PRODUCT_TOKEN_DICTIONARY_PATH = DEFAULT_CONFIG_DIR / "product_token_dictionary.csv"
+DEFAULT_CATEGORY_RULES_PATH = DEFAULT_CONFIG_DIR / "category_rules.csv"
+DEFAULT_TOKEN_EXCLUDE_LIST_PATH = DEFAULT_CONFIG_DIR / "token_exclude_list.csv"
 
 
 class PriceHistoryPoint(BaseModel):
@@ -58,7 +68,7 @@ class ProcessedItem(BaseModel):
     normalized_title: str = ""
     source_keyword: str = ""
     category_confidence: float = 0.0
-    matched_keywords: list[str] = Field(default_factory=list)
+    matched_keywords: dict[str, str] = Field(default_factory=dict)
     classification_method: str = "unclassified"
     graphKeywords: list[str] = Field(default_factory=list)
 
@@ -78,9 +88,16 @@ class HamaDataPipeline:
         keyword_catalog: Sequence[str] | None = None,
         match_index: ProductMatchIndex | None = None,
         model_classifier: CategoryModelClassifier | None = None,
+        product_token_dictionary_path: str | Path | None = None,
+        category_rules_path: str | Path | None = None,
     ) -> None:
         self.match_index = match_index or self._build_keyword_index(keyword_catalog or [])
         self.model_classifier = model_classifier
+        self.product_token_dictionary_path = Path(
+            product_token_dictionary_path or DEFAULT_PRODUCT_TOKEN_DICTIONARY_PATH
+        )
+        self.category_rules = self._load_category_rules(Path(category_rules_path or DEFAULT_CATEGORY_RULES_PATH))
+        self.product_name_automaton = self._build_product_name_automaton(self.product_token_dictionary_path)
 
     def run_pipeline(self, raw_item: Mapping[str, Any]) -> HamaProduct:
         raw_title = self._clean_text(raw_item.get("raw_title") or raw_item.get("name"))
@@ -105,9 +122,17 @@ class HamaDataPipeline:
             source_keyword=source_keyword,
             candidates=evidence_candidates,
         )
+        product_name_match = self._match_product_name(normalized_title)
+        category, confidence, method = self._assign_category_from_product_name(
+            matched_keywords=product_name_match,
+            source_keyword=source_keyword,
+            fallback_category=category,
+            fallback_confidence=confidence,
+            fallback_method=method,
+        )
         graph_keywords = self._generate_graph_keywords(
             category=category,
-            matched_keywords=matched_keywords,
+            matched_keywords=[*matched_keywords, *product_name_match.values()],
             candidates=evidence_candidates,
             source_keyword=source_keyword,
             normalized_title=normalized_title,
@@ -139,7 +164,7 @@ class HamaDataPipeline:
             normalized_title=normalized_title,
             source_keyword=source_keyword,
             category_confidence=confidence,
-            matched_keywords=matched_keywords,
+            matched_keywords=product_name_match,
             classification_method=method,
             graphKeywords=graph_keywords,
         )
@@ -169,6 +194,83 @@ class HamaDataPipeline:
 
         logger.info("[HamaDataPipeline] model classifier is not connected. title=%s", normalized_title)
         return "미분류", 0.0
+
+    def _match_product_name(self, product_name: str) -> dict[str, str]:
+        compact_title = self._compact_match_text(product_name)
+        if not compact_title:
+            return {}
+
+        best_matches: dict[str, tuple[int, int, str]] = {}
+        for end_index, (field_name, canonical_value, token_length) in self.product_name_automaton.iter(compact_title):
+            start_index = end_index - token_length + 1
+            current = best_matches.get(field_name)
+            if current is None or token_length > current[0] or (
+                token_length == current[0] and start_index < current[1]
+            ):
+                best_matches[field_name] = (token_length, start_index, canonical_value)
+
+        ordered_fields = ("brand", "model", "detail", "spec", "option")
+        return {
+            field_name: best_matches[field_name][2]
+            for field_name in ordered_fields
+            if field_name in best_matches
+        }
+
+    @classmethod
+    def _build_product_name_automaton(cls, dictionary_path: Path) -> ahocorasick.Automaton:
+        automaton = ahocorasick.Automaton()
+        for row in cls._read_enabled_csv_rows(dictionary_path):
+            field_name = cls._clean_text(row.get("field_name"))
+            canonical_value = cls._clean_text(row.get("canonical_value"))
+            if not field_name or not canonical_value:
+                continue
+
+            aliases = cls._split_csv_list(row.get("aliases"))
+            for alias in cls._unique_values([canonical_value, *aliases]):
+                normalized_alias = cls._compact_match_text(alias)
+                if normalized_alias:
+                    automaton.add_word(
+                        normalized_alias,
+                        (field_name, canonical_value, len(normalized_alias)),
+                    )
+        automaton.make_automaton()
+        return automaton
+
+    @staticmethod
+    def _compact_match_text(value: Any) -> str:
+        normalized = normalize_title(value)
+        return re.sub(r"\s+", "", normalized)
+
+    def _assign_category_from_product_name(
+        self,
+        *,
+        matched_keywords: Mapping[str, str],
+        source_keyword: str,
+        fallback_category: str,
+        fallback_confidence: float,
+        fallback_method: str,
+    ) -> tuple[str, float, str]:
+        matched_values = {self._compact_match_text(value) for value in matched_keywords.values()}
+        source_tokens = set(TitleTokenProfile.from_title(source_keyword).token_set)
+        source_values = {self._compact_match_text(token) for token in source_tokens}
+        category = self._infer_product_category(matched_values)
+
+        if category:
+            return category, max(fallback_confidence, 0.9), "product_name_trie"
+
+        category = self._infer_product_category(source_values)
+        if category:
+            return category, max(fallback_confidence, 0.75), "source_keyword_correlation"
+
+        return fallback_category, fallback_confidence, fallback_method
+
+    def _infer_product_category(self, tokens: set[str]) -> str:
+        matched_categories: set[str] = set()
+        for token in tokens:
+            matched_categories.update(self.category_rules.get(token, set()))
+        if len(matched_categories) == 1:
+            return next(iter(matched_categories))
+        return ""
 
     def _generate_graph_keywords(
         self,
@@ -218,6 +320,54 @@ class HamaDataPipeline:
         ]
         return ProductMatchIndex.from_rows(rows)
 
+    @classmethod
+    def _load_category_rules(cls, rules_path: Path) -> dict[str, set[str]]:
+        category_rules: dict[str, set[str]] = {}
+        for row in cls._read_enabled_csv_rows(rules_path):
+            category = cls._clean_text(row.get("category"))
+            tokens = cls._split_csv_list(row.get("tokens"))
+            if not category or not tokens:
+                continue
+            for token in tokens:
+                normalized_token = cls._compact_match_text(token)
+                if normalized_token:
+                    category_rules.setdefault(normalized_token, set()).add(category)
+        return category_rules
+
+    @classmethod
+    def _load_token_exclusions(cls, exclusions_path: Path) -> set[str]:
+        excluded_tokens: set[str] = set()
+        for row in cls._read_enabled_csv_rows(exclusions_path):
+            for token in cls._split_csv_list(row.get("tokens") or row.get("token")):
+                normalized_token = cls._compact_match_text(token)
+                if normalized_token:
+                    excluded_tokens.add(normalized_token)
+        return excluded_tokens
+
+    @staticmethod
+    def _read_enabled_csv_rows(path: Path) -> list[dict[str, str]]:
+        if not path.exists():
+            logger.warning("[HamaDataPipeline] config csv not found path=%s", path)
+            return []
+
+        with path.open("r", encoding="utf-8-sig", newline="") as csv_file:
+            rows: list[dict[str, str]] = []
+            for row in csv.DictReader(csv_file):
+                enabled = HamaDataPipeline._clean_text(row.get("enabled") or "1").lower()
+                if enabled in {"0", "false", "n", "no", "비활성"}:
+                    continue
+                rows.append({key: str(value or "") for key, value in row.items() if key is not None})
+            return rows
+
+    @staticmethod
+    def _split_csv_list(value: Any) -> list[str]:
+        values: list[str] = []
+        for token in re.split(r"[,/|;]", str(value or "")):
+            cleaned_token = token.strip()
+            if cleaned_token:
+                values.append(cleaned_token)
+        return values
+
     @staticmethod
     def _clean_text(value: Any) -> str:
         return str(value or "").strip()
@@ -244,10 +394,18 @@ class HamaCollectionPipeline:
         keyword_list: Sequence[str] | None = None,
         min_verify_confidence: float = 0.35,
         model_classifier: CategoryModelClassifier | None = None,
+        product_token_dictionary_path: str | Path | None = None,
+        category_rules_path: str | Path | None = None,
+        token_exclude_list_path: str | Path | None = None,
     ) -> None:
         self.keyword_list = HamaDataPipeline._unique_values(keyword_list or [])
         self.min_verify_confidence = min_verify_confidence
         self.model_classifier = model_classifier
+        self.product_token_dictionary_path = product_token_dictionary_path
+        self.category_rules_path = category_rules_path
+        self.token_exclude_tokens = HamaDataPipeline._load_token_exclusions(
+            Path(token_exclude_list_path or DEFAULT_TOKEN_EXCLUDE_LIST_PATH)
+        )
 
     def run_pipeline(self, keyword: str) -> list[ProcessedItem]:
         source_keyword = HamaDataPipeline._clean_text(keyword)
@@ -266,12 +424,11 @@ class HamaCollectionPipeline:
         item_pipeline = HamaDataPipeline(
             match_index=match_index,
             model_classifier=self.model_classifier,
+            product_token_dictionary_path=self.product_token_dictionary_path,
+            category_rules_path=self.category_rules_path,
         )
 
-        processed_items = [
-            item_pipeline.run_pipeline(self._raw_item_to_pipeline_input(item))
-            for item in [*joongna_list, *verified_items]
-        ]
+        processed_items = self._to_processed_items([*joongna_list, *verified_items], item_pipeline)
         logger.info(
             "[HamaCollectionPipeline] done keyword=%s joongna=%d bunjang_verified=%d processed=%d",
             source_keyword,
@@ -286,6 +443,16 @@ class HamaCollectionPipeline:
         for keyword in self.keyword_list:
             processed_items.extend(self.run_pipeline(keyword))
         return processed_items
+
+    def _to_processed_items(
+        self,
+        raw_items: Sequence[RawItem],
+        item_pipeline: HamaDataPipeline,
+    ) -> list[ProcessedItem]:
+        return [
+            item_pipeline.run_pipeline(self._raw_item_to_pipeline_input(item))
+            for item in raw_items
+        ]
 
     def _fetch_joongna_data(self, keyword: str) -> list[RawItem]:
         logger.info("[HamaCollectionPipeline] fetch joongna baseline keyword=%s", keyword)
@@ -310,12 +477,49 @@ class HamaCollectionPipeline:
         if not joongna_list:
             return list(bunjang_list)
 
+        reference_prices = self._valid_reference_prices(joongna_list)
+        reference_price = median(reference_prices) if reference_prices else None
+        min_price = int(reference_price * 0.35) if reference_price else None
+        max_price = int(reference_price * 2.5) if reference_price else None
+        core_tokens = self._extract_core_title_tokens(joongna_list)
+
+        logger.info(
+            "[HamaCollectionPipeline] verify baseline price=%s range=(%s,%s) core_tokens=%s",
+            reference_price,
+            min_price,
+            max_price,
+            core_tokens,
+        )
+
         reference_index = ProductMatchIndex.from_rows(
             [self._raw_item_to_match_row(item) for item in joongna_list]
         )
         verified_items: list[RawItem] = []
         for item in bunjang_list:
+            if not self._is_price_in_reference_range(item, min_price=min_price, max_price=max_price):
+                logger.info(
+                    "[HamaCollectionPipeline] drop price-outlier bunjang pid=%s price=%s range=(%s,%s)",
+                    item.pid,
+                    item.price,
+                    min_price,
+                    max_price,
+                )
+                continue
+
             profile = TitleTokenProfile.from_title(item.title)
+            if not self._has_relevant_title_tokens(
+                profile,
+                core_tokens=core_tokens,
+                excluded_tokens=self.token_exclude_tokens,
+            ):
+                logger.info(
+                    "[HamaCollectionPipeline] drop irrelevant-title bunjang pid=%s title=%s core_tokens=%s",
+                    item.pid,
+                    item.title,
+                    core_tokens,
+                )
+                continue
+
             candidates = reference_index.match(profile, platform=item.platform)
             correlation = reference_index.correlate_category(
                 candidates,
@@ -330,6 +534,69 @@ class HamaCollectionPipeline:
                 continue
             verified_items.append(item)
         return verified_items
+
+    @staticmethod
+    def _valid_reference_prices(items: Sequence[RawItem]) -> list[int]:
+        return sorted(int(item.price) for item in items if item.price and item.price > 0)
+
+    def _extract_core_title_tokens(self, items: Sequence[RawItem], *, limit: int = 8) -> set[str]:
+        token_counts: Counter[str] = Counter()
+        title_count = 0
+        for item in items:
+            profile = TitleTokenProfile.from_title(item.title)
+            if not profile.token_set:
+                continue
+            title_count += 1
+            token_counts.update(token for token in profile.token_set if self._is_signal_token(token))
+
+        if not token_counts:
+            return set()
+
+        min_frequency = 2 if title_count >= 3 else 1
+        return {
+            token
+            for token, count in token_counts.most_common(limit)
+            if count >= min_frequency
+        }
+
+    @staticmethod
+    def _is_price_in_reference_range(
+        item: RawItem,
+        *,
+        min_price: int | None,
+        max_price: int | None,
+    ) -> bool:
+        if min_price is None or max_price is None:
+            return True
+        if item.price is None or item.price <= 0:
+            return False
+        return min_price <= item.price <= max_price
+
+    @staticmethod
+    def _has_relevant_title_tokens(
+        profile: TitleTokenProfile,
+        *,
+        core_tokens: set[str],
+        excluded_tokens: set[str],
+    ) -> bool:
+        if not core_tokens:
+            return True
+
+        item_tokens = set(profile.token_set)
+        matched_core_tokens = item_tokens & core_tokens
+        excluded_match_count = len({HamaDataPipeline._compact_match_text(token) for token in item_tokens} & excluded_tokens)
+        if matched_core_tokens:
+            return excluded_match_count < 3
+        return False
+
+    def _is_signal_token(self, token: str) -> bool:
+        if len(token) < 2:
+            return False
+        if HamaDataPipeline._compact_match_text(token) in self.token_exclude_tokens:
+            return False
+        if token.isdigit():
+            return len(token) >= 3
+        return True
 
     @staticmethod
     def _raw_item_to_match_row(item: RawItem) -> dict[str, Any]:
