@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import type { PricePoint } from '../types/product';
 import { hairline } from '../styles/hairline';
@@ -45,10 +45,10 @@ const priceRangeOptions: Array<{ id: PriceRangeId; label: string; take: number |
 const chartWidth = 720;
 const chartHeight = 318;
 const chartPadding = {
-  top: 64,
-  right: 56,
+  top: 58,
+  right: 48,
   bottom: 44,
-  left: 48,
+  left: 132,
 };
 const chartLeft = chartPadding.left;
 const chartRight = chartWidth - chartPadding.right;
@@ -61,8 +61,6 @@ export function PriceInsightChart({
   points,
   keywordOptions,
 }: PriceInsightChartProps) {
-  const chartInstanceId = useId().replace(/:/g, '');
-  const fillId = `${chartInstanceId}-price-fill`;
   const keywords = keywordOptions.length > 0 ? keywordOptions.slice(0, 6) : ['현재 상품'];
   const [activeKeywordIndex, setActiveKeywordIndex] = useState(0);
   const [activeRange, setActiveRange] = useState<PriceRangeId>('3m');
@@ -114,14 +112,13 @@ export function PriceInsightChart({
     coordinates[0]
   );
   const path = buildSmoothPath(coordinates);
-  const areaPath = `${path} L ${latest.x} ${chartBottom} L ${chartLeft} ${chartBottom} Z`;
   const canMoveKeyword = keywords.length > 1;
   const activePointIndex = hoveredPointIndex ?? selectedPointIndex;
   const activeTooltipPoint =
     activePointIndex === null ? null : coordinates[activePointIndex] ?? null;
   const maxLabelText = `최고 ${formatWon(maxPrice)}`;
   const minLabelText = `최저 ${formatWon(minPrice)}`;
-  const averageLabelText = `기간 평균 ${formatWon(averagePrice)}`;
+  const averageLabelText = `기간 평균 ${formatCompactWon(averagePrice)}`;
   const maxLabelPosition = getPointLabelPlacement({
     point: maxPoint,
     text: maxLabelText,
@@ -137,7 +134,6 @@ export function PriceInsightChart({
   const averageLabelPosition = getAverageLabelPlacement({
     averageY,
     text: averageLabelText,
-    occupiedBoxes: [maxLabelPosition, minLabelPosition],
   });
 
   const selectKeyword = (index: number) => {
@@ -154,10 +150,7 @@ export function PriceInsightChart({
   };
 
   return (
-    <section className="relative overflow-hidden rounded-[30px] border border-[#D6DEE9] bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(248,250,252,0.76)_48%,rgba(239,246,255,0.58))] p-4 shadow-[0_24px_70px_rgba(15,23,42,0.09),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur-md">
-      <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-blue-100/40 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-28 left-8 h-52 w-52 rounded-full bg-emerald-100/34 blur-3xl" />
-
+    <section className="relative overflow-hidden rounded-[30px] border border-[#D6DEE9] bg-white/88 p-4 shadow-[0_18px_48px_rgba(15,23,42,0.065),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur-md">
       <div className="relative z-30 flex flex-wrap items-center justify-between gap-2">
         <div className="relative flex min-w-0 items-center">
           <button
@@ -212,7 +205,7 @@ export function PriceInsightChart({
         </div>
 
         <div
-          className="flex items-center gap-1.5 rounded-full border border-[#D7DEE9] bg-white/76 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.96)]"
+          className="flex flex-wrap items-center justify-end gap-2"
           aria-label="가격 그래프 기간 선택"
         >
           {priceRangeOptions.map((option) => {
@@ -223,11 +216,11 @@ export function PriceInsightChart({
                 key={option.id}
                 type="button"
                 onClick={() => selectRange(option.id)}
-                className={`h-8 min-w-12 rounded-full border px-3 text-[12px] font-black transition ${hairline.focus} ${
+                className={`inline-flex h-10 min-w-[58px] items-center justify-center rounded-[18px] px-4 text-sm font-black transition-colors ${hairline.focus} ${
                   isActive
-                    ? 'border-[#111827] bg-white text-[#111827] shadow-[inset_0_0_0_1px_rgba(17,24,39,0.5)]'
-                    : 'border-transparent bg-transparent text-[#7B8494] hover:border-[#C9CFDA] hover:bg-white hover:text-[#111827]'
-                }`}
+                    ? hairline.controlActive
+                    : `${hairline.control} ${hairline.controlHover}`
+                } active:border-black active:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.65),0_8px_20px_rgba(29,29,31,0.035)]`}
                 aria-pressed={isActive}
               >
                 {option.label}
@@ -238,21 +231,13 @@ export function PriceInsightChart({
       </div>
 
       <div className="relative z-10 mt-4">
-        <div className="relative min-h-[318px] overflow-hidden rounded-[28px] border border-[#D7DEE9] bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.96)]">
+        <div className="relative min-h-[318px] overflow-hidden rounded-[28px] border border-[#D7DEE9] bg-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.96)]">
           <svg
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
             className="h-full min-h-[318px] w-full overflow-visible"
             role="img"
             aria-label={`${activeKeyword} 가격 흐름 그래프`}
           >
-            <defs>
-              <linearGradient id={fillId} x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="#2563EB" stopOpacity="0.2" />
-                <stop offset="72%" stopColor="#2563EB" stopOpacity="0.035" />
-                <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-
             {Array.from({ length: 3 }, (_, index) => {
               const y = chartTop + (index / 2) * chartInnerHeight;
 
@@ -298,14 +283,13 @@ export function PriceInsightChart({
               text={averageLabelText}
             />
 
-            <path d={areaPath} fill={`url(#${fillId})`} />
             <path
               d={path}
               fill="none"
-              stroke="#2563EB"
+              stroke="#1D1D1F"
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth="6.5"
+              strokeWidth="6.8"
             />
 
             {coordinates.map((point, index) => {
@@ -347,7 +331,7 @@ export function PriceInsightChart({
                     cy={point.y}
                     r={isActive ? 8.2 : index === coordinates.length - 1 ? 6.8 : 5}
                     fill="#FFFFFF"
-                    stroke={isActive ? '#111827' : '#2563EB'}
+                    stroke="#1D1D1F"
                     strokeWidth={isActive ? 3.8 : 3.2}
                   />
                 </g>
@@ -508,17 +492,17 @@ function AverageLabel({
       <rect
         width={placement.width}
         height={placement.height}
-        rx="11"
-        fill="rgba(255,255,255,0.86)"
-        stroke="#D7DEE9"
-        strokeWidth="1"
+        rx="12"
+        fill="#FFFFFF"
+        stroke="#C9CFDA"
+        strokeWidth="1.1"
       />
       <text
         x={placement.textX}
         y={placement.textY}
-        fill="#667085"
+        fill="#626873"
         fontSize="10.5"
-        fontWeight="900"
+        fontWeight="950"
       >
         {text}
       </text>
@@ -634,47 +618,25 @@ function getPointLabelPlacement({
 function getAverageLabelPlacement({
   averageY,
   text,
-  occupiedBoxes,
 }: {
   averageY: number;
   text: string;
-  occupiedBoxes: LabelBox[];
 }): AverageLabelPlacement {
-  const width = Math.max(116, text.length * 6.3);
-  const height = 22;
-  const candidatePositions = [
-    { x: chartLeft + 8, y: averageY - height - 18, priority: 0 },
-    { x: chartRight - width - 8, y: averageY - height - 18, priority: 1 },
-    { x: chartLeft + 8, y: averageY + 18, priority: 2 },
-    { x: chartRight - width - 8, y: averageY + 18, priority: 3 },
-    { x: chartLeft + 8, y: chartTop + 8, priority: 4 },
-    { x: chartRight - width - 8, y: chartTop + 8, priority: 5 },
-  ];
+  const width = Math.max(96, text.length * 6.45 + 22);
+  const height = 24;
+  const x = Math.max(10, chartLeft - width - 14);
+  const y = clamp(averageY - height / 2, chartTop + 2, chartBottom - height - 2);
 
-  const candidates = candidatePositions.map((candidate) => {
-    const x = clamp(candidate.x, chartLeft, chartRight - width);
-    const y = clamp(candidate.y, chartTop + 2, chartBottom - height);
-    const box = { x, y, width, height };
-
-    return {
-      ...box,
-      lineGapStart: Math.max(chartLeft, x - 10),
-      lineGapEnd: Math.min(chartRight, x + width + 10),
-      textX: 11,
-      textY: 15,
-      score:
-        candidate.priority * 12 +
-        occupiedBoxes.reduce(
-          (total, occupiedBox) => total + getOverlapArea(box, occupiedBox) * 6,
-          0
-        ) +
-        getBoundsPenalty(box),
-    };
-  });
-
-  return candidates.reduce((best, candidate) =>
-    candidate.score < best.score ? candidate : best
-  );
+  return {
+    x,
+    y,
+    width,
+    height,
+    lineGapStart: chartLeft,
+    lineGapEnd: chartLeft,
+    textX: 11,
+    textY: 16,
+  };
 }
 
 function getAnchoredLabelX(
@@ -725,6 +687,14 @@ function deterministicRatio(seed: string) {
   }
 
   return (hash >>> 0) / 4294967295;
+}
+
+function formatCompactWon(value: number) {
+  if (value >= 10000) {
+    return `${Math.round(value / 10000).toLocaleString('ko-KR')}만원`;
+  }
+
+  return formatWon(value);
 }
 
 function clamp(value: number, min: number, max: number) {
