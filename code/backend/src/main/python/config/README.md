@@ -114,6 +114,18 @@ python -m pip install -r "code/backend/src/main/python/requirements.txt"
 python -m py_compile "code/backend/src/main/python/hama_data_pipeline.py"
 ```
 
+수동 기입 전 참고 CSV 생성:
+
+```powershell
+python "code/backend/src/main/python/generate_config_reference_csv.py"
+```
+
+생성 위치:
+
+```text
+code/backend/src/main/python/config/reference/
+```
+
 상품명 매칭과 카테고리 배정이 CSV 설정을 읽는지 간단히 확인:
 
 ```powershell
