@@ -22,6 +22,7 @@ public class ChatbotService {
     private final ChatHistoryRepository chatHistoryRepository;
     private final SearchLogService searchLogService;
     private final PriceAdviceService priceAdviceService;
+    private final GameSpecGuideService gameSpecGuideService;
 
     @Transactional
     public ChatMessageResponse handleMessage(Long userId, ChatMessageRequest request) {
@@ -71,6 +72,9 @@ public class ChatbotService {
         String intent = safeIntent(analysis.getIntent());
         String keyword = safeKeyword(analysis.getKeyword());
 
+        String gameName = resolveGameName(userMessage, analysis.getGameName());
+        String performanceLevel = analysis.getPerformanceLevel();
+
         logAnalysis(
                 intent,
                 keyword,
@@ -78,8 +82,8 @@ public class ChatbotService {
                 analysis.getMaxPrice(),
                 analysis.getProductType(),
                 analysis.getUseCase(),
-                analysis.getGameName(),
-                analysis.getPerformanceLevel()
+                gameName,
+                performanceLevel
         );
 
         logUserMessage(userMessage);
@@ -217,8 +221,8 @@ public class ChatbotService {
                     analysis.getMinPrice(),
                     analysis.getMaxPrice(),
                     analysis.getUseCase(),
-                    analysis.getGameName(),
-                    analysis.getPerformanceLevel(),
+                    gameName,
+                    performanceLevel,
                     items
             );
 
@@ -382,6 +386,17 @@ public class ChatbotService {
         }
 
         if (isGaming) {
+            String specGuide = gameSpecGuideService.makeGuide(gameName, performanceLevel);
+
+            if (specGuide != null && !specGuide.isBlank()) {
+                return specGuide + "\n\n"
+                        + "아래는 "
+                        + normalizeGameLabel(gameName)
+                        + " 플레이용으로 볼 만한 중고 "
+                        + keyword
+                        + " 후보입니다.";
+            }
+
             return "'" + keyword + "' 관련 상품 중 "
                     + normalizeGameLabel(gameName)
                     + " 플레이 후보를 "
@@ -527,6 +542,60 @@ public class ChatbotService {
 
         return keyword.trim();
     }
+
+    private String resolveGameName(String userMessage, String analyzedGameName) {
+        if (analyzedGameName != null && !analyzedGameName.isBlank()) {
+            return analyzedGameName.trim();
+        }
+
+        if (userMessage == null || userMessage.isBlank()) {
+            return null;
+        }
+
+        String normalized = userMessage
+                .replaceAll("\\s+", "")
+                .toLowerCase();
+
+        if (normalized.contains("래프트")
+                || normalized.contains("raft")) {
+            return "래프트";
+        }
+
+        if (normalized.contains("배그")
+                || normalized.contains("배틀그라운드")
+                || normalized.contains("pubg")) {
+            return "배그";
+        }
+
+        if (normalized.contains("러스트")
+                || normalized.contains("rust")) {
+            return "러스트";
+        }
+
+        if (normalized.contains("롤")
+                || normalized.contains("리그오브레전드")
+                || normalized.contains("lol")) {
+            return "롤";
+        }
+
+        if (normalized.contains("오버워치")
+                || normalized.contains("overwatch")) {
+            return "오버워치";
+        }
+
+        if (normalized.contains("발로란트")
+                || normalized.contains("valorant")) {
+            return "발로란트";
+        }
+
+        if (normalized.contains("마인크래프트")
+                || normalized.contains("minecraft")) {
+            return "마인크래프트";
+        }
+
+        return null;
+    }
+
     private boolean isPriceAdviceQuestion(String message) {
         if (message == null || message.isBlank()) {
             return false;
