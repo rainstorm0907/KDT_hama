@@ -1,26 +1,33 @@
 import { hairline } from '../styles/hairline';
 
-export type SortOption = 'low-price' | 'recent';
+export type SortOption = 'relevance' | 'low-price' | 'recent';
 
 type SortControlsProps = {
   activeSort: SortOption;
   onSortChange: (sort: SortOption) => void;
   labels?: Partial<Record<SortOption, string>>;
+  options?: SortOption[];
 };
 
-const sortOptions: SortOption[] = ['low-price', 'recent'];
+const defaultSortOptions: SortOption[] = ['relevance', 'low-price', 'recent'];
 
 export function SortControls({
   activeSort,
   onSortChange,
   labels = {},
+  options = defaultSortOptions,
 }: SortControlsProps) {
   return (
     <div className="flex flex-wrap justify-start gap-2 md:justify-end">
-      {sortOptions.map((option) => {
+      {options.map((option) => {
         const isActive = activeSort === option;
         const label =
-          labels[option] ?? (option === 'low-price' ? '낮은 가격순' : '최신순');
+          labels[option] ??
+          (option === 'relevance'
+            ? '정확도순'
+            : option === 'low-price'
+              ? '낮은 가격순'
+              : '최신순');
 
         return (
           <button

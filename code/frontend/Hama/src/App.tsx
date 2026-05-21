@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AuthModal } from './components/AuthModal';
 import type { AuthMode } from './components/AuthModal';
@@ -17,6 +17,38 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    let hideTimerId: number | undefined;
+
+    const showTransientScrollbar = () => {
+      root.classList.add('is-scrolling');
+
+      if (hideTimerId) {
+        window.clearTimeout(hideTimerId);
+      }
+
+      hideTimerId = window.setTimeout(() => {
+        root.classList.remove('is-scrolling');
+      }, 900);
+    };
+
+    window.addEventListener('scroll', showTransientScrollbar, { passive: true });
+    window.addEventListener('wheel', showTransientScrollbar, { passive: true });
+    window.addEventListener('touchmove', showTransientScrollbar, { passive: true });
+
+    return () => {
+      if (hideTimerId) {
+        window.clearTimeout(hideTimerId);
+      }
+
+      root.classList.remove('is-scrolling');
+      window.removeEventListener('scroll', showTransientScrollbar);
+      window.removeEventListener('wheel', showTransientScrollbar);
+      window.removeEventListener('touchmove', showTransientScrollbar);
+    };
+  }, []);
 
   const closeAuthModal = () => setAuthMode(null);
 
@@ -42,7 +74,10 @@ function App() {
             path="/search"
             element={<SearchResultsPage onProductSelect={setSelectedProduct} />}
           />
-          <Route path="/mypage" element={<MyPage />} />
+          <Route
+            path="/mypage"
+            element={<MyPage onProductSelect={setSelectedProduct} />}
+          />
           <Route path="/design-lab" element={<DesignLabPage />} />
           <Route path="/design/:variant" element={<DesignPreviewPage />} />
         </Routes>

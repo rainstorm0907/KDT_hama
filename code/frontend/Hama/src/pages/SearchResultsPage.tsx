@@ -1,16 +1,20 @@
 import { RefreshCcw } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { fetchSearchProducts } from '../api/products';
 import { PlatformPill } from '../components/PlatformPill';
 import type { PlatformName } from '../components/PlatformPill';
 import { ProductCard } from '../components/ProductCard';
 import { SearchBar } from '../components/SearchBar';
 import { SortControls } from '../components/SortControls';
 import type { SortOption } from '../components/SortControls';
-// TODO(BE): 백엔드 연결 시 mockProducts 대신 fetchSearchProducts를 호출합니다.
-import { products } from '../data/mockProducts';
 import { hairline } from '../styles/hairline';
 import type { Product } from '../types/product';
+import {
+  TEMPORARY_SEARCH_DISPLAY_LIMIT,
+  calculateSearchSummaryTemporarily,
+  filterAndSortProductsTemporarily,
+} from '../utils/temporarySearchCalculations';
 import { formatWon } from '../utils/format';
 
 type SearchResultsPageProps = {
@@ -19,6 +23,7 @@ type SearchResultsPageProps = {
 
 // TODO(BE): 플랫폼별 결과 수가 필요하면 search API의 facets.platforms에서 받아 렌더링합니다.
 const platformFilters: PlatformName[] = ['번개장터', '중고나라'];
+const SEARCH_API_LIMIT = 5000;
 
 export function SearchResultsPage({ onProductSelect }: SearchResultsPageProps) {
   const [searchParams] = useSearchParams();
@@ -26,44 +31,69 @@ export function SearchResultsPage({ onProductSelect }: SearchResultsPageProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [activePlatforms, setActivePlatforms] =
     useState<PlatformName[]>(platformFilters);
-  const [sortOption, setSortOption] = useState<SortOption>('low-price');
+  const [sortOption, setSortOption] = useState<SortOption>('relevance');
+  const [apiProducts, setApiProducts] = useState<Product[]>([]);
+  const [updatedAt, setUpdatedAt] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // TODO(BE): /api/products/search 연결 후에는 이 useMemo 전체를 제거하고 response.items를 사용합니다.
-  // 검색어, 플랫폼, 정렬, 페이지는 API query string으로 넘기고 백엔드가 필터링/정렬을 책임집니다.
-  const filteredProducts = useMemo(() => {
-    const normalizedQuery = query.toLowerCase().replace(/\s/g, '');
-    const queryMatchedProducts = products.filter((product) => {
-      const searchableText = `${product.name} ${product.brand} ${product.category}`
-        .toLowerCase()
-        .replace(/\s/g, '');
+  useEffect(() => {
+    const controller = new AbortController();
 
-      return !normalizedQuery || searchableText.includes(normalizedQuery);
-    });
-    const queryBaseProducts =
-      queryMatchedProducts.length > 0 ? queryMatchedProducts : products;
-    const visibleProducts = queryBaseProducts.filter((product) =>
-      activePlatforms.includes(product.platform as PlatformName)
-    );
+    async function loadSearchProducts() {
+      setIsLoading(true);
+      setErrorMessage(null);
 
-    return [...visibleProducts].sort((a, b) => {
-      if (sortOption === 'recent') {
-        return b.date.localeCompare(a.date);
+      try {
+        const response = await fetchSearchProducts({
+          query,
+          platforms: platformFilters,
+          sort: 'recent',
+          page: 1,
+          limit: SEARCH_API_LIMIT,
+          signal: controller.signal,
+        });
+
+        setApiProducts(response.items);
+        setUpdatedAt(response.summary.updatedAt);
+      } catch (error: unknown) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+
+        setApiProducts([]);
+        setUpdatedAt('');
+        setErrorMessage('검색 API 호출에 실패했습니다. 백엔드 서버 상태를 확인해 주세요.');
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
+    }
 
-      return a.price - b.price;
+    void loadSearchProducts();
+
+    return () => controller.abort();
+  }, [query]);
+
+  // TODO(BE): MVP 임시 필터/정렬입니다. 백엔드가 플랫폼 필터/정렬을 책임지면
+  // filterAndSortProductsTemporarily 호출을 제거하고 response.items를 그대로 사용합니다.
+  const filteredProducts = useMemo(() => {
+    return filterAndSortProductsTemporarily({
+      products: apiProducts,
+      query,
+      platforms: activePlatforms,
+      sortOption,
     });
-  }, [activePlatforms, query, sortOption]);
+  }, [activePlatforms, apiProducts, query, sortOption]);
 
-  // TODO(BE): 5천개 데이터 연결 후에는 현재 페이지 기준 계산이 아니라 response.summary.lowestPrice/averagePrice를 사용합니다.
-  const lowestPrice = filteredProducts[0]?.price ?? 0;
-  const averagePrice =
-    filteredProducts.length > 0
-      ? Math.round(
-          filteredProducts.reduce((total, product) => total + product.price, 0) /
-            filteredProducts.length /
-            1000
-        ) * 1000
-      : 0;
+  // TODO(BE): MVP 임시 가격 요약입니다. 백엔드가 필터 적용 전체 결과 기준 summary를 내려주면
+  // calculateSearchSummaryTemporarily 호출을 제거하고 response.summary 값을 사용합니다.
+  const { lowestPrice, averagePrice } = useMemo(
+    () => calculateSearchSummaryTemporarily(filteredProducts),
+    [filteredProducts]
+  );
+  const displayProducts = filteredProducts.slice(0, TEMPORARY_SEARCH_DISPLAY_LIMIT);
 
   return (
     <main className={`flex-1 pb-24 ${hairline.page}`}>
@@ -85,14 +115,19 @@ export function SearchResultsPage({ onProductSelect }: SearchResultsPageProps) {
               >
                 {query} 검색 결과
               </h1>
-              <div className={`mt-4 flex flex-wrap items-center gap-4 text-base font-semibold ${hairline.mutedText}`}>
-                <span>총 {filteredProducts.length.toLocaleString('ko-KR')}개 상품</span>
+              <div
+                className={`mt-4 flex flex-wrap items-center gap-4 text-base font-semibold ${hairline.mutedText}`}
+              >
+                <span>
+                  총 {filteredProducts.length.toLocaleString('ko-KR')}개 상품
+                </span>
+                {isLoading ? <span>불러오는 중</span> : null}
               </div>
             </div>
 
             <p className={`inline-flex items-center gap-2 text-sm font-semibold ${hairline.mutedText}`}>
               <RefreshCcw className="h-4 w-4" aria-hidden="true" />
-              최종 업데이트: 2025.05.24 14:30
+              최종 업데이트: {updatedAt || '확인 중'}
             </p>
           </div>
 
@@ -151,8 +186,25 @@ export function SearchResultsPage({ onProductSelect }: SearchResultsPageProps) {
             />
           </div>
 
+          {errorMessage ? (
+            <div className={`mt-6 rounded-2xl px-5 py-4 text-sm font-bold text-rose-700 ${hairline.card}`}>
+              {errorMessage}
+            </div>
+          ) : null}
+
+          {!isLoading && !errorMessage && filteredProducts.length === 0 ? (
+            <div className={`mt-8 flex min-h-40 items-center justify-center rounded-2xl px-6 text-center ${hairline.panelSoft}`}>
+              <p className="text-base font-bold text-gray-900">
+                검색 결과가 없습니다
+                <span className="mt-1 block text-sm font-semibold text-[#86868B]">
+                  다른 검색어로 다시 찾아보세요
+                </span>
+              </p>
+            </div>
+          ) : null}
+
           <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {filteredProducts.map((product) => (
+            {displayProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -163,9 +215,11 @@ export function SearchResultsPage({ onProductSelect }: SearchResultsPageProps) {
 
           <div className={`mt-8 flex min-h-24 items-center justify-center rounded-2xl px-6 text-center ${hairline.panelSoft}`}>
             <p className="text-base font-bold text-gray-900">
-              더 많은 상품을 불러오는 중이에요...
+              {displayProducts.length < filteredProducts.length
+                ? `${displayProducts.length.toLocaleString('ko-KR')}개만 먼저 보여주는 중이에요`
+                : '조건에 맞는 상품을 정리했어요'}
               <span className="mt-1 block text-sm font-semibold text-[#86868B]">
-                잠시만 기다려 주세요
+                필터를 바꾸면 더 다양한 결과를 볼 수 있어요
               </span>
             </p>
           </div>

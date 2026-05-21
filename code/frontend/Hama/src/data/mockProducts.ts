@@ -167,7 +167,7 @@ export const products: Product[] = crawledProducts.map((product, index) => ({
   brand: product.category,
   price: product.price,
   status: product.status,
-  description: `${product.name} 상품입니다. ${product.platform}에서 수집한 실제 중고거래 매물이며, 상세 상태와 거래 조건은 원본 페이지에서 확인해 주세요.`,
+  description: '',
   imageUrl: product.imageUrl,
   images: [product.imageUrl, product.imageUrl, product.imageUrl],
   link: product.link,

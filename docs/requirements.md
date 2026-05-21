@@ -22,17 +22,29 @@ kdtproject
 │   │       │   ├── chatbot
 │   │       │   └── exception
 │   │       ├── python
+│   │       │   ├── analysis
+│   │       │   ├── archive
+│   │       │   ├── config
 │   │       │   ├── crawling
 │   │       │   ├── preprocessing
+│   │       │   ├── api_server.py
+│   │       │   ├── generate_config_reference_csv.py
+│   │       │   ├── hama_data_pipeline.py
+│   │       │   ├── product_matching.py
 │   │       │   └── requirements.txt
 │   │       └── resources
 │   └── frontend
 │       └── Hama
 │           ├── public
 │           ├── src
+│           │   ├── api
 │           │   ├── components
 │           │   ├── data
+│           │   ├── design-prototypes
+│           │   ├── pages
+│           │   ├── styles
 │           │   ├── types
+│           │   ├── utils
 │           │   ├── App.css
 │           │   ├── App.tsx
 │           │   ├── index.css
@@ -173,7 +185,11 @@ PostgreSQL 또는 Supabase DB 접근 코드를 작성합니다.
 - `UserRepository.java`: 사용자 테이블 접근
 - `ItemRepository.java`: 상품 테이블 접근
 - `WishRepository.java`: 찜 테이블 접근
-- `SearchHistoryRepository.java`: 검색 기록 테이블 접근
+- `SearchLogRepository.java`: 기존 검색 로그 테이블 접근
+- `SearchEventRepository.java`: 검색/노출/클릭 이벤트 테이블 접근
+- `ItemSearchMatchRepository.java`: 상품-검색어 매칭 테이블 접근
+- `NotificationRepository.java`: 알림 테이블 접근
+- `ContentPageRepository.java`: 공지사항/약관/개인정보 문서 테이블 접근
 
 작성 기준:
 
@@ -207,10 +223,23 @@ DB 테이블과 매핑되는 JPA Entity 클래스를 작성합니다.
 들어갈 수 있는 파일 예시:
 
 - `User.java`: 사용자 테이블 매핑
+- `Platform.java`: 플랫폼 테이블 매핑
 - `Item.java`: 상품 테이블 매핑
-- `Wish.java`: 찜 테이블 매핑
-- `Category.java`: 카테고리 테이블 매핑
-- `SearchHistory.java`: 검색 기록 테이블 매핑
+- `PriceHistory.java`: 가격 이력 테이블 매핑
+- `Wishlist.java`: 찜 테이블 매핑
+- `SearchLog.java`: 기존 검색 로그 테이블 매핑
+- `SearchEvent.java`: 검색/노출/클릭 이벤트 테이블 매핑
+- `ItemSearchMatch.java`: 상품-검색어 매칭 테이블 매핑
+- `ItemView.java`: 최근 본 상품 테이블 매핑
+- `SearchRanking.java`: 검색 순위 집계 테이블 매핑
+- `PriceStatsDaily.java`: 일별 가격 통계 테이블 매핑
+- `UserPreference.java`: 사용자 선호 태그 테이블 매핑
+- `Banner.java`: 배너 테이블 매핑
+- `ContentPage.java`: 공지사항/약관/개인정보 문서 테이블 매핑
+- `ChatHistory.java`: 챗봇 대화 내역 테이블 매핑
+- `ChatFaq.java`: 챗봇 FAQ 테이블 매핑
+- `Notification.java`: 알림 테이블 매핑
+- `RecommendedItem.java`: 추천 상품 연결 테이블 매핑
 
 작성 기준:
 
@@ -225,6 +254,9 @@ Python 기반 크롤링 스크립트와 입력 데이터를 관리합니다.
 들어갈 수 있는 파일 예시:
 
 - `crawling_20260429.py`: 번개장터, 중고나라 상품 데이터 수집 스크립트
+- `crawling_20260429_by_keyword.py`: 키워드별 결과 CSV 저장용 크롤링 스크립트
+- `crawling_20260429_no_filter.py`: 플랫폼 검색 결과를 필터 없이 저장하는 비교용 크롤링 스크립트
+- `update_keyword_list.py`: 플랫폼 인기검색어 기반 키워드 목록 갱신 스크립트
 - `keyword_list.csv`: 크롤링에 사용할 검색 키워드 목록
 - `archive/integrated_crawling_initial.py`: 초기 크롤링 코드 보관본
 
@@ -234,6 +266,41 @@ Python 기반 크롤링 스크립트와 입력 데이터를 관리합니다.
 - Spring Boot가 직접 Python 코드를 포함하지 않고, DB를 통해 수집 결과를 조회하는 구조를 권장합니다.
 - 실행에 필요한 Python 패키지는 `backend/src/main/python/requirements.txt`에 정리합니다.
 - 개선 전 코드나 Colab 원본에서 변환한 초기 코드는 `archive` 폴더에 보관합니다.
+
+### `backend/src/main/python/analysis`
+
+크롤링 원본 또는 no-filter 결과를 검토하기 위한 분석용 스크립트와 결과 CSV를 관리합니다.
+
+현재 작성된 파일:
+
+- `cluster_bracket_contents.py`: no-filter 크롤링 결과에서 상품명 대괄호(`[]`) 내부 텍스트만 추출하고, 추출 텍스트끼리 토큰 기반으로 클러스터링합니다.
+- `results/bracket_contents`: 대괄호 내부 텍스트 단순 추출 결과 CSV를 보관합니다.
+- `results/bracket_clusters`: 대괄호 내부 텍스트 클러스터링 상세/내용별/요약 CSV를 보관합니다.
+
+작성 기준:
+
+- 서비스 실행 코드와 분리된 검토/분석 목적의 코드를 둡니다.
+- 분석 결과는 `analysis/results` 아래에 저장해 크롤링 원본 결과와 섞이지 않도록 합니다.
+- 분석 스크립트가 원본 입력을 읽을 때는 `crawling/results`를 기준으로 하되, 출력 기본 위치는 `analysis/results`로 둡니다.
+
+### `backend/src/main/python/config`
+
+상품명 매칭, 카테고리 배정, 제외 토큰 관리를 위한 CSV 설정과 작성 가이드를 관리합니다.
+
+현재 작성된 파일:
+
+- `README.md`: 설정 CSV 작성 및 확인 방법
+- `product_token_dictionary.csv`: 상품명에서 브랜드, 모델, 스펙, 옵션 등을 추출하기 위한 사전
+- `category_rules.csv`: 상품 매칭 결과 또는 검색 키워드 기반 카테고리 배정 규칙
+- `token_exclude_list.csv`: 정확성 검사와 핵심 토큰 추출에서 제외할 노이즈 토큰
+- `reference/*.csv`: 크롤링 결과 기반 수동 검토용 참고 CSV
+
+관련 스크립트:
+
+- `generate_config_reference_csv.py`: 설정 CSV를 보강하기 위한 참고 CSV 생성
+- `product_matching.py`: 상품명 정규화, 토큰화, 매칭 보조 로직
+- `hama_data_pipeline.py`: 설정 CSV를 읽어 상품명 매칭과 카테고리 배정을 수행하는 파이프라인
+- `api_server.py`: Python 파이프라인 확인용 FastAPI 서버
 
 ### `backend/src/main/python/preprocessing`
 
@@ -269,7 +336,7 @@ Spring Boot 설정 파일입니다.
 
 ## Frontend
 
-프론트엔드는 `code/frontend/Hama`에 위치한 Vite + React + TypeScript 기반 사용자 화면 영역입니다. 현재는 홈 화면, 검색 패널, 배너, 카테고리, 추천 상품 목록을 중심으로 구성되어 있습니다.
+프론트엔드는 `code/frontend/Hama`에 위치한 Vite + React + TypeScript 기반 사용자 화면 영역입니다. 현재는 홈, 검색 결과, 마이페이지, 디자인 랩과 상품 카드/상세/가격 인사이트 UI를 중심으로 구성되어 있습니다.
 
 ### 프론트엔드 파일 배치 기준
 
@@ -279,9 +346,13 @@ Spring Boot 설정 파일입니다.
 
 - 앱 실행 진입점은 `frontend/Hama/src/main.tsx`에 둡니다.
 - 앱 최상위 화면 조합은 `frontend/Hama/src/App.tsx`에 둡니다.
-- 여러 화면에서 재사용하거나 홈 화면을 구성하는 UI 조각은 `frontend/Hama/src/components`에 둡니다.
-- 카테고리, 상품, 최근 검색어 같은 임시 화면 데이터는 `frontend/Hama/src/data`에 둡니다.
+- 화면 단위 컴포넌트는 `frontend/Hama/src/pages`에 둡니다.
+- 여러 화면에서 재사용하는 UI 조각은 `frontend/Hama/src/components`에 둡니다.
+- API 접근 모듈은 `frontend/Hama/src/api`에 둡니다.
+- 카테고리, 목 상품 같은 임시 화면 데이터는 `frontend/Hama/src/data`에 둡니다.
 - 컴포넌트와 데이터에서 공유하는 TypeScript 타입은 `frontend/Hama/src/types`에 둡니다.
+- 포맷팅, 최근 검색어, 임시 계산 로직은 `frontend/Hama/src/utils`에 둡니다.
+- 디자인 검토용 프로토타입은 `frontend/Hama/src/design-prototypes`에 둡니다.
 - 전역 스타일은 `frontend/Hama/src/index.css`, 앱 단위 스타일은 `frontend/Hama/src/App.css`에 둡니다.
 - 로고, 배너, 아이콘 같은 정적 파일은 `frontend/Hama/public`에 둡니다.
 
@@ -289,8 +360,10 @@ Spring Boot 설정 파일입니다.
 
 - `frontend/Hama/src/App.tsx`: 맞는 위치입니다. 앱 최상위 컴포넌트입니다.
 - `frontend/Hama/src/components/Header.tsx`: 맞는 위치입니다. 홈 화면에서 재사용 가능한 UI 컴포넌트입니다.
-- `frontend/Hama/src/data/catalog.ts`: 맞는 위치입니다. 카테고리/상품/최근 검색어 데이터를 관리합니다.
-- `frontend/Hama/src/types/catalog.ts`: 맞는 위치입니다. 카탈로그 관련 타입을 정의합니다.
+- `frontend/Hama/src/pages/HomePage.tsx`: 맞는 위치입니다. 홈 화면 페이지 컴포넌트입니다.
+- `frontend/Hama/src/api/products.ts`: 맞는 위치입니다. 상품 데이터 접근 모듈입니다.
+- `frontend/Hama/src/data/categories.ts`: 맞는 위치입니다. 카테고리 데이터를 관리합니다.
+- `frontend/Hama/src/types/product.ts`: 맞는 위치입니다. 상품 관련 타입을 정의합니다.
 - `frontend/src/App.tsx`: 현재 구조에서는 잘못된 위치입니다. 앱은 `Hama` 폴더 안에 있습니다.
 - `frontend/App.tsx`: 잘못된 위치입니다. `src` 밖에 화면 코드를 두지 않습니다.
 
@@ -304,17 +377,42 @@ frontend/Hama
 │   ├── hama_lowban1.jpg
 │   └── icons.svg
 ├── src
+│   ├── api
+│   │   └── products.ts
 │   ├── components
+│   │   ├── AuthModal.tsx
+│   │   ├── Banner.tsx
 │   │   ├── CategoryGrid.tsx
 │   │   ├── Footer.tsx
 │   │   ├── Header.tsx
-│   │   ├── HeroBanner.tsx
-│   │   ├── ProductGrid.tsx
-│   │   └── SearchPanel.tsx
+│   │   ├── PlatformPill.tsx
+│   │   ├── PriceInsightChart.tsx
+│   │   ├── ProductCard.tsx
+│   │   ├── ProductDetailModal.tsx
+│   │   ├── ProductVisual.tsx
+│   │   ├── SearchBar.tsx
+│   │   └── SortControls.tsx
 │   ├── data
-│   │   └── catalog.ts
+│   │   ├── categories.ts
+│   │   └── mockProducts.ts
+│   ├── design-prototypes
+│   │   ├── price-insight-a
+│   │   ├── price-insight-b
+│   │   └── price-insight-c
+│   ├── pages
+│   │   ├── DesignLabPage.tsx
+│   │   ├── DesignPreviewPage.tsx
+│   │   ├── HomePage.tsx
+│   │   ├── MyPage.tsx
+│   │   └── SearchResultsPage.tsx
+│   ├── styles
+│   │   └── hairline.ts
 │   ├── types
-│   │   └── catalog.ts
+│   │   └── product.ts
+│   ├── utils
+│   │   ├── format.ts
+│   │   ├── recentSearches.ts
+│   │   └── temporarySearchCalculations.ts
 │   ├── App.css
 │   ├── App.tsx
 │   ├── index.css
@@ -326,15 +424,21 @@ frontend/Hama
 
 새 파일을 만들 때 확인 순서:
 
-1. 화면을 구성하는 UI 컴포넌트인가?
-   맞다면 `frontend/Hama/src/components`에 둡니다. 예: `Header.tsx`, `ProductGrid.tsx`
-2. 화면에 표시할 임시 데이터나 목 데이터인가?
-   맞다면 `frontend/Hama/src/data`에 둡니다. 예: `catalog.ts`
-3. 여러 파일에서 공유하는 타입인가?
-   맞다면 `frontend/Hama/src/types`에 둡니다. 예: `catalog.ts`
-4. 앱 전체 또는 특정 앱 화면 스타일인가?
+1. 라우팅 또는 화면 단위 컴포넌트인가?
+   맞다면 `frontend/Hama/src/pages`에 둡니다. 예: `HomePage.tsx`, `SearchResultsPage.tsx`
+2. 여러 화면에서 재사용되는 UI 컴포넌트인가?
+   맞다면 `frontend/Hama/src/components`에 둡니다. 예: `Header.tsx`, `ProductCard.tsx`
+3. 백엔드/API 데이터 접근 모듈인가?
+   맞다면 `frontend/Hama/src/api`에 둡니다. 예: `products.ts`
+4. 화면에 표시할 임시 데이터나 목 데이터인가?
+   맞다면 `frontend/Hama/src/data`에 둡니다. 예: `categories.ts`, `mockProducts.ts`
+5. 여러 파일에서 공유하는 타입인가?
+   맞다면 `frontend/Hama/src/types`에 둡니다. 예: `product.ts`
+6. 공통 유틸리티인가?
+   맞다면 `frontend/Hama/src/utils`에 둡니다. 예: `format.ts`, `recentSearches.ts`
+7. 앱 전체 또는 특정 앱 화면 스타일인가?
    전역 스타일은 `index.css`, 앱 단위 스타일은 `App.css`에 둡니다.
-5. 이미지, 로고, 아이콘 같은 정적 파일인가?
+8. 이미지, 로고, 아이콘 같은 정적 파일인가?
    맞다면 `frontend/Hama/public`에 둡니다.
 
 ### `frontend/Hama/src/App.tsx`
@@ -343,28 +447,33 @@ React 앱의 최상위 컴포넌트입니다.
 
 들어갈 내용:
 
-- 홈 화면 전체 레이아웃 조합
-- 검색 패널 열림/닫힘 상태 관리
-- 선택된 카테고리 상태 관리
-- Header, SearchPanel, HeroBanner, CategoryGrid, ProductGrid, Footer 연결
+- 현재 페이지 상태 관리
+- Home, Search Results, My Page, Design Lab 같은 페이지 컴포넌트 전환
+- 공통 앱 레이아웃과 전역 스타일 연결
 
 작성 기준:
 
-- 화면이 커지면 상태와 레이아웃은 `App.tsx`에 두고, UI 조각은 `components`로 분리합니다.
-- 데이터는 컴포넌트 안에 직접 길게 두지 않고 `data/catalog.ts`에서 import합니다.
-- 카테고리와 상품 타입은 `types/catalog.ts`에서 관리합니다.
+- 앱 전체 흐름과 페이지 전환은 `App.tsx`에서 관리합니다.
+- 화면 단위 구현은 `pages`로, 재사용 UI는 `components`로 분리합니다.
+- 상품 관련 타입은 `types/product.ts`에서 관리합니다.
 
 ### `frontend/Hama/src/components`
 
-홈 화면을 구성하는 React 컴포넌트를 작성합니다.
+여러 페이지에서 재사용하는 React 컴포넌트를 작성합니다.
 
 현재 작성된 파일:
 
+- `AuthModal.tsx`: 로그인/회원가입 모달
+- `Banner.tsx`: 홈 화면 배너 영역
 - `Header.tsx`: 상단 로고와 메뉴 영역
-- `SearchPanel.tsx`: 검색 입력창과 최근 검색어 패널
-- `HeroBanner.tsx`: 홈 화면 배너 영역
 - `CategoryGrid.tsx`: 카테고리 선택 그리드
-- `ProductGrid.tsx`: 추천 상품 목록 그리드
+- `SearchBar.tsx`: 검색 입력창
+- `ProductCard.tsx`: 상품 카드
+- `ProductDetailModal.tsx`: 상품 상세 모달
+- `ProductVisual.tsx`: 상품 이미지/시각 요소
+- `PriceInsightChart.tsx`: 가격 인사이트 차트
+- `PlatformPill.tsx`: 플랫폼 표시 배지
+- `SortControls.tsx`: 정렬 컨트롤
 - `Footer.tsx`: 하단 정보 영역
 
 작성 기준:
@@ -379,12 +488,38 @@ React 앱의 최상위 컴포넌트입니다.
 
 현재 작성된 파일:
 
-- `catalog.ts`: 카테고리 목록, 추천 상품 목록, 최근 검색어 목록
+- `categories.ts`: 카테고리 목록
+- `mockProducts.ts`: 검색/상세 화면용 목 상품 데이터
 
 작성 기준:
 
 - 백엔드 API 연동 전까지 사용하는 목 데이터를 둡니다.
 - API 연동 후에는 이 데이터를 API 응답으로 대체하거나 fixture 용도로 분리합니다.
+
+### `frontend/Hama/src/api`
+
+프론트엔드에서 상품 데이터를 조회하는 API 접근 모듈을 관리합니다.
+
+현재 작성된 파일:
+
+- `products.ts`: 상품 목록, 상품 상세, 관련 상품 조회용 데이터 접근 함수
+
+작성 기준:
+
+- 백엔드 API가 준비되기 전에는 목 데이터 연결부를 감싸고, 이후 실제 HTTP 호출로 교체합니다.
+- 화면 컴포넌트가 데이터 소스 구현에 직접 의존하지 않도록 합니다.
+
+### `frontend/Hama/src/pages`
+
+라우팅 또는 화면 단위 컴포넌트를 관리합니다.
+
+현재 작성된 파일:
+
+- `HomePage.tsx`: 홈 화면
+- `SearchResultsPage.tsx`: 검색 결과 화면
+- `MyPage.tsx`: 마이페이지
+- `DesignLabPage.tsx`: 디자인 시안 목록 화면
+- `DesignPreviewPage.tsx`: 디자인 시안 미리보기 화면
 
 ### `frontend/Hama/src/types`
 
@@ -392,12 +527,32 @@ React 앱의 최상위 컴포넌트입니다.
 
 현재 작성된 파일:
 
-- `catalog.ts`: `Category`, `Product` 타입
+- `product.ts`: 상품, 플랫폼, 가격 인사이트 관련 타입
 
 작성 기준:
 
 - 여러 컴포넌트에서 공유하는 타입을 둡니다.
 - API 응답 타입이 생기면 도메인별 타입 파일로 분리할 수 있습니다.
+
+### `frontend/Hama/src/utils`
+
+여러 컴포넌트에서 공유하는 유틸리티 함수를 관리합니다.
+
+현재 작성된 파일:
+
+- `format.ts`: 가격 등 화면 표시용 포맷 함수
+- `recentSearches.ts`: 최근 검색어 저장/조회 유틸리티
+- `temporarySearchCalculations.ts`: 검색 화면 임시 계산 로직
+
+### `frontend/Hama/src/design-prototypes`
+
+가격 인사이트 UI 시안과 README를 보관합니다.
+
+현재 작성된 폴더:
+
+- `price-insight-a`
+- `price-insight-b`
+- `price-insight-c`
 
 ### `frontend/Hama/public`
 
@@ -499,7 +654,7 @@ DB 테이블 생성 SQL과 ERD 기준 정보를 정리합니다.
 
 들어갈 내용:
 
-- 11개 테이블 DDL
+- 18개 테이블 DDL
 - Primary Key, Foreign Key
 - 인덱스
 - 테이블 관계 설명

@@ -14,12 +14,15 @@
 
 - [ ] Backend Java 기본 구조 구현
 - [x] Backend Python 크롤링 파일 작성 (작성일: 2026-04-21 ~ 2026-04-29)
+- [x] Backend Python 파이프라인/API/설정 파일 작성 (작성일: 2026-05-21)
+- [x] Backend Python 분석용 스크립트 작성 (작성일: 2026-05-21)
 - [ ] Backend Python 전처리 파일 작성
 - [x] Frontend Hama Vite 실행 진입 파일 구성 (작성일: 2026-04-30)
 - [x] Frontend 기본 App 컴포넌트 작성 (작성일: 2026-04-30)
 - [x] Frontend 홈 화면 공통 컴포넌트 작성 (작성일: 2026-04-30)
 - [x] Frontend 목 데이터와 타입 파일 작성 (작성일: 2026-04-30)
-- [ ] Frontend API, 훅, 라우팅, 전역 상태 관리 파일 작성
+- [x] Frontend API 모듈과 페이지 파일 작성 (작성일: 2026-05-21)
+- [ ] Frontend 훅, 라우팅 라이브러리, 전역 상태 관리 파일 작성
 
 ## Backend Java
 
@@ -67,7 +70,12 @@
 - [ ] `UserRepository.java`: 사용자 테이블 접근
 - [ ] `ItemRepository.java`: 상품 테이블 접근
 - [ ] `WishRepository.java`: 찜 테이블 접근
-- [ ] `SearchLogRepository.java`: 검색 로그 테이블 접근
+- [ ] `SearchLogRepository.java`: 기존 검색 로그 테이블 접근
+- [ ] `SearchEventRepository.java`: 검색/노출/클릭 이벤트 테이블 접근
+- [ ] `ItemSearchMatchRepository.java`: 상품-검색어 매칭 테이블 접근
+- [ ] `ItemViewRepository.java`: 최근 본 상품 테이블 접근
+- [ ] `PriceStatsDailyRepository.java`: 일별 가격 통계 테이블 접근
+- [ ] `ContentPageRepository.java`: 공지사항/약관/개인정보 문서 테이블 접근
 - [ ] `RecommendationRepository.java`: 추천 상품 테이블 접근
 - [ ] `NotificationRepository.java`: 알림 관련 테이블 접근
 
@@ -96,11 +104,17 @@
 - [ ] `PriceHistory.java`: 가격 이력 테이블 매핑
 - [ ] `Wishlist.java`: 찜 테이블 매핑
 - [ ] `SearchLog.java`: 검색 로그 테이블 매핑
+- [ ] `SearchEvent.java`: 검색/노출/클릭 이벤트 테이블 매핑
+- [ ] `ItemSearchMatch.java`: 상품-검색어 매칭 테이블 매핑
+- [ ] `ItemView.java`: 최근 본 상품 테이블 매핑
 - [ ] `SearchRanking.java`: 검색 순위 테이블 매핑
+- [ ] `PriceStatsDaily.java`: 일별 가격 통계 테이블 매핑
 - [ ] `UserPreference.java`: 사용자 선호 태그 테이블 매핑
 - [ ] `Banner.java`: 배너 테이블 매핑
+- [ ] `ContentPage.java`: 공지사항/약관/개인정보 문서 테이블 매핑
 - [ ] `ChatHistory.java`: 챗봇 대화 내역 테이블 매핑
 - [ ] `ChatFaq.java`: 챗봇 FAQ 테이블 매핑
+- [ ] `Notification.java`: 알림 테이블 매핑
 - [ ] `RecommendedItem.java`: 추천 상품 연결 테이블 매핑
 
 현재 상태:
@@ -170,6 +184,24 @@
 - [ ] 크롤링 결과 저장 방식 정리
 - [ ] DB 저장 연동 방식 정리
 
+### `analysis`
+
+- [x] `cluster_bracket_contents.py`: no-filter 크롤링 결과의 상품명 대괄호(`[]`) 내부 텍스트 추출/클러스터링 스크립트 작성 (작성일: 2026-05-21)
+- [x] `results/bracket_contents`: 대괄호 내부 텍스트 단순 추출 결과 CSV 보관 위치 정리 (작성일: 2026-05-21)
+- [x] `results/bracket_clusters`: 대괄호 내부 텍스트 클러스터링 결과 CSV 보관 위치 정리 (작성일: 2026-05-21)
+
+### `config` 및 파이프라인
+
+- [x] `config/README.md`: Hama 파이프라인 설정 CSV 작성 가이드 작성 (작성일: 2026-05-21)
+- [x] `config/product_token_dictionary.csv`: 상품 토큰 사전 작성 (작성일: 2026-05-21)
+- [x] `config/category_rules.csv`: 카테고리 배정 규칙 작성 (작성일: 2026-05-21)
+- [x] `config/token_exclude_list.csv`: 제외 토큰 목록 작성 (작성일: 2026-05-21)
+- [x] `config/reference/*.csv`: 설정 수동 검토용 참고 CSV 생성 (작성일: 2026-05-21)
+- [x] `generate_config_reference_csv.py`: 설정 참고 CSV 생성 스크립트 작성 (작성일: 2026-05-21)
+- [x] `product_matching.py`: 상품명 정규화/토큰화/매칭 보조 모듈 작성 (작성일: 2026-05-21)
+- [x] `hama_data_pipeline.py`: 설정 CSV 기반 상품 매칭 파이프라인 작성 (작성일: 2026-05-21)
+- [x] `api_server.py`: Python 파이프라인 확인용 FastAPI 서버 작성 (작성일: 2026-05-21)
+
 ### `preprocessing`
 
 - [ ] 중복 상품 제거 스크립트 작성
@@ -204,31 +236,59 @@
 ### `src/App.tsx`
 
 - [x] `src/App.tsx`: 앱 최상위 컴포넌트 작성 (작성일: 2026-04-30)
-- [x] 검색 패널 열림/닫힘 상태 관리 (작성일: 2026-04-30)
-- [x] 선택된 카테고리 상태 관리 (작성일: 2026-04-30)
-- [x] Header, SearchPanel, HeroBanner, CategoryGrid, ProductGrid, Footer 연결 (작성일: 2026-04-30)
+- [x] 페이지 전환 상태 관리 (작성일: 2026-05-21)
+- [x] 홈, 검색 결과, 마이페이지, 디자인 랩 페이지 연결 (작성일: 2026-05-21)
 - [ ] API 연동 후 목 데이터 의존성 제거 또는 fixture 분리
 
 ### `src/components`
 
 - [x] `Header.tsx`: 상단 로고와 메뉴 영역 (작성일: 2026-04-30)
-- [x] `SearchPanel.tsx`: 검색 입력창과 최근 검색어 패널 (작성일: 2026-04-30)
-- [x] `HeroBanner.tsx`: 홈 배너 영역 (작성일: 2026-04-30)
+- [x] `SearchBar.tsx`: 검색 입력창 (작성일: 2026-05-21)
+- [x] `Banner.tsx`: 홈 배너 영역 (작성일: 2026-05-21)
 - [x] `CategoryGrid.tsx`: 카테고리 선택 그리드 (작성일: 2026-04-30)
-- [x] `ProductGrid.tsx`: 추천 상품 목록 그리드 (작성일: 2026-04-30)
+- [x] `ProductCard.tsx`: 상품 카드 (작성일: 2026-05-21)
+- [x] `ProductDetailModal.tsx`: 상품 상세 모달 (작성일: 2026-05-21)
+- [x] `ProductVisual.tsx`: 상품 이미지/시각 요소 (작성일: 2026-05-21)
+- [x] `PriceInsightChart.tsx`: 가격 인사이트 차트 (작성일: 2026-05-21)
+- [x] `PlatformPill.tsx`: 플랫폼 배지 (작성일: 2026-05-21)
+- [x] `SortControls.tsx`: 정렬 컨트롤 (작성일: 2026-05-21)
+- [x] `AuthModal.tsx`: 로그인/회원가입 모달 (작성일: 2026-05-21)
 - [x] `Footer.tsx`: 하단 정보 영역 (작성일: 2026-04-30)
-- [ ] 로그인/회원가입 UI가 필요하면 별도 컴포넌트 또는 페이지로 추가
-- [ ] 마이페이지 UI가 필요하면 별도 컴포넌트 또는 페이지로 추가
 
 ### `src/data`
 
-- [x] `catalog.ts`: 카테고리, 추천 상품, 최근 검색어 목 데이터 (작성일: 2026-04-30)
+- [x] `categories.ts`: 카테고리 목록 데이터 (작성일: 2026-05-21)
+- [x] `mockProducts.ts`: 상품 목 데이터 (작성일: 2026-05-21)
 - [ ] 백엔드 API 연동 시 데이터 대체 방식 정리
+
+### `src/api`
+
+- [x] `products.ts`: 상품 데이터 접근 모듈 (작성일: 2026-05-21)
+
+### `src/pages`
+
+- [x] `HomePage.tsx`: 홈 화면 페이지 (작성일: 2026-05-21)
+- [x] `SearchResultsPage.tsx`: 검색 결과 페이지 (작성일: 2026-05-21)
+- [x] `MyPage.tsx`: 마이페이지 (작성일: 2026-05-21)
+- [x] `DesignLabPage.tsx`: 디자인 시안 목록 페이지 (작성일: 2026-05-21)
+- [x] `DesignPreviewPage.tsx`: 디자인 시안 미리보기 페이지 (작성일: 2026-05-21)
 
 ### `src/types`
 
-- [x] `catalog.ts`: `Category`, `Product` 타입 정의 (작성일: 2026-04-30)
+- [x] `product.ts`: 상품, 플랫폼, 가격 인사이트 타입 정의 (작성일: 2026-05-21)
 - [ ] API 응답 타입 추가 필요 여부 확인
+
+### `src/utils`
+
+- [x] `format.ts`: 화면 표시용 포맷 유틸리티 (작성일: 2026-05-21)
+- [x] `recentSearches.ts`: 최근 검색어 저장/조회 유틸리티 (작성일: 2026-05-21)
+- [x] `temporarySearchCalculations.ts`: 검색 화면 임시 계산 로직 (작성일: 2026-05-21)
+
+### `src/design-prototypes`
+
+- [x] `price-insight-a`: 가격 인사이트 시안 A와 README (작성일: 2026-05-21)
+- [x] `price-insight-b`: 가격 인사이트 시안 B와 README (작성일: 2026-05-21)
+- [x] `price-insight-c`: 가격 인사이트 시안 C와 README (작성일: 2026-05-21)
 
 ### 스타일 파일
 
@@ -245,9 +305,7 @@
 
 ### 아직 없는 기능/폴더
 
-- [ ] `src/api`: 백엔드 API 연동 모듈
 - [ ] `src/hooks`: 반복 상태 로직용 커스텀 훅
-- [ ] `src/pages`: 라우팅 단위 페이지가 필요해질 경우 추가
 - [ ] `src/routes`: React Router 도입 시 라우팅 설정
 - [ ] `src/contexts`: 전역 상태가 필요해질 경우 추가
 - [ ] `src/assets`: import 기반 에셋 관리가 필요해질 경우 추가

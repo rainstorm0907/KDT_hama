@@ -44,6 +44,7 @@ export function HomePage({ onProductSelect }: HomePageProps) {
               activeSort={sortOption}
               onSortChange={setSortOption}
               labels={{ 'low-price': '인기순' }}
+              options={['low-price', 'recent']}
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">

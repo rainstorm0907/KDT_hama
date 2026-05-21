@@ -3,11 +3,16 @@ import { ProductVisual } from '../components/ProductVisual';
 // TODO(BE): 찜 목록 API가 생기면 GET /api/users/me/wishlist 응답으로 교체합니다.
 import { products } from '../data/mockProducts';
 import { hairline } from '../styles/hairline';
+import type { Product } from '../types/product';
 import { formatWon } from '../utils/format';
 
 const wishlistItems = products.slice(0, 3);
 
-export function MyPage() {
+type MyPageProps = {
+  onProductSelect: (product: Product) => void;
+};
+
+export function MyPage({ onProductSelect }: MyPageProps) {
   return (
     <main className={`flex-1 ${hairline.page}`}>
       <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-12 px-8 py-16 md:grid-cols-[320px_1fr] md:items-start lg:gap-14">
@@ -49,24 +54,31 @@ export function MyPage() {
             {wishlistItems.map((item) => (
               <article
                 key={item.id}
-                className={`group flex items-center gap-6 rounded-[24px] p-6 transition-all ${hairline.card} ${hairline.cardHover}`}
+                className={`group flex items-center gap-4 rounded-[24px] p-6 transition-all focus-within:ring-2 focus-within:ring-black focus-within:ring-offset-2 ${hairline.card} ${hairline.cardHover}`}
               >
-                <div className={`flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl ${hairline.image}`}>
-                  <ProductVisual
-                    imageUrl={item.imageUrl}
-                    name={item.name}
-                    variant="thumb"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-400 font-bold uppercase">
-                    {item.brand}
-                  </p>
-                  <h4 className="font-bold text-gray-900 mb-2 line-clamp-2">
-                    {item.name}
-                  </h4>
-                  <p className="font-bold text-lg">{formatWon(item.price)}</p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onProductSelect(item)}
+                  className="flex min-w-0 flex-1 items-center gap-6 text-left outline-none"
+                  aria-label={`${item.name} 상세 보기`}
+                >
+                  <div className={`flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl ${hairline.image}`}>
+                    <ProductVisual
+                      imageUrl={item.imageUrl}
+                      name={item.name}
+                      variant="thumb"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-gray-400 font-bold uppercase">
+                      {item.brand}
+                    </p>
+                    <h4 className="font-bold text-gray-900 mb-2 line-clamp-2">
+                      {item.name}
+                    </h4>
+                    <p className="font-bold text-lg">{formatWon(item.price)}</p>
+                  </div>
+                </button>
                 <button
                   className={`rounded-full border border-[#C9CFDA] bg-white/70 p-3 text-red-500 transition-colors hover:bg-red-50 ${hairline.focus}`}
                   aria-label={`${item.name} 찜 해제`}

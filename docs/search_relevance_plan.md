@@ -17,6 +17,8 @@
 - 중복 상품 중 대표 행은 `keyword` 길이가 더 긴 쪽을 남기고, `matched_keywords` 중 더 구체적인 긴 키워드를 `canonical_name`으로 선택합니다.
 - `+`, `plus`, `플러스`, `pro`, `max`, `ultra` 같은 표기 차이를 정규화합니다.
 - `crawling_20260429_no_filter.py`를 만들어 필터 미적용 결과와 비교할 수 있게 했습니다.
+- `analysis/cluster_bracket_contents.py`를 추가해 no-filter 결과의 상품명 대괄호(`[]`) 내부 텍스트만 추출하고 클러스터링할 수 있게 했습니다.
+- 대괄호 분석 결과는 `code/backend/src/main/python/analysis/results/bracket_contents`와 `code/backend/src/main/python/analysis/results/bracket_clusters`에 저장합니다.
 
 ## 확인된 문제
 
@@ -26,6 +28,7 @@
 - `아이폰 17e`처럼 숫자와 짧은 알파벳 접미사가 붙은 모델명은 오탐에 취약합니다.
   - `17e`가 `17`과 `e`로 나뉘면 `case`, `MagSafe`, `Sweet` 같은 단어의 `e` 때문에 잘못 매칭될 수 있습니다.
 - 케이스, 필름, 맥세이프 같은 액세서리 상품이 본체 가격 통계에 섞일 수 있습니다.
+- `[미개봉]`, `[리퍼급]`, `[01272]`, `[대전 중고폰]`처럼 상품 상태, 판매자 관리번호, 지역/매장 정보가 대괄호 안에 들어가 클러스터링 토큰을 흐릴 수 있습니다.
 - no-filter 결과는 수량이 늘지만 상품명 정합성이 낮아져 가격 통계 품질을 떨어뜨릴 수 있습니다.
 
 ## 비교 결과 요약

@@ -73,8 +73,9 @@ readme
   - 역할
       - 프론트엔드
         - Hama 프론트엔드 Vite 앱 구조 구성
-        - 홈 화면 컴포넌트(`Header`, `HeroBanner`, `SearchPanel`, `CategoryGrid`, `ProductGrid`, `Footer`) 구현
-        - 카테고리/상품 더미 데이터와 타입 정의 분리
+        - 홈/검색 결과/마이페이지/디자인 랩 페이지 구조 구현
+        - 공통 컴포넌트(`Header`, `SearchBar`, `CategoryGrid`, `ProductCard`, `ProductDetailModal`, `Footer` 등) 구현
+        - 카테고리/상품 목 데이터와 상품 타입 정의 분리
   - GIT URL: https://github.com/rlekdm
 - **이준호**
   - 역할

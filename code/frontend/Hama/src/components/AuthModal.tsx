@@ -23,7 +23,7 @@ export function AuthModal({
   return (
     <>
       <div
-        className="fixed inset-0 z-[100] bg-white/48 backdrop-blur-[8px] transition-all"
+        className={`fixed inset-0 z-[100] transition-all ${hairline.modalOverlay}`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -87,12 +87,12 @@ function LoginPanel({
         <input
           type="email"
           placeholder="이메일 주소"
-          className={`w-full rounded-2xl border border-[#C9CFDA] bg-white/70 px-5 py-4 outline-none transition-all focus:border-black focus:ring-2 focus:ring-black`}
+          className="w-full rounded-2xl border border-[#C9CFDA] bg-white px-5 py-4 outline-none transition-all focus:border-black focus:ring-2 focus:ring-black"
         />
         <input
           type="password"
           placeholder="비밀번호"
-          className="w-full rounded-2xl border border-[#C9CFDA] bg-white/70 px-5 py-4 outline-none transition-all focus:border-black focus:ring-2 focus:ring-black"
+          className="w-full rounded-2xl border border-[#C9CFDA] bg-white px-5 py-4 outline-none transition-all focus:border-black focus:ring-2 focus:ring-black"
         />
         <div className="flex justify-end px-1">
           <button
@@ -145,17 +145,17 @@ function SignUpPanel({ onClose, onModeChange }: PanelProps) {
         <input
           type="text"
           placeholder="이름"
-          className="w-full rounded-2xl border border-[#C9CFDA] bg-white/70 px-5 py-4 outline-none focus:border-black focus:ring-2 focus:ring-black"
+          className="w-full rounded-2xl border border-[#C9CFDA] bg-white px-5 py-4 outline-none focus:border-black focus:ring-2 focus:ring-black"
         />
         <input
           type="email"
           placeholder="이메일 주소"
-          className="w-full rounded-2xl border border-[#C9CFDA] bg-white/70 px-5 py-4 outline-none focus:border-black focus:ring-2 focus:ring-black"
+          className="w-full rounded-2xl border border-[#C9CFDA] bg-white px-5 py-4 outline-none focus:border-black focus:ring-2 focus:ring-black"
         />
         <input
           type="password"
           placeholder="비밀번호"
-          className="w-full rounded-2xl border border-[#C9CFDA] bg-white/70 px-5 py-4 outline-none focus:border-black focus:ring-2 focus:ring-black"
+          className="w-full rounded-2xl border border-[#C9CFDA] bg-white px-5 py-4 outline-none focus:border-black focus:ring-2 focus:ring-black"
         />
         <button className={`mt-4 w-full rounded-2xl py-4 font-bold transition-all ${hairline.primaryButton} ${hairline.focus}`}>
           시작하기
@@ -192,7 +192,7 @@ function FindPasswordPanel({ onClose, onModeChange }: PanelProps) {
         <ArrowLeft className="w-5 h-5 text-gray-400" />
       </button>
       <ModalCloseButton onClose={onClose} />
-      <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#C9CFDA] bg-white/70">
+      <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#C9CFDA] bg-white">
         <Search className="w-6 h-6 text-black" />
       </div>
       <h2
@@ -213,7 +213,7 @@ function FindPasswordPanel({ onClose, onModeChange }: PanelProps) {
         <input
           type="email"
           placeholder="이메일 주소 입력"
-          className="w-full rounded-2xl border border-[#C9CFDA] bg-white/70 px-5 py-4 outline-none transition-all focus:border-black focus:ring-2 focus:ring-black"
+          className="w-full rounded-2xl border border-[#C9CFDA] bg-white px-5 py-4 outline-none transition-all focus:border-black focus:ring-2 focus:ring-black"
         />
         <button className={`mt-4 w-full rounded-2xl py-4 font-bold transition-all ${hairline.primaryButton} ${hairline.focus}`}>
           재설정 링크 보내기

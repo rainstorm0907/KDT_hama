@@ -2,10 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  min-height: 100%;
+  overflow-y: auto;
+  scrollbar-color: transparent transparent;
+  scrollbar-width: none;
+}
+
+html.is-scrolling {
+  scrollbar-color: rgba(17, 24, 39, 0.22) transparent;
+  scrollbar-width: thin;
+}
+
+html::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+html.is-scrolling::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html.is-scrolling::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.is-scrolling::-webkit-scrollbar-thumb {
+  background: rgba(17, 24, 39, 0.2);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
 body {
+  min-height: 100%;
   margin: 0;
   padding: 0;
   background-color: #f9f9fb;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
 }
 
 @keyframes image-slide {
@@ -21,6 +60,41 @@ body {
 
 .animate-image-slide {
   animation: image-slide 260ms ease-out;
+}
+
+.transient-scrollbar {
+  scrollbar-color: transparent transparent;
+  scrollbar-width: none;
+}
+
+.transient-scrollbar:hover,
+.transient-scrollbar:focus-within,
+.transient-scrollbar.is-scrolling {
+  scrollbar-color: rgba(17, 24, 39, 0.2) transparent;
+  scrollbar-width: thin;
+}
+
+.transient-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.transient-scrollbar:hover::-webkit-scrollbar,
+.transient-scrollbar:focus-within::-webkit-scrollbar,
+.transient-scrollbar.is-scrolling::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.transient-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.transient-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(17, 24, 39, 0.18);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
 }
 
 /* 카테고리 인터랙션 */

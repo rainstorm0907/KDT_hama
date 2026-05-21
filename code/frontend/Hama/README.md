@@ -37,6 +37,22 @@ npm install
 npm run dev
 ```
 
+검색 API까지 함께 확인하려면 백엔드 MVP 서버를 먼저 실행합니다.
+
+```bash
+cd ../../backend/src/main/python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn api_server:app --reload --host 127.0.0.1 --port 8000
+```
+
+프론트 개발 서버는 같은 origin의 `/api` 프록시를 쓰는 것을 기본으로 합니다.
+
+```bash
+API_PROXY_TARGET=http://127.0.0.1:8000 npm run dev
+```
+
 개발 서버가 실행되면 브라우저에서 아래 주소로 접속합니다.
 
 ```text
@@ -63,13 +79,13 @@ npm run build
 
 ## 백엔드 연결 메모
 
-검색 결과 화면은 `src/api/products.ts`의 `fetchSearchProducts` 호출로 mock 데이터를 교체하는 구조를 기준으로 합니다.
+검색 결과 화면은 `src/api/products.ts`의 `fetchSearchProducts` 호출로 CSV 기반 MVP API를 호출합니다.
 
 ```http
 GET /api/products/search?q=아이폰&platforms=번개장터,중고나라&sort=low-price&page=1&limit=40
 ```
 
-응답의 `items`는 현재 `src/types/product.ts`의 `Product` 타입과 맞추는 것을 우선합니다. `summary.lowestPrice`, `summary.averagePrice`, `total`은 현재 페이지가 아니라 필터가 적용된 전체 검색 결과 기준으로 계산합니다.
+응답의 `items`는 현재 `src/types/product.ts`의 `Product` 타입과 맞추는 것을 우선합니다. MVP에서는 `src/utils/temporarySearchCalculations.ts`가 플랫폼 필터, 정렬, 최저가, 평균가를 임시로 계산합니다. DB 기반 검색으로 넘어가면 이 임시 파일 의존성을 제거하고 `summary.lowestPrice`, `summary.averagePrice`, `total`을 백엔드에서 필터 적용 전체 검색 결과 기준으로 계산합니다.
 
 ```ts
 type SearchProductsResponse = {
@@ -117,10 +133,10 @@ type SearchProductsResponse = {
 
 - [ ] API 통신 모듈 구성: 백엔드 API 요청/응답 공통 처리
 - [ ] API 계약 정리: 검색, 상품 상세, 가격 비교, 찜, 로그인 응답 형식 정의
-- [x] 검색 기능 연동: 검색어 입력, URL 쿼리 이동, mock 결과 필터링
+- [x] 검색 기능 연동: 검색어 입력, URL 쿼리 이동, CSV 기반 MVP API 호출
 - [ ] 최근 검색어 관리: 로컬스토리지 저장, 개별 삭제, 전체 삭제
 - [ ] 카테고리 필터 연동: 선택된 카테고리에 맞는 상품 목록 표시
-- [x] 정렬 기능 연동: 낮은 가격순, 최신순 mock 정렬
+- [x] 정렬 기능 연동: 낮은 가격순, 최신순 MVP 임시 프론트 정렬
 - [ ] 찜 기능 연동: 관심 상품 등록/삭제 및 마이페이지 반영
 - [x] 인증 상태 관리: mock 로그인 여부에 따른 헤더 표시 전환
 
@@ -137,19 +153,36 @@ type SearchProductsResponse = {
 ### 5단계: 프로젝트 관리 및 협업
 
 - [ ] 화면별 완료 기준 정리: 메인, 검색 결과, 상세, 마이페이지별 Definition of Done 작성
-- [ ] 백엔드 연동 전 mock data 구조 확정
-- [ ] API 변경 사항 기록 방식 정리
-- [ ] 프론트/백엔드 역할 분리: 데이터 가공 위치와 화면 표시 책임 구분
+- [x] 백엔드 연동 전 mock data 구조 확정
+- [x] API 변경 사항 기록 방식 정리
+- [x] 프론트/백엔드 역할 분리: MVP 임시 계산 위치와 향후 백엔드 이관 지점 기록
 - [ ] 발표용 사용자 플로우 정리: 검색 -> 비교 -> 상세 -> 원본 페이지 이동
 
 ## 현재 진행 상황
 
-현재 프론트엔드는 메인 화면, 검색 결과 페이지, 상품 상세 팝업, 로그인/회원가입 팝업, 마이페이지 기본 화면까지 구현되어 있습니다. 프리셋 3번 `Precision Hairline` 방향을 기준으로 공통 헤더, 검색창, 필터, 상품 카드, 모달 표면 스타일을 `src/styles/hairline.ts`에 모아 재사용합니다. 검색 결과는 URL 쿼리와 mock data 기반으로 동작하며, 실제 API 연동과 AI 챗봇 기능은 아직 구현 전입니다.
+현재 프론트엔드는 메인 화면, 검색 결과 페이지, 상품 상세 팝업, 로그인/회원가입 팝업, 마이페이지 기본 화면까지 구현되어 있습니다. 프리셋 3번 `Precision Hairline` 방향을 기준으로 공통 헤더, 검색창, 필터, 상품 카드, 모달 표면 스타일을 `src/styles/hairline.ts`에 모아 재사용합니다. 검색 결과 화면은 플랫폼 필터, 정렬, 최저가/평균가 요약, 상품 상세 팝업 연결까지 구성되어 있습니다. AI 챗봇 기능은 아직 구현 전입니다.
 
-## 다음 우선순위
+## 검색 화면 집중 체크리스트
 
-1. 백엔드 API 계약 문서화
-2. 검색 결과 API 연동 및 로딩/빈/에러 상태 구현
-3. 최근 검색어 로컬스토리지 저장/삭제 상태 연동
-4. 로그인/회원가입 API 연동
-5. 찜 목록과 목표 가격 기능 연동
+### 완료
+
+- [x] `/search` 페이지 분리 및 검색창 URL 연결
+- [x] 검색 결과 카드 그리드 구성
+- [x] 번개장터/중고나라 플랫폼 필터 구현
+- [x] 최저가, 평균가 요약 대시보드 구성
+- [x] 낮은 가격순, 최신순, 관련도순 정렬 구현
+- [x] 상품 카드 클릭 시 상세 팝업 연결
+- [x] 상세 팝업에서 원본 페이지 이동 버튼 연결
+- [x] 검색창 최근 검색어 팝업 UI 구성
+- [x] 검색창 팝업이 화면을 밀지 않도록 overlay 방식 수정
+
+### 다음 작업
+
+1. 최근 검색어 저장/삭제 기능 완성
+2. 인기 검색어 영역 추가
+3. 검색 결과 로딩/빈 상태/에러 상태 정리
+4. 검색어와 상품 상세의 연결 흐름 강화
+5. 상품별 가격 추이 기간 선택 UI 추가: 1주, 1달, 3달
+6. 평균가 대비 현재 가격 표시 추가: 예시 `-3%`
+7. 찜 추가, 알림 설정, 챗봇 버튼의 동작 상태 정리
+8. 검색 화면 반응형 최종 점검
