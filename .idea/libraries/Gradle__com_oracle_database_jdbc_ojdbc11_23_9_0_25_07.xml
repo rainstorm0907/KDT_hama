@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="Gradle: com.oracle.database.jdbc:ojdbc11:23.9.0.25.07" type="java-imported" external-system-id="GRADLE">
+    <properties groupId="com.oracle.database.jdbc" artifactId="ojdbc11" version="23.9.0.25.07" baseVersion="23.9.0.25.07" />
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.oracle.database.jdbc/ojdbc11/23.9.0.25.07/4fe3479be8322eaac43f1cd0fb5818e93048201d/ojdbc11-23.9.0.25.07.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
