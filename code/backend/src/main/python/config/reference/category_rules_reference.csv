@@ -1,0 +1,3 @@
+﻿category,tokens,enabled,match_count,source_keywords,note
+디지털/가전 > 모바일,"아이폰, iphone, 갤럭시, galaxy, 모바일, 스마트폰, 휴대폰, 핸드폰, s25, s25plus, s25ultra, s26, s26edge, s26ultra",1,14353,"갤럭시 s25, 갤럭시 s26, 아이폰 16, 아이폰 17, 아이폰 17 프로, 갤럭시 s25 울트라, 갤럭시 s25 플러스, 아이폰 15, 갤럭시 s26 울트라, 갤럭시워치, 아이폰 17 프로 맥스, 맥북",검토 후 config/category_rules.csv에 필요한 토큰만 반영
+디지털/가전 > 노트북,"맥북, macbook, macbookair, macbookpro, 그램, gram, 노트북, 랩탑, laptop",1,1268,"맥북, 아이패드, 에어팟 프로, 애플워치, 아이폰 16, 플스5, 아이폰 17, 갤럭시 s26 울트라, 갤럭시 s26, 아이폰 17 프로, 아이폰 15, 갤럭시 s25 플러스",검토 후 config/category_rules.csv에 필요한 토큰만 반영
