@@ -2,18 +2,17 @@ import { useEffect, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AuthModal } from './components/AuthModal';
 import type { AuthMode } from './components/AuthModal';
-import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { ProductDetailModal } from './components/ProductDetailModal';
-import { DesignPreviewPage } from './pages/DesignPreviewPage';
-import { DesignLabPage } from './pages/DesignLabPage';
+import { SiteFooter } from './components/SiteFooter';
 import { HomePage } from './pages/HomePage';
+import { LegalPage } from './pages/LegalPage';
 import { MyPage } from './pages/MyPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { hairline } from './styles/hairline';
 import type { Product } from './types/product';
 
-function App() {
+export function AppRoot() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -78,11 +77,11 @@ function App() {
             path="/mypage"
             element={<MyPage onProductSelect={setSelectedProduct} />}
           />
-          <Route path="/design-lab" element={<DesignLabPage />} />
-          <Route path="/design/:variant" element={<DesignPreviewPage />} />
+          <Route path="/terms" element={<LegalPage type="terms" />} />
+          <Route path="/privacy" element={<LegalPage type="privacy" />} />
         </Routes>
 
-        <Footer />
+        <SiteFooter />
       </div>
 
       <AuthModal
@@ -103,4 +102,4 @@ function App() {
   );
 }
 
-export default App;
+export default AppRoot;

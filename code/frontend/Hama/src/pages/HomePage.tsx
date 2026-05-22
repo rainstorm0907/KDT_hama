@@ -1,24 +1,54 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Banner } from '../components/Banner';
 import { CategoryGrid } from '../components/CategoryGrid';
-import { ProductCard } from '../components/ProductCard';
+import { ProductCard, ProductCardSkeleton } from '../components/ProductCard';
+import { RefreshProductsButton } from '../components/RefreshProductsButton';
+import { RowsMenu } from '../components/RowsMenu';
+import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { SearchBar } from '../components/SearchBar';
-import { SortControls } from '../components/SortControls';
-import type { SortOption } from '../components/SortControls';
 import { categories } from '../data/categories';
-// TODO(BE): 메인 추천 상품 API가 생기면 GET /api/products/recommended 응답으로 교체합니다.
-import { products } from '../data/mockProducts';
+import { useRecommendedProductsQuery } from '../queries/productQueries';
 import { hairline } from '../styles/hairline';
+import type { RowCountOption } from '../types/productList';
 import type { Product } from '../types/product';
+import { formatUpdatedAtTimestamp } from '../utils/format';
 
 type HomePageProps = {
   onProductSelect: (product: Product) => void;
 };
 
+const PRODUCT_COLUMNS = 4;
+
 export function HomePage({ onProductSelect }: HomePageProps) {
+  const navigate = useNavigate();
   const [activeId, setActiveId] = useState('phone');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [sortOption, setSortOption] = useState<SortOption>('low-price');
+  const [rowCount, setRowCount] = useState<RowCountOption>(4);
+  const recommendedLimit = rowCount * PRODUCT_COLUMNS;
+  const recommendedProductsQuery = useRecommendedProductsQuery({
+    limit: recommendedLimit,
+  });
+  const recommendedProducts = recommendedProductsQuery.data?.items ?? [];
+  const isRecommendedLoading = recommendedProductsQuery.isPending;
+  const isRecommendedRefreshing = recommendedProductsQuery.isFetching;
+  const recommendedError = recommendedProductsQuery.isError
+    ? '추천 상품을 불러오지 못했습니다. 백엔드 서버 상태를 확인해 주세요.'
+    : null;
+  const recommendedUpdatedAt = formatUpdatedAtTimestamp(
+    recommendedProductsQuery.dataUpdatedAt
+  );
+
+  const handleCategorySelect = (id: string) => {
+    const category = categories.find((item) => item.id === id);
+
+    if (!category) {
+      return;
+    }
+
+    setActiveId(id);
+    navigate(`/search?q=${encodeURIComponent(category.name)}`);
+  };
 
   return (
     <main className={`flex-1 flex flex-col gap-14 md:gap-16 pb-24 ${hairline.page}`}>
@@ -31,33 +61,59 @@ export function HomePage({ onProductSelect }: HomePageProps) {
       <CategoryGrid
         categories={categories}
         activeId={activeId}
-        onSelect={setActiveId}
+        onSelect={handleCategorySelect}
       />
 
       <section id="products" aria-label="추천 상품" className="w-full">
         <div className="max-w-[1440px] mx-auto px-8">
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <h2 className="text-xl font-bold tracking-tight text-gray-900">
               추천 상품
             </h2>
-            <SortControls
-              activeSort={sortOption}
-              onSortChange={setSortOption}
-              labels={{ 'low-price': '인기순' }}
-              options={['low-price', 'recent']}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {products.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onClick={onProductSelect}
+            <div className="flex flex-wrap items-center gap-3">
+              <RowsMenu value={rowCount} onChange={setRowCount} />
+              <RefreshProductsButton
+                isLoading={isRecommendedRefreshing}
+                onRefresh={() => void recommendedProductsQuery.refetch()}
+                updatedAt={recommendedUpdatedAt}
               />
-            ))}
+            </div>
           </div>
+
+          {recommendedError ? (
+            <div className={`mb-8 rounded-2xl px-5 py-4 text-sm font-bold text-rose-700 ${hairline.card}`}>
+              {recommendedError}
+            </div>
+          ) : null}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {isRecommendedLoading && recommendedProducts.length === 0
+              ? Array.from({ length: recommendedLimit }, (_, index) => (
+                  <ProductCardSkeleton key={`home-skeleton-${index}`} />
+                ))
+              : recommendedProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onClick={onProductSelect}
+                  />
+                ))}
+          </div>
+
+          {!isRecommendedLoading && !recommendedError && recommendedProducts.length === 0 ? (
+            <div className={`mt-8 flex min-h-40 items-center justify-center rounded-2xl px-6 text-center ${hairline.panelSoft}`}>
+              <p className="text-base font-bold text-gray-900">
+                추천할 상품이 없습니다
+                <span className="mt-1 block text-sm font-semibold text-[#86868B]">
+                  백엔드 데이터 연결 상태를 확인해 주세요
+                </span>
+              </p>
+            </div>
+          ) : null}
         </div>
       </section>
+
+      <ScrollToTopButton />
     </main>
   );
 }

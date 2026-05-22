@@ -30,17 +30,22 @@
 
 ## 초기 세팅 및 실행
 
-처음 프로젝트를 받은 뒤에는 의존성을 먼저 설치합니다. `react-router-dom`도 이 설치 과정에서 함께 설치됩니다.
+아래 명령어는 저장소 폴더명이 `HamaMain`인 기준입니다. 처음에는 저장소가 있는 상위 폴더에서 `cd HamaMain`으로 프로젝트 루트에 들어간 뒤 실행합니다.
+
+처음 프로젝트를 받은 뒤에는 프론트 폴더로 이동한 뒤 의존성을 먼저 설치합니다. `react-router-dom`도 이 설치 과정에서 함께 설치됩니다.
 
 ```bash
+cd HamaMain
+cd code/frontend/Hama
 npm install
-npm run dev
+npm run dev -- --host 127.0.0.1 --port 5178 --strictPort --force
 ```
 
 검색 API까지 함께 확인하려면 백엔드 MVP 서버를 먼저 실행합니다.
 
 ```bash
-cd ../../backend/src/main/python
+cd HamaMain
+cd code/backend/src/main/python
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -50,18 +55,23 @@ uvicorn api_server:app --reload --host 127.0.0.1 --port 8000
 프론트 개발 서버는 같은 origin의 `/api` 프록시를 쓰는 것을 기본으로 합니다.
 
 ```bash
-API_PROXY_TARGET=http://127.0.0.1:8000 npm run dev
+cd HamaMain
+cd code/frontend/Hama
+cp .env.example .env
+npm run dev -- --host 127.0.0.1 --port 5178 --strictPort --force
 ```
 
 개발 서버가 실행되면 브라우저에서 아래 주소로 접속합니다.
 
 ```text
-http://127.0.0.1:5173/
+http://127.0.0.1:5178/
 ```
 
 ## 빌드 및 검사
 
 ```bash
+cd HamaMain
+cd code/frontend/Hama
 npm run lint
 npm run build
 ```
@@ -85,7 +95,7 @@ npm run build
 GET /api/products/search?q=아이폰&platforms=번개장터,중고나라&sort=low-price&page=1&limit=40
 ```
 
-응답의 `items`는 현재 `src/types/product.ts`의 `Product` 타입과 맞추는 것을 우선합니다. MVP에서는 `src/utils/temporarySearchCalculations.ts`가 플랫폼 필터, 정렬, 최저가, 평균가를 임시로 계산합니다. DB 기반 검색으로 넘어가면 이 임시 파일 의존성을 제거하고 `summary.lowestPrice`, `summary.averagePrice`, `total`을 백엔드에서 필터 적용 전체 검색 결과 기준으로 계산합니다.
+응답의 `items`는 현재 `src/types/product.ts`의 `Product` 타입과 맞추는 것을 우선합니다. 플랫폼 필터, 정렬, 최저가, 평균가, 전체 개수는 백엔드 API 응답의 `summary`와 `total`을 기준으로 표시합니다.
 
 ```ts
 type SearchProductsResponse = {
@@ -138,13 +148,13 @@ type SearchProductsResponse = {
 - [ ] 카테고리 필터 연동: 선택된 카테고리에 맞는 상품 목록 표시
 - [x] 정렬 기능 연동: 낮은 가격순, 최신순 MVP 임시 프론트 정렬
 - [ ] 찜 기능 연동: 관심 상품 등록/삭제 및 마이페이지 반영
-- [x] 인증 상태 관리: mock 로그인 여부에 따른 헤더 표시 전환
+- [x] 인증 상태 관리: 로그인 여부에 따른 헤더 표시 전환
 
 ### 4단계: 사용자 경험 품질
 
-- [ ] 로딩 상태: 검색 결과, 상품 상세, 찜 목록 스켈레톤 UI
-- [ ] 빈 상태: 검색 결과 없음, 최근 검색어 없음, 찜 목록 없음
-- [ ] 에러 상태: API 실패, 네트워크 오류, 권한 오류 메시지
+- [x] 로딩 상태: 메인/검색 결과 상품 카드 스켈레톤 UI
+- [x] 빈 상태: 검색 결과 없음, 최근 검색어 없음, 찜 목록 없음
+- [x] 에러 상태: API 실패, 네트워크 오류 메시지
 - [ ] 키보드 접근성: 검색창, 카테고리, 정렬 버튼, 카드 이동 가능 여부 확인
 - [ ] 반응형 검증: 모바일, 태블릿, 데스크톱 주요 화면 확인
 - [ ] 이미지 대체 UI: 상품 이미지 로딩 실패 또는 이미지 없음 처리
@@ -153,7 +163,7 @@ type SearchProductsResponse = {
 ### 5단계: 프로젝트 관리 및 협업
 
 - [ ] 화면별 완료 기준 정리: 메인, 검색 결과, 상세, 마이페이지별 Definition of Done 작성
-- [x] 백엔드 연동 전 mock data 구조 확정
+- [x] 백엔드 API 응답 타입 기준 확정
 - [x] API 변경 사항 기록 방식 정리
 - [x] 프론트/백엔드 역할 분리: MVP 임시 계산 위치와 향후 백엔드 이관 지점 기록
 - [ ] 발표용 사용자 플로우 정리: 검색 -> 비교 -> 상세 -> 원본 페이지 이동

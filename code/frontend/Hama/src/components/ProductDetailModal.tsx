@@ -13,6 +13,11 @@ import { fetchProductDetail } from '../api/products';
 import type { Product } from '../types/product';
 import { hairline } from '../styles/hairline';
 import { formatWon } from '../utils/format';
+import {
+  isProductWished,
+  saveRecentProduct,
+  toggleWishlistProduct,
+} from '../utils/userProductLists';
 import { PriceInsightChart } from './PriceInsightChart';
 import { ProductVisual } from './ProductVisual';
 
@@ -49,9 +54,12 @@ export function ProductDetailModal({
       productKey: '',
       product: null,
     });
-  const [isWished, setIsWished] = useState(false);
+  const [isWished, setIsWished] = useState(() =>
+    product ? isProductWished(product) : false
+  );
   const [isAlertEnabled, setIsAlertEnabled] = useState(false);
   const [activeToast, setActiveToast] = useState<'wish' | 'alert' | null>(null);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   useLayoutEffect(() => {
     if (!product) {
@@ -92,6 +100,7 @@ export function ProductDetailModal({
       return;
     }
 
+    saveRecentProduct(product);
     const controller = new AbortController();
 
     fetchProductDetail({
@@ -152,6 +161,12 @@ export function ProductDetailModal({
     (isDetailLoading
       ? '상품 설명을 불러오는 중이에요.'
       : '등록된 상세 설명이 없습니다. 원본 페이지에서 확인해 주세요.');
+  const descriptionPreviewLimit = 210;
+  const canExpandDescription = descriptionText.length > descriptionPreviewLimit;
+  const visibleDescriptionText =
+    canExpandDescription && !isDescriptionExpanded
+      ? `${descriptionText.slice(0, descriptionPreviewLimit).trim()}…`
+      : descriptionText;
   const insightKeywords = buildInsightKeywords(visibleProduct);
 
   const moveImage = (direction: 'prev' | 'next') => {
@@ -182,12 +197,10 @@ export function ProductDetailModal({
   };
 
   const handleWishToggle = () => {
-    setIsWished((current) => {
-      const nextValue = !current;
-      setActiveToast(nextValue ? 'wish' : null);
+    const nextValue = toggleWishlistProduct(visibleProduct);
 
-      return nextValue;
-    });
+    setIsWished(nextValue);
+    setActiveToast(nextValue ? 'wish' : null);
   };
 
   const goToWishlist = () => {
@@ -234,7 +247,7 @@ export function ProductDetailModal({
         </button>
 
         <div className="transient-scrollbar grid max-h-[calc(100vh-72px)] grid-cols-1 items-stretch overflow-y-auto lg:grid-cols-2">
-          <div className="flex h-full flex-col border-b border-[#C9CFDA] p-6 lg:border-b-0 lg:border-r lg:p-7">
+          <div className="flex h-full flex-col border-b border-[#C9CFDA] p-6 lg:min-h-[760px] lg:border-b-0 lg:border-r lg:p-7">
             <div className={`relative h-[58vh] min-h-[520px] max-h-[670px] overflow-hidden rounded-[20px] ${hairline.image}`}>
               <span className={`absolute left-6 top-6 z-20 px-5 py-2.5 text-base ${hairline.status}`}>
                 {visibleProduct.status}
@@ -294,41 +307,43 @@ export function ProductDetailModal({
               ) : null}
             </div>
 
-            <div className="transient-scrollbar mt-4 flex gap-3 overflow-x-auto pb-1">
-              {visibleProduct.images.map((imageId, index) => (
-                <button
-                  type="button"
-                  key={`${imageId}-${index}`}
-                  aria-label={`${index + 1}번 상품 이미지 보기`}
-                  onClick={() => selectImage(index)}
-                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 bg-[#F5F5F7] transition focus:outline-none focus:ring-2 focus:ring-black ${
-                    index === activeImageIndex
-                      ? 'border-black shadow-sm'
-                      : 'border-[#C9CFDA] opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  <ProductVisual
-                    imageUrl={resolveImageUrl(imageId)}
-                    name={`${visibleProduct.name} 썸네일 ${index + 1}`}
-                    variant="thumb"
-                  />
-                </button>
-              ))}
-            </div>
+            <div className="mt-auto pt-4">
+              <div className="transient-scrollbar flex gap-3 overflow-x-auto pb-1">
+                {visibleProduct.images.map((imageId, index) => (
+                  <button
+                    type="button"
+                    key={`${imageId}-${index}`}
+                    aria-label={`${index + 1}번 상품 이미지 보기`}
+                    onClick={() => selectImage(index)}
+                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 bg-[#F5F5F7] transition focus:outline-none focus:ring-2 focus:ring-black ${
+                      index === activeImageIndex
+                        ? 'border-black shadow-sm'
+                        : 'border-[#C9CFDA] opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <ProductVisual
+                      imageUrl={resolveImageUrl(imageId)}
+                      name={`${visibleProduct.name} 썸네일 ${index + 1}`}
+                      variant="thumb"
+                    />
+                  </button>
+                ))}
+              </div>
 
-            <a
-              href={visibleProduct.link}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-5 inline-flex h-16 w-full items-center justify-center gap-2.5 rounded-xl border border-emerald-600/20 bg-emerald-600 px-5 text-lg font-black text-white shadow-[0_10px_24px_rgba(5,150,105,0.14)] transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2"
-            >
-              {visibleProduct.platform}에서 보기
-              <ExternalLink className="h-5 w-5" aria-hidden="true" />
-            </a>
+              <a
+                href={visibleProduct.link}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 inline-flex h-16 w-full items-center justify-center gap-2.5 rounded-xl border border-emerald-600/20 bg-emerald-600 px-5 text-lg font-black text-white shadow-[0_10px_24px_rgba(5,150,105,0.14)] transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2"
+              >
+                {visibleProduct.platform}에서 보기
+                <ExternalLink className="h-5 w-5" aria-hidden="true" />
+              </a>
+            </div>
           </div>
 
           <div className="flex h-full min-h-[760px] flex-col p-6 lg:p-7">
-            <div className="pr-12">
+            <div className="pr-20">
               <h2
                 id={titleId}
                 className="text-2xl font-black leading-snug tracking-tight text-gray-950"
@@ -349,9 +364,26 @@ export function ProductDetailModal({
               <h3 className="text-base font-black tracking-tight text-gray-900">
                 상품 설명
               </h3>
-              <p className="mt-3 text-[17px] font-semibold leading-8 text-gray-700">
-                {descriptionText}
-              </p>
+              <div
+                className={`mt-3 rounded-2xl border border-transparent pr-1 ${
+                  isDescriptionExpanded
+                    ? 'transient-scrollbar max-h-44 overflow-y-auto border-[#D9DEE7]/75 bg-white/58 px-4 py-3'
+                    : ''
+                }`}
+              >
+                <p className="break-words text-[16px] font-semibold leading-7 text-gray-700">
+                  {visibleDescriptionText}
+                </p>
+              </div>
+              {canExpandDescription ? (
+                <button
+                  type="button"
+                  onClick={() => setIsDescriptionExpanded((current) => !current)}
+                  className={`mt-2 text-sm font-black text-[#626873] underline decoration-[#C9CFDA] underline-offset-4 transition-colors hover:text-gray-950 ${hairline.focus}`}
+                >
+                  {isDescriptionExpanded ? '접기' : '더보기'}
+                </button>
+              ) : null}
             </div>
 
             <div className="mt-9">
