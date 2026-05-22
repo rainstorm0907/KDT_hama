@@ -3,7 +3,7 @@ import type { Product } from '../types/product';
 export type SearchProductsParams = {
   query: string;
   platforms: string[];
-  sort: 'low-price' | 'recent';
+  sort: 'relevance' | 'low-price' | 'recent';
   page: number;
   limit: number;
   signal?: AbortSignal;
@@ -27,11 +27,22 @@ export type ProductDetailParams = {
   signal?: AbortSignal;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+export type RecommendedProductsParams = {
+  limit: number;
+  signal?: AbortSignal;
+};
 
-// MVP에서는 백엔드가 CSV를 Product DTO로 정규화해 내려주고, 플랫폼 필터/정렬/가격 요약은
-// src/utils/temporarySearchCalculations.ts에서 임시 계산합니다.
-// TODO(BE): DB 기반 검색 API가 준비되면 백엔드가 필터/정렬/summary를 모두 계산하도록 계약을 확정합니다.
+export type RecommendedProductsResponse = {
+  items: Product[];
+  total: number;
+  limit: number;
+  summary: {
+    lowestPrice: number;
+    averagePrice: number;
+    updatedAt: string;
+  };
+};
+
 export async function fetchSearchProducts({
   query,
   platforms,
@@ -48,7 +59,7 @@ export async function fetchSearchProducts({
     limit: String(limit),
   });
 
-  const response = await fetch(`${API_BASE_URL}/api/products/search?${params}`, {
+  const response = await fetch(`/api/products/search?${params}`, {
     signal,
   });
 
@@ -57,6 +68,25 @@ export async function fetchSearchProducts({
   }
 
   return response.json() as Promise<SearchProductsResponse>;
+}
+
+export async function fetchRecommendedProducts({
+  limit,
+  signal,
+}: RecommendedProductsParams): Promise<RecommendedProductsResponse> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+  });
+
+  const response = await fetch(`/api/products/recommended?${params}`, {
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error('추천 상품을 불러오지 못했습니다.');
+  }
+
+  return response.json() as Promise<RecommendedProductsResponse>;
 }
 
 export async function fetchProductDetail({
@@ -68,7 +98,7 @@ export async function fetchProductDetail({
   const encodedPid = encodeURIComponent(pid);
 
   const response = await fetch(
-    `${API_BASE_URL}/api/products/${encodedPlatform}/${encodedPid}`,
+    `/api/products/${encodedPlatform}/${encodedPid}`,
     { signal }
   );
 

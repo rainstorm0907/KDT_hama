@@ -21,8 +21,19 @@ type SearchBarProps = {
 // 비로그인 상태는 localStorage에 저장해도 충분합니다.
 // TODO(BE): 인기 검색어 API가 생기면 GET /api/search/popular 응답으로 교체합니다.
 // 지금은 검색 화면 시연용 기본 랭킹입니다.
-const popularKeywords = ['아이폰', '맥북', '갤럭시', '아이패드', '에어팟', '닌텐도'];
-const visiblePopularKeywordCount = 4;
+const popularKeywords = [
+  '아이폰',
+  '맥북',
+  '갤럭시',
+  '아이패드',
+  '에어팟',
+  '닌텐도',
+  '플스',
+  '자전거',
+  '신발',
+  '카메라',
+];
+const visiblePopularKeywordCount = 5;
 
 export function SearchBar({
   isOpen,
@@ -103,7 +114,8 @@ export function SearchBar({
               type="button"
               onClick={() =>
                 setPopularStartIndex((current) =>
-                  current === 0 ? popularKeywords.length - 1 : current - 1
+                  (current - visiblePopularKeywordCount + popularKeywords.length) %
+                  popularKeywords.length
                 )
               }
               className={`flex h-6 w-6 items-center justify-center rounded-full text-[#99A3B0] transition hover:bg-white/60 hover:text-[#4E5865] ${hairline.focus}`}
@@ -126,7 +138,10 @@ export function SearchBar({
             <button
               type="button"
               onClick={() =>
-                setPopularStartIndex((current) => (current + 1) % popularKeywords.length)
+                setPopularStartIndex(
+                  (current) =>
+                    (current + visiblePopularKeywordCount) % popularKeywords.length
+                )
               }
               className={`flex h-6 w-6 items-center justify-center rounded-full text-[#99A3B0] transition hover:bg-white/60 hover:text-[#4E5865] ${hairline.focus}`}
               aria-label="다음 인기 검색어 보기"
