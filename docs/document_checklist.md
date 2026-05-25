@@ -188,7 +188,8 @@
 
 - [x] `cluster_bracket_contents.py`: no-filter 크롤링 결과의 상품명 대괄호(`[]`) 내부 텍스트 추출/클러스터링 스크립트 작성 (작성일: 2026-05-21)
 - [x] `results/bracket_contents`: 대괄호 내부 텍스트 단순 추출 결과 CSV 보관 위치 정리 (작성일: 2026-05-21)
-- [x] `results/bracket_clusters`: 대괄호 내부 텍스트 클러스터링 결과 CSV 보관 위치 정리 (작성일: 2026-05-21)
+- [x] `results/bracket_clusters`: 대괄호 내부 텍스트 상세 CSV 보관 위치 정리 (작성일: 2026-05-21)
+- [x] `latest_bracket_cluster_detail.csv`: 대괄호 내부 텍스트, 문구별 등장 횟수, `/`와 공백 기준 분리 토큰, 분리 토큰 조합별 등장 횟수 및 토큰별 전체 등장 횟수를 함께 담는 상세 CSV 생성 (작성일: 2026-05-21)
 
 ### `config` 및 파이프라인
 

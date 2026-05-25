@@ -91,12 +91,10 @@ class HamaDataPipeline:
         product_token_dictionary_path: str | Path | None = None,
         category_rules_path: str | Path | None = None,
     ) -> None:
-        self.match_index = match_index or self._build_keyword_index(keyword_catalog or [])
-        self.model_classifier = model_classifier
+        del keyword_catalog, match_index, model_classifier, category_rules_path
         self.product_token_dictionary_path = Path(
             product_token_dictionary_path or DEFAULT_PRODUCT_TOKEN_DICTIONARY_PATH
         )
-        self.category_rules = self._load_category_rules(Path(category_rules_path or DEFAULT_CATEGORY_RULES_PATH))
         self.product_name_automaton = self._build_product_name_automaton(self.product_token_dictionary_path)
 
     def run_pipeline(self, raw_item: Mapping[str, Any]) -> HamaProduct:
@@ -106,45 +104,13 @@ class HamaDataPipeline:
 
         logger.info("[HamaDataPipeline] start platform=%s pid=%s", platform, raw_item.get("pid"))
         normalized_title = self._normalize_title(raw_title)
-        token_profile = TitleTokenProfile.from_title(normalized_title)
-        match_candidates = self._match_keywords_trie(token_profile, platform=platform)
-        correlation = self._classify_category_by_correlation(match_candidates, source_keyword)
-
-        category = correlation.category
-        confidence = correlation.confidence
-        method = correlation.method
-        evidence_candidates = list(correlation.evidence)
-        if category == "미분류":
-            category, confidence = self._classify_category_model(normalized_title)
-            method = "model_stub"
-
-        matched_keywords = self._collect_matched_keywords(
-            source_keyword=source_keyword,
-            candidates=evidence_candidates,
-        )
         product_name_match = self._match_product_name(normalized_title)
-        category, confidence, method = self._assign_category_from_product_name(
-            matched_keywords=product_name_match,
-            source_keyword=source_keyword,
-            fallback_category=category,
-            fallback_confidence=confidence,
-            fallback_method=method,
-        )
-        graph_keywords = self._generate_graph_keywords(
-            category=category,
-            matched_keywords=[*matched_keywords, *product_name_match.values()],
-            candidates=evidence_candidates,
-            source_keyword=source_keyword,
-            normalized_title=normalized_title,
-        )
+        graph_keywords = self._unique_values([source_keyword, *product_name_match.values()])
 
         logger.info(
-            "[HamaDataPipeline] done pid=%s category=%s confidence=%.2f method=%s matched=%s",
+            "[HamaDataPipeline] done pid=%s category_matching=disabled matched=%s",
             raw_item.get("pid"),
-            category,
-            confidence,
-            method,
-            matched_keywords,
+            product_name_match,
         )
 
         return HamaProduct(
@@ -158,14 +124,14 @@ class HamaDataPipeline:
             link=self._clean_text(raw_item.get("link")),
             date=self._clean_text(raw_item.get("date")),
             description=self._clean_text(raw_item.get("description")),
-            category=category,
+            category="",
             priceHistory=list(raw_item.get("priceHistory") or []),
             raw_title=raw_title,
             normalized_title=normalized_title,
             source_keyword=source_keyword,
-            category_confidence=confidence,
+            category_confidence=0.0,
             matched_keywords=product_name_match,
-            classification_method=method,
+            classification_method="category_matching_disabled",
             graphKeywords=graph_keywords,
         )
 
