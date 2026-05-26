@@ -65,8 +65,6 @@ def main() -> None:
 
     print(f"입력 CSV: {input_path}")
     print(f"대괄호 상세 결과: {output_paths['detail_output_path']}")
-    print(f"대괄호 내용별 결과: {output_paths['item_output_path']}")
-    print(f"대괄호 클러스터 요약: {output_paths['summary_output_path']}")
 
 
 def parse_args() -> argparse.Namespace:
@@ -144,58 +142,25 @@ def run_bracket_content_clustering(
     )
 
     content_to_cluster_id: dict[str, str] = {}
-    item_rows: list[dict[str, Any]] = []
-    summary_rows: list[dict[str, Any]] = []
+    split_token_counts = build_split_token_counts(stats_by_content.values())
+    split_tokens_counts = build_split_tokens_counts(stats_by_content.values())
 
     for cluster_no, stats_group in enumerate(cluster_groups, start=1):
         cluster_id = f"bracket_{cluster_no:03d}"
-        cluster_tokens = ordered_cluster_tokens(stats_group)
-        representative = choose_representative_content(stats_group)
-        occurrence_count = sum(stats.count for stats in stats_group)
-
         for stats in stats_group:
             content_to_cluster_id[stats.normalized_content.lower()] = cluster_id
-            item_rows.append(
-                {
-                    "cluster_id": cluster_id,
-                    "bracket_content": stats.content,
-                    "normalized_content": stats.normalized_content,
-                    "count": stats.count,
-                    "token_text": " ".join(stats.tokens),
-                    "platform_counts": format_counter(stats.platform_counts),
-                    "keyword_counts_top8": format_counter(stats.keyword_counts, limit=8),
-                    "sample_titles": " | ".join(stats.sample_titles),
-                }
-            )
-
-        summary_rows.append(
-            {
-                "cluster_id": cluster_id,
-                "unique_content_count": len(stats_group),
-                "occurrence_count": occurrence_count,
-                "representative_content": representative,
-                "cluster_tokens": cluster_tokens,
-                "bracket_contents": merge_unique((stats.normalized_content for stats in stats_group), limit=30),
-                "platform_counts": format_counter(merge_counters(stats.platform_counts for stats in stats_group)),
-                "keyword_counts_top8": format_counter(
-                    merge_counters(stats.keyword_counts for stats in stats_group),
-                    limit=8,
-                ),
-                "sample_titles": merge_unique(
-                    (title for stats in stats_group for title in stats.sample_titles),
-                    limit=sample_limit,
-                ),
-            }
-        )
 
     for row in detail_rows:
         content_key = row["normalized_content"].lower()
+        split_tokens = split_bracket_content_for_count(row["normalized_content"])
+        split_tokens_text = format_split_tokens(split_tokens)
         row["cluster_id"] = content_to_cluster_id.get(content_key, "")
+        row["bracket_content_count"] = stats_by_content[content_key].count
+        row["split_tokens"] = split_tokens_text
+        row["split_tokens_count"] = split_tokens_counts[split_tokens_text]
+        row["split_token_counts"] = format_split_token_counts(split_tokens, split_token_counts)
 
-    item_rows.sort(key=lambda row: (row["cluster_id"], -int(row["count"]), row["normalized_content"]))
-    summary_rows.sort(key=lambda row: (-int(row["occurrence_count"]), row["cluster_id"]))
-
-    return write_outputs(output_dir, detail_rows, item_rows, summary_rows)
+    return write_outputs(output_dir, detail_rows)
 
 
 def extract_bracket_contents(
@@ -309,6 +274,79 @@ def tokenize_bracket_content(value: str) -> list[str]:
     return tokens
 
 
+def split_bracket_content_for_count(value: str) -> list[str]:
+    """검토용 빈도 집계는 요청 기준대로 슬래시와 공백만 분리 기준으로 사용합니다."""
+    return [token.strip() for token in re.split(r"[/\s]+", value) if token.strip()]
+
+
+def build_split_token_counts(stats_values: Any) -> Counter[str]:
+    token_counts: Counter[str] = Counter()
+    for stats in stats_values:
+        split_tokens = split_bracket_content_for_count(stats.normalized_content)
+        token_counts.update({token: stats.count for token in split_tokens})
+    return token_counts
+
+
+def build_split_tokens_counts(stats_values: Any) -> Counter[str]:
+    split_tokens_counts: Counter[str] = Counter()
+    for stats in stats_values:
+        split_tokens_text = format_split_tokens(split_bracket_content_for_count(stats.normalized_content))
+        split_tokens_counts[split_tokens_text] += stats.count
+    return split_tokens_counts
+
+
+def format_split_tokens(split_tokens: list[str]) -> str:
+    return " | ".join(split_tokens)
+
+
+def format_split_token_counts(split_tokens: list[str], token_counts: Counter[str]) -> str:
+    unique_tokens = dict.fromkeys(split_tokens)
+    return " | ".join(f"{token}:{token_counts[token]}" for token in unique_tokens)
+
+
+def build_split_token_count_rows(
+    stats_values: Any,
+    sample_limit: int,
+) -> list[dict[str, Any]]:
+    token_counts: Counter[str] = Counter()
+    token_content_counts: Counter[str] = Counter()
+    token_platform_counts: defaultdict[str, Counter[str]] = defaultdict(Counter)
+    token_keyword_counts: defaultdict[str, Counter[str]] = defaultdict(Counter)
+    token_samples: defaultdict[str, list[str]] = defaultdict(list)
+    token_sample_titles: defaultdict[str, list[str]] = defaultdict(list)
+
+    for stats in stats_values:
+        split_tokens = split_bracket_content_for_count(stats.normalized_content)
+        for token in dict.fromkeys(split_tokens):
+            token_content_counts[token] += 1
+            token_platform_counts[token].update(stats.platform_counts)
+            token_keyword_counts[token].update(stats.keyword_counts)
+            if len(token_samples[token]) < sample_limit:
+                token_samples[token].append(stats.normalized_content)
+            for title in stats.sample_titles:
+                if len(token_sample_titles[token]) >= sample_limit:
+                    break
+                if title not in token_sample_titles[token]:
+                    token_sample_titles[token].append(title)
+
+        token_counts.update({token: stats.count for token in split_tokens})
+
+    rows = []
+    for token, count in token_counts.most_common():
+        rows.append(
+            {
+                "split_token": token,
+                "count": count,
+                "unique_bracket_content_count": token_content_counts[token],
+                "platform_counts": format_counter(token_platform_counts[token]),
+                "keyword_counts_top8": format_counter(token_keyword_counts[token], limit=8),
+                "sample_bracket_contents": " | ".join(token_samples[token]),
+                "sample_titles": " | ".join(token_sample_titles[token]),
+            }
+        )
+    return rows
+
+
 def normalize_text(value: str) -> str:
     text = value.lower()
     text = re.sub(r"(?<=[a-z0-9])plus\b", " 플러스", text)
@@ -369,56 +407,35 @@ def clean_value(value: Any) -> str:
 def write_outputs(
     output_dir: Path,
     detail_rows: list[dict[str, Any]],
-    item_rows: list[dict[str, Any]],
-    summary_rows: list[dict[str, Any]],
 ) -> dict[str, Path]:
     now = datetime.now().strftime("%Y%m%d_%H%M")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     detail_output_path = output_dir / f"bracket_cluster_detail_{now}.csv"
-    item_output_path = output_dir / f"bracket_cluster_items_{now}.csv"
-    summary_output_path = output_dir / f"bracket_cluster_summary_{now}.csv"
     latest_detail_path = output_dir / "latest_bracket_cluster_detail.csv"
-    latest_item_path = output_dir / "latest_bracket_cluster_items.csv"
-    latest_summary_path = output_dir / "latest_bracket_cluster_summary.csv"
 
     write_csv(detail_output_path, detail_rows, detail_fieldnames())
-    write_csv(item_output_path, item_rows, item_fieldnames())
-    write_csv(summary_output_path, summary_rows, summary_fieldnames())
     write_csv(latest_detail_path, detail_rows, detail_fieldnames())
-    write_csv(latest_item_path, item_rows, item_fieldnames())
-    write_csv(latest_summary_path, summary_rows, summary_fieldnames())
 
     return {
         "detail_output_path": detail_output_path,
-        "item_output_path": item_output_path,
-        "summary_output_path": summary_output_path,
         "latest_detail_path": latest_detail_path,
-        "latest_item_path": latest_item_path,
-        "latest_summary_path": latest_summary_path,
     }
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> None:
     with path.open("w", encoding="utf-8-sig", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer = csv.DictWriter(file, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
 
 def detail_fieldnames() -> list[str]:
     return [
-        "cluster_id",
-        "bracket_content",
-        "normalized_content",
-        "match_index_in_title",
         "keyword",
-        "platform",
-        "pid",
+        "split_tokens",
+        "split_tokens_count",
         "name",
-        "price",
-        "status",
-        "link",
     ]
 
 
@@ -445,6 +462,18 @@ def summary_fieldnames() -> list[str]:
         "bracket_contents",
         "platform_counts",
         "keyword_counts_top8",
+        "sample_titles",
+    ]
+
+
+def split_token_fieldnames() -> list[str]:
+    return [
+        "split_token",
+        "count",
+        "unique_bracket_content_count",
+        "platform_counts",
+        "keyword_counts_top8",
+        "sample_bracket_contents",
         "sample_titles",
     ]
 

@@ -275,7 +275,7 @@ Python 기반 크롤링 스크립트와 입력 데이터를 관리합니다.
 
 - `cluster_bracket_contents.py`: no-filter 크롤링 결과에서 상품명 대괄호(`[]`) 내부 텍스트만 추출하고, 추출 텍스트끼리 토큰 기반으로 클러스터링합니다.
 - `results/bracket_contents`: 대괄호 내부 텍스트 단순 추출 결과 CSV를 보관합니다.
-- `results/bracket_clusters`: 대괄호 내부 텍스트 클러스터링 상세/내용별/요약 CSV를 보관합니다.
+- `results/bracket_clusters`: 대괄호 내부 텍스트 상세 CSV를 보관합니다. 상세 CSV에는 대괄호 문구별 등장 횟수(`bracket_content_count`), `/`와 공백 기준 분리 토큰(`split_tokens`), 분리 토큰 조합별 등장 횟수(`split_tokens_count`), 분리 토큰별 전체 등장 횟수(`split_token_counts`)를 함께 포함합니다.
 
 작성 기준:
 
