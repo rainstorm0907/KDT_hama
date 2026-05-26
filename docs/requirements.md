@@ -223,7 +223,6 @@ DB 테이블과 매핑되는 JPA Entity 클래스를 작성합니다.
 들어갈 수 있는 파일 예시:
 
 - `User.java`: 사용자 테이블 매핑
-- `Platform.java`: 플랫폼 테이블 매핑
 - `Item.java`: 상품 테이블 매핑
 - `PriceHistory.java`: 가격 이력 테이블 매핑
 - `Wishlist.java`: 찜 테이블 매핑
@@ -654,7 +653,7 @@ DB 테이블 생성 SQL과 ERD 기준 정보를 정리합니다.
 
 들어갈 내용:
 
-- 18개 테이블 DDL
+- 17개 테이블 DDL
 - Primary Key, Foreign Key
 - 인덱스
 - 테이블 관계 설명

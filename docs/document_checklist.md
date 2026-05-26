@@ -99,7 +99,6 @@
 ### `entity`
 
 - [ ] `User.java`: 사용자 테이블 매핑
-- [ ] `Platform.java`: 플랫폼 테이블 매핑
 - [ ] `Item.java`: 상품 테이블 매핑
 - [ ] `PriceHistory.java`: 가격 이력 테이블 매핑
 - [ ] `Wishlist.java`: 찜 테이블 매핑

@@ -181,6 +181,6 @@ code/backend/src/main/python
 - [구현 파일 작성 체크리스트](./document_checklist.md): 백엔드/프론트엔드 구현 파일 작성 상태 체크리스트
 - [검색 결과 정합성 판별 모델 진행 계획](./search_relevance_plan.md): 크롤링 결과 정합성 판별 모델의 현재 진행 상황과 다음 작업 계획
 - [API 명세서](./api_spec.md): API 명세서
-- [DB 테이블 생성 SQL](./db_schema.sql): 18개 테이블 기준 DB 테이블 생성 SQL
+- [DB 테이블 생성 SQL](./db_schema.sql): 17개 테이블 기준 DB 테이블 생성 SQL
 - [ERD 이미지](./ERD.drawio.png): ERD 이미지
-- [데이터 명세서](./데이터%20명세서.xlsx): 18개 테이블 기준 데이터 명세서
+- [데이터 명세서](./데이터%20명세서.xlsx): 17개 테이블 기준 데이터 명세서

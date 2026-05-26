@@ -196,7 +196,7 @@
 - `canonical_name`: 표준 상품명, 가격 집계 기준
 - `title`: 플랫폼 원본 상품명
 - `matched_keywords`: 같은 상품에 매칭된 표준 상품명 후보 목록
-- `platform_id + original_id`: 중복 저장 방지 기준
+- `platform_name + original_id`: 중복 저장 방지 기준
 
 가격 통계는 `canonical_name` 또는 향후 `product_id` 기준으로 집계합니다.
 

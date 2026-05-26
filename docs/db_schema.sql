@@ -16,16 +16,10 @@ CREATE TABLE Users (
     CONSTRAINT uq_users_name_birth UNIQUE (name, birth_date)
 );
 
--- [2. 플랫폼 및 매물 정보]
-CREATE TABLE Platforms (
-    platform_id     NUMBER PRIMARY KEY,
-    platform_name   VARCHAR2(50) UNIQUE NOT NULL,
-    is_active       CHAR(1) DEFAULT 'Y'
-);
-
+-- [2. 매물 정보]
 CREATE TABLE Items (
     item_id         NUMBER PRIMARY KEY,
-    platform_id     NUMBER NOT NULL,
+    platform_name   VARCHAR2(50) NOT NULL, -- 번개장터, 중고나라 등
     original_id     VARCHAR2(100) NOT NULL,
     canonical_name  VARCHAR2(200) NOT NULL, -- 표준 상품명, 가격 집계 기준
     title           VARCHAR2(300) NOT NULL,
@@ -42,8 +36,7 @@ CREATE TABLE Items (
     url_status      VARCHAR2(20), -- ACTIVE, REDIRECTED, NOT_FOUND
     crawled_at      TIMESTAMP DEFAULT SYSDATE,
     last_seen_at    TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT fk_items_platform FOREIGN KEY (platform_id) REFERENCES Platforms(platform_id),
-    CONSTRAINT uq_items_platform_original UNIQUE (platform_id, original_id)
+    CONSTRAINT uq_items_platform_original UNIQUE (platform_name, original_id)
 );
 
 -- [3. 시세 그래프 및 알림용 이력]
@@ -88,14 +81,13 @@ CREATE TABLE Search_Events (
     event_id        NUMBER PRIMARY KEY,
     user_id         NUMBER,
     keyword         VARCHAR2(100) NOT NULL,
-    platform_id     NUMBER,
+    platform_name   VARCHAR2(50),
     item_id         NUMBER,
     event_type      VARCHAR2(20) NOT NULL, -- SEARCH, IMPRESSION, CLICK
     result_rank     NUMBER,
     relevance_score NUMBER,
     created_at      TIMESTAMP DEFAULT SYSDATE,
     CONSTRAINT fk_search_events_user FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    CONSTRAINT fk_search_events_platform FOREIGN KEY (platform_id) REFERENCES Platforms(platform_id),
     CONSTRAINT fk_search_events_item FOREIGN KEY (item_id) REFERENCES Items(item_id)
 );
 
@@ -126,27 +118,25 @@ CREATE TABLE Item_Views (
 CREATE TABLE Search_Rankings (
     rank_id         NUMBER PRIMARY KEY,
     keyword         VARCHAR2(100) NOT NULL,
-    platform_id     NUMBER,
+    platform_name   VARCHAR2(50),
     period_start    DATE,
     period_end      DATE,
     search_count    NUMBER DEFAULT 0,
     trend_status    VARCHAR2(10), -- 상승, 하락, 유지
-    calculated_at   TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT fk_rankings_platform FOREIGN KEY (platform_id) REFERENCES Platforms(platform_id)
+    calculated_at   TIMESTAMP DEFAULT SYSDATE
 );
 
 -- [6-1. 기간별 가격 통계 캐시: 최저가/평균가 대시보드 성능용]
 CREATE TABLE Price_Stats_Daily (
     stat_id         NUMBER PRIMARY KEY,
     canonical_name  VARCHAR2(200) NOT NULL,
-    platform_id     NUMBER,
+    platform_name   VARCHAR2(50),
     stat_date       DATE NOT NULL,
     lowest_price    NUMBER,
     average_price   NUMBER,
     item_count      NUMBER DEFAULT 0,
     calculated_at   TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT fk_price_stats_platform FOREIGN KEY (platform_id) REFERENCES Platforms(platform_id),
-    CONSTRAINT uq_price_stats_daily UNIQUE (canonical_name, platform_id, stat_date)
+    CONSTRAINT uq_price_stats_daily UNIQUE (canonical_name, platform_name, stat_date)
 );
 
 -- [7. 홈화면: 사용자 맞춤 추천 태그]
