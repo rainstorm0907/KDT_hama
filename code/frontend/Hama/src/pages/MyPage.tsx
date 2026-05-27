@@ -6,20 +6,24 @@ import {
   Heart,
   KeyRound,
   Mail,
+  Plus,
   RefreshCw,
+  Search,
   Settings,
+  ShieldCheck,
   UserRound,
   Trash2,
   X,
   type LucideIcon,
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
-import { fetchRecommendedProducts } from '../api/products';
+import { useNavigate } from 'react-router-dom';
 import { PlatformPill } from '../components/PlatformPill';
 import { ProductVisual } from '../components/ProductVisual';
+import { useRecommendedProductsQuery } from '../queries/productQueries';
 import { hairline } from '../styles/hairline';
 import type { Product } from '../types/product';
-import { formatUpdatedAt, formatWon } from '../utils/format';
+import { formatUpdatedAt, formatUpdatedAtTimestamp, formatWon } from '../utils/format';
 import {
   getStoredRecentProducts,
   getStoredWishlistProducts,
@@ -30,10 +34,19 @@ import {
 
 type MyPageProps = {
   onProductSelect: (product: Product) => void;
+  isAdmin?: boolean;
 };
 
 type Tab = 'wishlist' | 'recent' | 'notifications' | 'settings';
 type NotificationSection = 'lowPrice' | 'status' | 'keyword';
+type MyPageToastTone = 'amber' | 'gray' | 'rose';
+type MyPageToastState = {
+  product: Product;
+  message?: string;
+  tone?: MyPageToastTone;
+  actionLabel?: string;
+  onAction?: () => void;
+};
 type SettingsView =
   | 'main'
   | 'editName'
@@ -100,8 +113,11 @@ const defaultNotificationPreferences: Record<NotificationSection, boolean> = {
   status: true,
   keyword: true,
 };
+const inactiveNavItemClass =
+  'border border-[#D7DDE7]/72 bg-white/[0.48] text-[#565D68] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] hover:border-[#C9CFDA] hover:bg-white/[0.78] hover:text-[#1D1D1F]';
 
-export function MyPage({ onProductSelect }: MyPageProps) {
+export function MyPage({ onProductSelect, isAdmin = false }: MyPageProps) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('wishlist');
   const [settingsView, setSettingsView] = useState<SettingsView>('main');
 
@@ -127,10 +143,10 @@ export function MyPage({ onProductSelect }: MyPageProps) {
                       setActiveTab(tab.id);
                       setSettingsView('main');
                     }}
-                    className={`flex items-center gap-3 rounded-2xl p-4 text-left text-lg font-black transition-colors ${
+                    className={`flex items-center gap-3 rounded-2xl p-4 text-left text-lg font-black transition-all ${
                       isActive
                         ? `${hairline.primaryButton} ${hairline.focus}`
-                        : `text-[#626873] ${hairline.controlHover} ${hairline.focus}`
+                        : `${inactiveNavItemClass} ${hairline.focus}`
                     }`}
                   >
                     <span
@@ -157,10 +173,10 @@ export function MyPage({ onProductSelect }: MyPageProps) {
                       setActiveTab(tab.id);
                       setSettingsView('main');
                     }}
-                    className={`flex items-center gap-3 rounded-2xl p-4 text-left text-lg font-black transition-colors ${
+                    className={`flex items-center gap-3 rounded-2xl p-4 text-left text-lg font-black transition-all ${
                       isActive
                         ? `${hairline.primaryButton} ${hairline.focus}`
-                        : `text-[#626873] ${hairline.controlHover} ${hairline.focus}`
+                        : `${inactiveNavItemClass} ${hairline.focus}`
                     }`}
                   >
                     <span
@@ -174,6 +190,18 @@ export function MyPage({ onProductSelect }: MyPageProps) {
                   </button>
                 );
               })}
+              {isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin')}
+                  className={`flex items-center gap-3 rounded-2xl p-4 text-left text-lg font-black transition-all ${inactiveNavItemClass} ${hairline.focus}`}
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F4F5F7] text-[#1D1D1F]">
+                    <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  관리자
+                </button>
+              ) : null}
             </nav>
           </div>
         </aside>
@@ -200,13 +228,57 @@ function WishlistTab({
 }) {
   const [wishlist, setWishlist] = useState<Product[]>(() => getStoredWishlistProducts());
   const [lastLoaded, setLastLoaded] = useState(() => new Date().toISOString());
-  const [alertToastProduct, setAlertToastProduct] = useState<Product | null>(null);
+  const [toast, setToast] = useState<MyPageToastState | null>(null);
+  const [enabledAlertKeys, setEnabledAlertKeys] = useState<string[]>([]);
 
   const refreshWishlist = () => {
     setWishlist(getStoredWishlistProducts());
     setLastLoaded(new Date().toISOString());
   };
-  const removeItem = (product: Product) => setWishlist(removeWishlistProduct(product));
+  const restoreWishlistProduct = (product: Product) => {
+    if (!isProductWished(product)) {
+      toggleWishlistProduct(product);
+    }
+
+    setWishlist(getStoredWishlistProducts());
+    setToast(null);
+  };
+  const removeItem = (product: Product) => {
+    setWishlist(removeWishlistProduct(product));
+    setToast({
+      product,
+      message: '찜 목록에서 상품을 제거했습니다',
+      tone: 'rose',
+      actionLabel: '되돌리기',
+      onAction: () => restoreWishlistProduct(product),
+    });
+  };
+  const toggleProductAlert = (product: Product) => {
+    const key = getProductListKey(product);
+    const isEnabled = enabledAlertKeys.includes(key);
+
+    setEnabledAlertKeys((current) =>
+      isEnabled
+        ? current.filter((item) => item !== key)
+        : [...current, key]
+    );
+    setToast(
+      isEnabled
+        ? {
+            product,
+            message: '상품 알림을 해제했습니다',
+            tone: 'amber',
+            actionLabel: '되돌리기',
+            onAction: () => {
+              setEnabledAlertKeys((current) =>
+                current.includes(key) ? current : [...current, key]
+              );
+              setToast(null);
+            },
+          }
+        : { product }
+    );
+  };
 
   return (
     <>
@@ -237,15 +309,20 @@ function WishlistTab({
               onSelect={onProductSelect}
               isWished
               onWishClick={() => removeItem(product)}
-              onAlertClick={() => setAlertToastProduct(product)}
+              isAlertEnabled={enabledAlertKeys.includes(getProductListKey(product))}
+              onAlertClick={() => toggleProductAlert(product)}
             />
           ))}
         </div>
       )}
-      {alertToastProduct ? (
+      {toast ? (
         <MyPageAlertToast
-          product={alertToastProduct}
-          onClose={() => setAlertToastProduct(null)}
+          product={toast.product}
+          message={toast.message}
+          tone={toast.tone}
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
+          onClose={() => setToast(null)}
         />
       ) : null}
     </>
@@ -258,54 +335,69 @@ function RecentTab({
   onProductSelect: (product: Product) => void;
 }) {
   const [recentProducts, setRecentProducts] = useState<Product[]>(() => getStoredRecentProducts());
-  const [browseProducts, setBrowseProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [lastLoaded, setLastLoaded] = useState(() => new Date().toISOString());
+  const browseProductsQuery = useRecommendedProductsQuery({ limit: 6 });
+  const browseProducts = browseProductsQuery.data?.items ?? [];
+  const isLoading = browseProductsQuery.isFetching;
+  const errorMessage = browseProductsQuery.isError
+    ? '백엔드 상품 데이터를 불러오지 못했습니다.'
+    : '';
+  const lastLoaded = formatUpdatedAtTimestamp(browseProductsQuery.dataUpdatedAt);
   const [, setWishlistRevision] = useState(0);
-  const [alertToastProduct, setAlertToastProduct] = useState<Product | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function loadBrowseProducts() {
-      setIsLoading(true);
-      setErrorMessage('');
-
-      try {
-        const response = await fetchRecommendedProducts({
-          limit: 6,
-          signal: controller.signal,
-        });
-        setBrowseProducts(response.items);
-        setLastLoaded(new Date().toISOString());
-      } catch (error: unknown) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          return;
-        }
-
-        setBrowseProducts([]);
-        setErrorMessage('백엔드 상품 데이터를 불러오지 못했습니다.');
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadBrowseProducts();
-
-    return () => controller.abort();
-  }, []);
+  const [toast, setToast] = useState<MyPageToastState | null>(null);
+  const [enabledAlertKeys, setEnabledAlertKeys] = useState<string[]>([]);
 
   const reload = () => {
     setRecentProducts(getStoredRecentProducts());
-    setLastLoaded(new Date().toISOString());
+    void browseProductsQuery.refetch();
   };
 
   const toggleWish = (product: Product) => {
-    toggleWishlistProduct(product);
+    const wasWished = isProductWished(product);
+    const isNowWished = toggleWishlistProduct(product);
     setWishlistRevision((current) => current + 1);
+
+    if (wasWished && !isNowWished) {
+      setToast({
+        product,
+        message: '찜 목록에서 상품을 제거했습니다',
+        tone: 'rose',
+        actionLabel: '되돌리기',
+        onAction: () => {
+          if (!isProductWished(product)) {
+            toggleWishlistProduct(product);
+          }
+
+          setWishlistRevision((current) => current + 1);
+          setToast(null);
+        },
+      });
+    }
+  };
+  const toggleProductAlert = (product: Product) => {
+    const key = getProductListKey(product);
+    const isEnabled = enabledAlertKeys.includes(key);
+
+    setEnabledAlertKeys((current) =>
+      isEnabled
+        ? current.filter((item) => item !== key)
+        : [...current, key]
+    );
+    setToast(
+      isEnabled
+        ? {
+            product,
+            message: '상품 알림을 해제했습니다',
+            tone: 'amber',
+            actionLabel: '되돌리기',
+            onAction: () => {
+              setEnabledAlertKeys((current) =>
+                current.includes(key) ? current : [...current, key]
+              );
+              setToast(null);
+            },
+          }
+        : { product }
+    );
   };
   const visibleProducts = recentProducts.length > 0 ? recentProducts : browseProducts;
   const isFallbackList = recentProducts.length === 0 && browseProducts.length > 0;
@@ -324,7 +416,7 @@ function RecentTab({
             label={isLoading ? '불러오는 중...' : '새로고침'}
             onClick={reload}
             isLoading={isLoading}
-            updatedAt={formatUpdatedAt(lastLoaded)}
+            updatedAt={lastLoaded}
           />
         }
       />
@@ -356,16 +448,21 @@ function RecentTab({
                 onSelect={onProductSelect}
                 isWished={isProductWished(product)}
                 onWishClick={() => toggleWish(product)}
-                onAlertClick={() => setAlertToastProduct(product)}
+                isAlertEnabled={enabledAlertKeys.includes(getProductListKey(product))}
+                onAlertClick={() => toggleProductAlert(product)}
               />
             ))}
           </div>
         </>
       )}
-      {alertToastProduct ? (
+      {toast ? (
         <MyPageAlertToast
-          product={alertToastProduct}
-          onClose={() => setAlertToastProduct(null)}
+          product={toast.product}
+          message={toast.message}
+          tone={toast.tone}
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
+          onClose={() => setToast(null)}
         />
       ) : null}
     </>
@@ -377,12 +474,31 @@ function NotificationsTab() {
   const [lastLoaded, setLastLoaded] = useState(() => new Date().toISOString());
   const [showAllStatusItems, setShowAllStatusItems] = useState(false);
   const [enabledAlertKeys, setEnabledAlertKeys] = useState<string[]>([]);
+  const [customKeywordAlerts, setCustomKeywordAlerts] = useState<string[]>([]);
+  const [keywordInput, setKeywordInput] = useState('');
+  const [dismissedStatusKeys, setDismissedStatusKeys] = useState<string[]>([]);
+  const [removedStatusProduct, setRemovedStatusProduct] = useState<Product | null>(null);
   const [sectionPreferences, setSectionPreferences] = useState(
     getStoredNotificationPreferences
   );
   const lowPriceProducts = wishlist.slice(0, 2);
-  const statusProducts = showAllStatusItems ? wishlist : wishlist.slice(0, 5);
+  const visibleWishlistForStatus = wishlist.filter(
+    (product) => !dismissedStatusKeys.includes(getProductListKey(product))
+  );
+  const statusProducts = visibleWishlistForStatus.slice(0, showAllStatusItems ? 12 : 4);
   const keywordRecommendations = getPopularKeywordRecommendations();
+  const activeKeywordAlertSet = new Set(
+    enabledAlertKeys
+      .filter((key) => key.startsWith('keyword:'))
+      .map((key) => key.replace('keyword:', ''))
+  );
+  const activeKeywordAlerts = enabledAlertKeys
+    .filter((key) => key.startsWith('keyword:'))
+    .map((key) => key.replace('keyword:', ''));
+  const orderedActiveKeywordAlerts = [
+    ...customKeywordAlerts.filter((keyword) => activeKeywordAlertSet.has(keyword)),
+    ...activeKeywordAlerts.filter((keyword) => !customKeywordAlerts.includes(keyword)),
+  ];
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -393,6 +509,8 @@ function NotificationsTab() {
 
   const refreshNotifications = () => {
     setWishlist(getStoredWishlistProducts());
+    setDismissedStatusKeys([]);
+    setRemovedStatusProduct(null);
     setLastLoaded(new Date().toISOString());
   };
 
@@ -409,6 +527,58 @@ function NotificationsTab() {
         ? current.filter((item) => item !== key)
         : [...current, key]
     );
+  };
+
+  const addKeywordAlert = (keyword: string) => {
+    const normalizedKeyword = keyword.trim();
+
+    if (!normalizedKeyword) {
+      return;
+    }
+
+    const key = `keyword:${normalizedKeyword}`;
+
+    setEnabledAlertKeys((current) =>
+      current.includes(key) ? current : [key, ...current]
+    );
+    setCustomKeywordAlerts((current) =>
+      popularAlertKeywords.includes(normalizedKeyword) || current.includes(normalizedKeyword)
+        ? current
+        : [normalizedKeyword, ...current]
+    );
+    setKeywordInput('');
+  };
+
+  const removeKeywordAlert = (keyword: string) => {
+    const key = `keyword:${keyword}`;
+
+    setEnabledAlertKeys((current) => current.filter((item) => item !== key));
+    setCustomKeywordAlerts((current) => current.filter((item) => item !== keyword));
+  };
+
+  const submitKeywordAlert = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    addKeywordAlert(keywordInput);
+  };
+
+  const dismissStatusProduct = (product: Product) => {
+    const key = getProductListKey(product);
+
+    setDismissedStatusKeys((current) => (
+      current.includes(key) ? current : [...current, key]
+    ));
+    setRemovedStatusProduct(product);
+  };
+
+  const undoDismissStatusProduct = () => {
+    if (!removedStatusProduct) {
+      return;
+    }
+
+    const key = getProductListKey(removedStatusProduct);
+
+    setDismissedStatusKeys((current) => current.filter((item) => item !== key));
+    setRemovedStatusProduct(null);
   };
 
   return (
@@ -432,8 +602,7 @@ function NotificationsTab() {
           isEnabled={sectionPreferences.lowPrice}
           onToggle={() => toggleSection('lowPrice')}
         >
-          {sectionPreferences.lowPrice ? (
-            lowPriceProducts.length > 0 ? (
+          {lowPriceProducts.length > 0 ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {lowPriceProducts.map((product) => {
                 const key = `low:${getProductListKey(product)}`;
@@ -448,14 +617,9 @@ function NotificationsTab() {
                 );
               })}
             </div>
-            ) : (
-              <NotificationEmptyText>
-                찜한 상품이 생기면 최근 상품 2개를 먼저 추천합니다.
-              </NotificationEmptyText>
-            )
           ) : (
             <NotificationEmptyText>
-              최저가 알림이 꺼져 있습니다. 스위치를 켜면 최근 찜 상품 기준으로 다시 추천합니다.
+              찜한 상품이 생기면 최근 상품 2개를 먼저 추천합니다.
             </NotificationEmptyText>
           )}
         </NotificationBlock>
@@ -467,33 +631,36 @@ function NotificationsTab() {
           isEnabled={sectionPreferences.status}
           onToggle={() => toggleSection('status')}
         >
-          {sectionPreferences.status ? (
-            statusProducts.length > 0 ? (
+          {statusProducts.length > 0 ? (
             <div className="flex flex-col gap-2.5">
-              {statusProducts.map((product) => (
-                <StatusAlertRow
-                  key={`status:${getProductListKey(product)}`}
-                  product={product}
-                />
-              ))}
-              {wishlist.length > 5 ? (
+              {statusProducts.map((product) => {
+                const key = `status:${getProductListKey(product)}`;
+
+                return (
+                  <StatusAlertRow
+                    key={key}
+                    product={product}
+                    isEnabled={enabledAlertKeys.includes(key)}
+                    onAdd={() => toggleAlertKey(key)}
+                    onDismiss={() => dismissStatusProduct(product)}
+                  />
+                );
+              })}
+              {visibleWishlistForStatus.length > 4 ? (
                 <button
                   type="button"
                   onClick={() => setShowAllStatusItems((current) => !current)}
                   className={`self-start rounded-full px-3 py-1.5 text-sm font-black text-[#626873] transition-colors hover:bg-white/80 hover:text-gray-950 ${hairline.focus}`}
                 >
-                  {showAllStatusItems ? '접기' : `+ 더보기 ${wishlist.length - 5}개`}
+                  {showAllStatusItems ? '찜 목록 접기' : `찜 목록 더보기 ${Math.min(visibleWishlistForStatus.length - 4, 8)}개`}
                 </button>
               ) : null}
             </div>
-            ) : (
-              <NotificationEmptyText>
-                찜한 상품이 없어서 판매 상태 알림을 만들 수 없습니다.
-              </NotificationEmptyText>
-            )
           ) : (
             <NotificationEmptyText>
-              판매 상태 알림이 꺼져 있습니다. 켜면 최근 찜 상품 5개부터 상태 변화를 보여줍니다.
+              {wishlist.length > 0
+                ? '표시할 찜 상품이 없습니다. 새로고침하면 숨긴 후보를 다시 볼 수 있습니다.'
+                : '찜한 상품이 없어서 판매 상태 알림을 만들 수 없습니다.'}
             </NotificationEmptyText>
           )}
         </NotificationBlock>
@@ -501,12 +668,42 @@ function NotificationsTab() {
         <NotificationBlock
           title="새 상품 알림"
           description="인기 검색어를 기준으로 새 상품 알림 후보를 가볍게 추천합니다."
-          tone="blue"
+          tone="neutral"
           isEnabled={sectionPreferences.keyword}
           onToggle={() => toggleSection('keyword')}
         >
-          {sectionPreferences.keyword ? (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            {orderedActiveKeywordAlerts.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {orderedActiveKeywordAlerts.map((keyword) => (
+                  <SelectedKeywordChip
+                    key={`active:${keyword}`}
+                    keyword={keyword}
+                    onRemove={() => removeKeywordAlert(keyword)}
+                  />
+                ))}
+              </div>
+            ) : null}
+            <form
+              onSubmit={submitKeywordAlert}
+              className={`flex h-12 items-center gap-2 rounded-2xl px-3 ${hairline.control}`}
+            >
+              <Search className="h-5 w-5 shrink-0 text-[#86868B]" aria-hidden="true" />
+              <input
+                value={keywordInput}
+                onChange={(event) => setKeywordInput(event.target.value)}
+                placeholder="알림 받을 키워드 추가"
+                className="min-w-0 flex-1 bg-transparent text-sm font-black text-gray-950 outline-none placeholder:text-[#86868B]"
+              />
+              <button
+                type="submit"
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${hairline.primaryButton} ${hairline.focus}`}
+                aria-label="키워드 알림 추가"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </form>
+            <div className="flex flex-wrap gap-2">
               {keywordRecommendations.map((keyword) => {
                 const key = `keyword:${keyword}`;
 
@@ -515,18 +712,28 @@ function NotificationsTab() {
                     key={key}
                     keyword={keyword}
                     isEnabled={enabledAlertKeys.includes(key)}
-                    onClick={() => toggleAlertKey(key)}
+                    onClick={() => (
+                      enabledAlertKeys.includes(key)
+                        ? removeKeywordAlert(keyword)
+                        : addKeywordAlert(keyword)
+                    )}
                   />
                 );
               })}
             </div>
-          ) : (
-            <NotificationEmptyText>
-              새 상품 알림이 꺼져 있습니다. 켜면 인기 검색어 기반 후보를 다시 보여줍니다.
-            </NotificationEmptyText>
-          )}
+          </div>
         </NotificationBlock>
       </div>
+      {removedStatusProduct ? (
+        <MyPageAlertToast
+          product={removedStatusProduct}
+          message="알림 목록에서 상품을 제거했습니다"
+          tone="gray"
+          actionLabel="되돌리기"
+          onAction={undoDismissStatusProduct}
+          onClose={() => setRemovedStatusProduct(null)}
+        />
+      ) : null}
     </>
   );
 }
@@ -679,12 +886,14 @@ function SettingsTab({
 function ProductListCard({
   product,
   isWished,
+  isAlertEnabled,
   onWishClick,
   onAlertClick,
   onSelect,
 }: {
   product: Product;
   isWished: boolean;
+  isAlertEnabled: boolean;
   onWishClick: () => void;
   onAlertClick: () => void;
   onSelect: (product: Product) => void;
@@ -734,10 +943,15 @@ function ProductListCard({
         <button
           type="button"
           onClick={onAlertClick}
-          className={`flex h-14 w-14 items-center justify-center rounded-[18px] border border-[#C9CFDA] bg-white text-amber-500 transition-colors hover:bg-amber-50 ${hairline.focus}`}
-          aria-label={`${product.name} 알림 설정`}
+          className={`flex h-14 w-14 items-center justify-center rounded-[18px] border transition-colors ${hairline.focus} ${
+            isAlertEnabled
+              ? 'border-amber-300 bg-amber-50 text-amber-600'
+              : 'border-[#C9CFDA] bg-white text-amber-500 hover:bg-amber-50'
+          }`}
+          aria-label={isAlertEnabled ? `${product.name} 알림 해제` : `${product.name} 알림 설정`}
+          aria-pressed={isAlertEnabled}
         >
-          <Bell className="h-6 w-6" aria-hidden="true" />
+          <Bell className={`h-6 w-6 ${isAlertEnabled ? 'fill-current' : ''}`} aria-hidden="true" />
         </button>
       </div>
     </article>
@@ -827,7 +1041,7 @@ function NotificationBlock({
 }: {
   title: string;
   description: string;
-  tone: 'emerald' | 'amber' | 'blue';
+  tone: 'emerald' | 'amber' | 'neutral';
   isEnabled: boolean;
   onToggle: () => void;
   children: ReactNode;
@@ -835,11 +1049,17 @@ function NotificationBlock({
   const toneClass = {
     emerald: 'bg-emerald-50/58',
     amber: 'bg-amber-50/58',
-    blue: 'bg-blue-50/50',
+    neutral: 'bg-[#F7F8FA]/92',
   }[tone];
 
   return (
-    <section className={`overflow-hidden rounded-[28px] ${hairline.card}`}>
+    <section
+      className={`overflow-hidden rounded-[28px] transition-all ${
+        isEnabled
+          ? `${hairline.card} border-[#AEB6C2] shadow-[0_16px_42px_rgba(29,29,31,0.07),inset_0_0_0_1px_rgba(107,118,135,0.28)]`
+          : hairline.card
+      }`}
+    >
       <div className="flex items-center justify-between gap-5 px-6 py-5">
         <div>
           <h4 className="text-xl font-black tracking-tight text-gray-950">{title}</h4>
@@ -849,23 +1069,25 @@ function NotificationBlock({
           type="button"
           onClick={onToggle}
           aria-pressed={isEnabled}
-          className={`relative h-8 w-14 shrink-0 rounded-full border transition-all ${hairline.focus} ${
+          className={`flex h-8 w-14 shrink-0 items-center rounded-full border p-[3px] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 ${
             isEnabled
-              ? 'border-[#111827] bg-[#111827] shadow-[0_8px_18px_rgba(17,24,39,0.18)]'
-              : 'border-[#C9CFDA] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]'
+              ? 'border-[#AEB6C2] bg-[#F3F4F6] shadow-[inset_0_0_0_1px_rgba(17,24,39,0.06),0_8px_18px_rgba(29,29,31,0.052)]'
+              : 'border-[#C9CFDA] bg-white shadow-[inset_0_1px_3px_rgba(17,24,39,0.07)]'
           }`}
           aria-label={`${title} ${isEnabled ? '끄기' : '켜기'}`}
         >
           <span
-            className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-[0_3px_10px_rgba(29,29,31,0.16)] transition-transform ${
-              isEnabled ? 'translate-x-6' : 'translate-x-1'
+            className={`block h-6 w-6 rounded-full transition-transform ${
+              isEnabled
+                ? 'translate-x-6 bg-[#1D1D1F] shadow-[0_4px_12px_rgba(29,29,31,0.18),inset_0_1px_0_rgba(255,255,255,0.2)]'
+                : 'translate-x-0 bg-white shadow-[0_3px_9px_rgba(29,29,31,0.16),inset_0_0_0_1px_rgba(201,207,218,0.92),inset_0_1px_0_rgba(255,255,255,0.96)]'
             }`}
           />
         </button>
       </div>
       <div
         className={`border-t border-[#D7DDE7]/88 px-6 py-5 transition-opacity ${
-          isEnabled ? toneClass : 'bg-[#F6F8FB] opacity-[0.82]'
+          isEnabled ? toneClass : 'bg-[#F6F8FB]/92'
         }`}
       >
         {children}
@@ -894,12 +1116,12 @@ function LowPriceAlertButton({
           : 'border-[#C9CFDA]/92 bg-white/72 text-gray-800 hover:bg-white'
       }`}
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-        <Bell className="h-5 w-5" aria-hidden="true" />
+      <span className={`h-12 w-12 shrink-0 overflow-hidden rounded-2xl ${hairline.image}`}>
+        <ProductVisual imageUrl={product.imageUrl} name={product.name} variant="thumb" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-base font-black">{product.name}</span>
-        <span className={`mt-0.5 block text-sm font-black ${isEnabled ? 'text-gray-950' : 'text-emerald-700'}`}>
+        <span className="mt-0.5 block text-sm font-black text-emerald-700">
           {formatWon(product.price)}
         </span>
       </span>
@@ -910,19 +1132,67 @@ function LowPriceAlertButton({
   );
 }
 
-function StatusAlertRow({ product }: { product: Product }) {
+function StatusAlertRow({
+  product,
+  isEnabled,
+  onAdd,
+  onDismiss,
+}: {
+  product: Product;
+  isEnabled: boolean;
+  onAdd: () => void;
+  onDismiss: () => void;
+}) {
   return (
-    <div className="flex items-center gap-3 rounded-[18px] border border-[#C9CFDA]/86 bg-white/72 px-3 py-2.5">
-      <div className={`h-14 w-14 shrink-0 overflow-hidden rounded-2xl ${hairline.image}`}>
-        <ProductVisual imageUrl={product.imageUrl} name={product.name} variant="thumb" />
+    <div
+      className={`flex flex-col gap-3 rounded-[18px] border bg-white/78 px-3 py-2.5 transition-all sm:flex-row sm:items-center ${
+        isEnabled
+          ? 'border-[#AEB6C2] shadow-[inset_0_0_0_1px_rgba(107,118,135,0.26),0_8px_20px_rgba(29,29,31,0.045)]'
+          : 'border-[#C9CFDA]/86'
+      }`}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className={`h-14 w-14 shrink-0 overflow-hidden rounded-2xl ${hairline.image}`}>
+          <ProductVisual imageUrl={product.imageUrl} name={product.name} variant="thumb" />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-black text-gray-950">{product.name}</p>
+            <p className={`mt-0.5 text-xs font-black ${hairline.mutedText}`}>
+              {formatWon(product.price)}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <PlatformPill platform={product.platform} size="card" />
+            <span className={`rounded-full px-3 py-1 text-xs font-black ${hairline.status}`}>
+              {product.status}
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-black text-gray-950">{product.name}</p>
-        <p className={`mt-0.5 text-xs font-bold ${hairline.mutedText}`}>{product.platform}</p>
+      <div className="flex shrink-0 flex-wrap items-center justify-start gap-2 self-stretch border-t border-[#E1E5EC]/80 pt-3 sm:justify-end sm:self-auto sm:border-l sm:border-t-0 sm:pl-3 sm:pt-0">
+        <button
+          type="button"
+          onClick={onAdd}
+          aria-label={`${product.name} 판매 상태 알림 ${isEnabled ? '켜짐' : '켜기'}`}
+          aria-pressed={isEnabled}
+          className={`inline-flex h-9 min-w-[78px] items-center justify-center rounded-xl border px-3 text-xs font-black transition-colors ${hairline.focus} ${
+            isEnabled
+              ? 'border-[#1D1D1F] bg-[#1D1D1F] text-white shadow-[0_6px_14px_rgba(29,29,31,0.08)]'
+              : 'border-[#C9CFDA] bg-white text-[#1D1D1F] hover:border-[#AEB6C2] hover:bg-[#FDFDFE]'
+          }`}
+        >
+          {isEnabled ? '켜짐' : '알림 켜기'}
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label={`${product.name} 판매 상태 알림 후보 숨기기`}
+          className={`flex h-9 w-9 items-center justify-center rounded-xl border border-[#C9CFDA] bg-white text-[#86868B] transition-colors hover:bg-rose-50 hover:text-rose-500 ${hairline.focus}`}
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
-      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${hairline.status}`}>
-        {product.status}
-      </span>
     </div>
   );
 }
@@ -941,22 +1211,37 @@ function KeywordAlertButton({
       type="button"
       onClick={onClick}
       aria-pressed={isEnabled}
-      className={`flex items-center justify-between gap-3 rounded-[22px] border px-4 py-3 transition-colors ${hairline.focus} ${
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-black transition-colors ${hairline.focus} ${
         isEnabled
           ? 'border-[#111827] bg-white text-gray-950 shadow-[inset_0_0_0_1px_rgba(17,24,39,0.68)]'
-          : 'border-[#C9CFDA]/92 bg-white/72 text-gray-800 hover:bg-white'
+          : 'border-[#C9CFDA]/92 bg-white/72 text-[#626873] hover:bg-white hover:text-gray-950'
       }`}
     >
-      <span className="flex min-w-0 items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-          <Bell className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <span className="truncate text-base font-black">{keyword}</span>
-      </span>
-      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${isEnabled ? 'bg-gray-950 text-white' : 'bg-white text-[#626873]'}`}>
-        {isEnabled ? '설정됨' : '알림 추가'}
-      </span>
+      <Plus className="h-4 w-4" aria-hidden="true" />
+      {keyword}
     </button>
+  );
+}
+
+function SelectedKeywordChip({
+  keyword,
+  onRemove,
+}: {
+  keyword: string;
+  onRemove: () => void;
+}) {
+  return (
+    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-black ${hairline.controlActive}`}>
+      {keyword}
+      <button
+        type="button"
+        onClick={onRemove}
+        className={`flex h-5 w-5 items-center justify-center rounded-full text-[#626873] transition-colors hover:bg-[#F3F4F6] hover:text-gray-950 ${hairline.focus}`}
+        aria-label={`${keyword} 새 상품 알림 삭제`}
+      >
+        <X className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    </span>
   );
 }
 
@@ -970,9 +1255,17 @@ function NotificationEmptyText({ children }: { children: ReactNode }) {
 
 function MyPageAlertToast({
   product,
+  message,
+  tone = 'amber',
+  actionLabel,
+  onAction,
   onClose,
 }: {
   product: Product;
+  message?: string;
+  tone?: MyPageToastTone;
+  actionLabel?: string;
+  onAction?: () => void;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -981,6 +1274,13 @@ function MyPageAlertToast({
     return () => window.clearTimeout(timeoutId);
   }, [onClose]);
 
+  const Icon = tone === 'amber' ? Bell : tone === 'rose' ? Heart : X;
+  const toneClass = {
+    amber: 'bg-amber-50 text-amber-500',
+    gray: 'bg-[#F3F4F6] text-[#626873]',
+    rose: 'bg-rose-50 text-rose-500',
+  }[tone];
+
   return (
     <div
       role="status"
@@ -988,21 +1288,32 @@ function MyPageAlertToast({
       className={`fixed bottom-8 left-1/2 z-[140] flex w-[min(540px,calc(100vw-48px))] -translate-x-1/2 items-center justify-between gap-4 rounded-2xl px-5 py-4 ${hairline.panel}`}
     >
       <div className="flex min-w-0 items-center gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-500">
-          <Bell className="h-5 w-5 fill-current" aria-hidden="true" />
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${toneClass}`}>
+          <Icon className="h-5 w-5 fill-current" aria-hidden="true" />
         </span>
         <p className="min-w-0 truncate text-base font-black text-gray-900">
-          {product.name} 알림이 설정되었습니다
+          {message ?? `${product.name} 알림이 설정되었습니다`}
         </p>
       </div>
-      <button
-        type="button"
-        onClick={onClose}
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#9AA2AF] transition hover:bg-white hover:text-gray-900 ${hairline.focus}`}
-        aria-label="알림 메시지 닫기"
-      >
-        <X className="h-4 w-4" aria-hidden="true" />
-      </button>
+      <div className="flex shrink-0 items-center gap-2">
+        {actionLabel && onAction ? (
+          <button
+            type="button"
+            onClick={onAction}
+            className={`rounded-xl px-4 py-2.5 text-sm font-black transition ${hairline.primaryButton} ${hairline.focus}`}
+          >
+            {actionLabel}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onClose}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#9AA2AF] transition hover:bg-white hover:text-gray-900 ${hairline.focus}`}
+          aria-label="알림 메시지 닫기"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -1010,8 +1321,8 @@ function MyPageAlertToast({
 function getPopularKeywordRecommendations(): string[] {
   const daySeed = Math.floor(Date.now() / 86_400_000);
 
-  return [0, 1].map((index) => {
-    const keywordIndex = (daySeed + index * 3) % popularAlertKeywords.length;
+  return popularAlertKeywords.map((_, index) => {
+    const keywordIndex = (daySeed + index) % popularAlertKeywords.length;
 
     return popularAlertKeywords[keywordIndex];
   });
