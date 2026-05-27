@@ -9,7 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { fetchProductDetail } from '../api/products';
+import { useProductDetailQuery } from '../queries/productQueries';
 import type { Product } from '../types/product';
 import { hairline } from '../styles/hairline';
 import { formatWon } from '../utils/format';
@@ -26,11 +26,6 @@ type ProductDetailModalProps = {
   onClose: () => void;
 };
 
-type DetailProductState = {
-  productKey: string;
-  product: Product | null;
-};
-
 type ImageSelectionState = {
   productKey: string;
   index: number;
@@ -45,15 +40,14 @@ export function ProductDetailModal({
   const titleId = useId();
   const navigate = useNavigate();
   const productKey = getProductKey(product);
+  const productDetailQuery = useProductDetailQuery({
+    platform: product?.platform ?? '',
+    pid: product?.pid ?? '',
+  });
   const [imageSelection, setImageSelection] = useState<ImageSelectionState>({
     productKey: '',
     index: 0,
   });
-  const [detailProductState, setDetailProductState] =
-    useState<DetailProductState>({
-      productKey: '',
-      product: null,
-    });
   const [isWished, setIsWished] = useState(() =>
     product ? isProductWished(product) : false
   );
@@ -101,41 +95,14 @@ export function ProductDetailModal({
     }
 
     saveRecentProduct(product);
-    const controller = new AbortController();
-
-    fetchProductDetail({
-      platform: product.platform,
-      pid: product.pid,
-      signal: controller.signal,
-    })
-      .then((productDetail) => {
-        setDetailProductState({
-          productKey,
-          product: productDetail,
-        });
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          return;
-        }
-
-        setDetailProductState({
-          productKey,
-          product: null,
-        });
-      });
-
-    return () => controller.abort();
-  }, [product, productKey]);
+  }, [product]);
 
   if (!product) {
     return null;
   }
 
-  const matchedDetailProduct =
-    detailProductState.productKey === productKey ? detailProductState.product : null;
-  const visibleProduct = matchedDetailProduct ?? product;
-  const isDetailLoading = detailProductState.productKey !== productKey;
+  const visibleProduct = productDetailQuery.data ?? product;
+  const isDetailLoading = productDetailQuery.isPending;
   const hasMultipleImages = visibleProduct.images.length > 1;
   const latestImageIndex = visibleProduct.images.length - 1;
   const activeImageIndex = Math.min(
