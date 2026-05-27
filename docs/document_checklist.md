@@ -202,6 +202,10 @@
 - [x] `product_matching.py`: 상품명 정규화/토큰화/매칭 보조 모듈 작성 (작성일: 2026-05-21)
 - [x] `hama_data_pipeline.py`: 설정 CSV 기반 상품 매칭 파이프라인 작성 (작성일: 2026-05-21)
 - [x] `api_server.py`: Python 파이프라인 확인용 FastAPI 서버 작성 (작성일: 2026-05-21)
+- [x] `supabase_repository.py`: Supabase 상품 조회 및 CSV fallback 저장소 모듈 작성 (작성일: 2026-05-27)
+- [x] `apply_supabase_schema.py`: Supabase/PostgreSQL 스키마 적용 스크립트 작성 (작성일: 2026-05-27)
+- [x] `import_csv_to_supabase.py`: 크롤링 CSV의 Supabase 적재 스크립트 작성 (작성일: 2026-05-27)
+- [x] `.env.example`: Supabase 로컬 환경 변수 예시 파일 작성 (작성일: 2026-05-27)
 
 ### `preprocessing`
 
@@ -216,7 +220,7 @@
 ### Python 의존성
 
 - [x] `requirements.txt`: Python 패키지 목록 파일 생성 (작성일: 2026-04-29)
-- [ ] 실제 실행에 필요한 패키지 목록 최신화
+- [x] 실제 실행에 필요한 패키지 목록 최신화 (작성일: 2026-05-27)
 
 ## Frontend
 

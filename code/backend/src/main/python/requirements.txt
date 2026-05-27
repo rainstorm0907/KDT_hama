@@ -5,3 +5,6 @@ fastapi
 pydantic
 uvicorn[standard]
 pyahocorasick
+python-dotenv
+psycopg[binary]
+supabase
