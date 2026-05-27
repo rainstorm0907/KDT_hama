@@ -28,36 +28,44 @@ kdtproject
 │   │       │   ├── crawling
 │   │       │   ├── preprocessing
 │   │       │   ├── api_server.py
+│   │       │   ├── apply_supabase_schema.py
 │   │       │   ├── generate_config_reference_csv.py
 │   │       │   ├── hama_data_pipeline.py
+│   │       │   ├── import_csv_to_supabase.py
 │   │       │   ├── product_matching.py
+│   │       │   ├── supabase_repository.py
 │   │       │   └── requirements.txt
 │   │       └── resources
-│   └── frontend
-│       └── Hama
-│           ├── public
-│           ├── src
-│           │   ├── api
-│           │   ├── components
-│           │   ├── data
-│           │   ├── design-prototypes
-│           │   ├── pages
-│           │   ├── styles
-│           │   ├── types
-│           │   ├── utils
-│           │   ├── App.css
-│           │   ├── App.tsx
-│           │   ├── index.css
-│           │   └── main.tsx
-│           ├── package.json
-│           ├── tsconfig.json
-│           └── vite.config.ts
+│   ├── frontend
+│   │   └── Hama
+│   │       ├── public
+│   │       ├── src
+│   │       │   ├── api
+│   │       │   ├── components
+│   │       │   ├── data
+│   │       │   ├── design-prototypes
+│   │       │   ├── pages
+│   │       │   ├── styles
+│   │       │   ├── types
+│   │       │   ├── utils
+│   │       │   ├── App.css
+│   │       │   ├── App.tsx
+│   │       │   ├── index.css
+│   │       │   └── main.tsx
+│   │       ├── package.json
+│   │       ├── tsconfig.json
+│   │       └── vite.config.ts
+│   └── supabase
+│       └── migrations
+│           └── 20260519000000_hama_schema.sql
 └── docs
     ├── project_structure.md
     ├── requirements.md
     ├── document_checklist.md
     ├── api_spec.md
     ├── db_schema.sql
+    ├── supabase_schema.sql
+    ├── supabase_setup.md
     ├── ERD.drawio.png
     └── 데이터 명세서.xlsx
 ```
@@ -301,6 +309,17 @@ Python 기반 크롤링 스크립트와 입력 데이터를 관리합니다.
 - `product_matching.py`: 상품명 정규화, 토큰화, 매칭 보조 로직
 - `hama_data_pipeline.py`: 설정 CSV를 읽어 상품명 매칭과 카테고리 배정을 수행하는 파이프라인
 - `api_server.py`: Python 파이프라인 확인용 FastAPI 서버
+- `supabase_repository.py`: Supabase 상품 조회와 CSV fallback을 분리하는 저장소 모듈
+- `apply_supabase_schema.py`: Supabase/PostgreSQL 스키마 적용 스크립트
+- `import_csv_to_supabase.py`: 크롤링 CSV를 Supabase 테이블로 적재하는 스크립트
+
+### `code/supabase/migrations`
+
+Supabase/PostgreSQL 테이블 생성 migration을 관리합니다.
+
+현재 작성된 파일:
+
+- `20260519000000_hama_schema.sql`: Hama MVP Supabase 스키마
 
 ### `backend/src/main/python/preprocessing`
 

@@ -28,35 +28,41 @@ kdtproject
 │   │       │   ├── crawling
 │   │       │   ├── preprocessing
 │   │       │   ├── api_server.py
+│   │       │   ├── apply_supabase_schema.py
 │   │       │   ├── generate_config_reference_csv.py
 │   │       │   ├── hama_data_pipeline.py
+│   │       │   ├── import_csv_to_supabase.py
 │   │       │   ├── product_matching.py
+│   │       │   ├── supabase_repository.py
 │   │       │   └── requirements.txt
 │   │       └── resources
 │   │           └── application.yml
-│   └── frontend
-│       └── Hama
-│           ├── public
-│           │   ├── favicon.svg
-│           │   ├── hamalogo.png
-│           │   ├── hama_lowban1.jpg
-│           │   └── icons.svg
-│           ├── src
-│           │   ├── api
-│           │   ├── components
-│           │   ├── data
-│           │   ├── design-prototypes
-│           │   ├── pages
-│           │   ├── styles
-│           │   ├── types
-│           │   ├── utils
-│           │   ├── App.css
-│           │   ├── App.tsx
-│           │   ├── index.css
-│           │   └── main.tsx
-│           ├── package.json
-│           ├── tsconfig.json
-│           └── vite.config.ts
+│   ├── frontend
+│   │   └── Hama
+│   │       ├── public
+│   │       │   ├── favicon.svg
+│   │       │   ├── hamalogo.png
+│   │       │   ├── hama_lowban1.jpg
+│   │       │   └── icons.svg
+│   │       ├── src
+│   │       │   ├── api
+│   │       │   ├── components
+│   │       │   ├── data
+│   │       │   ├── design-prototypes
+│   │       │   ├── pages
+│   │       │   ├── styles
+│   │       │   ├── types
+│   │       │   ├── utils
+│   │       │   ├── App.css
+│   │       │   ├── App.tsx
+│   │       │   ├── index.css
+│   │       │   └── main.tsx
+│   │       ├── package.json
+│   │       ├── tsconfig.json
+│   │       └── vite.config.ts
+│   └── supabase
+│       └── migrations
+│           └── 20260519000000_hama_schema.sql
 └── docs
     ├── project_structure.md
     ├── requirements.md
@@ -64,6 +70,8 @@ kdtproject
     ├── search_relevance_plan.md
     ├── api_spec.md
     ├── db_schema.sql
+    ├── supabase_schema.sql
+    ├── supabase_setup.md
     ├── ERD.drawio.png
     └── 데이터 명세서.xlsx
 ```
@@ -137,9 +145,12 @@ code/backend/src/main/python
 ├── preprocessing
 │   └── .gitkeep
 ├── api_server.py
+├── apply_supabase_schema.py
 ├── generate_config_reference_csv.py
 ├── hama_data_pipeline.py
+├── import_csv_to_supabase.py
 ├── product_matching.py
+├── supabase_repository.py
 └── requirements.txt
 ```
 
@@ -161,7 +172,11 @@ code/backend/src/main/python
 - `code/backend/src/main/python/config`: 상품명 매칭, 카테고리, 제외 토큰 CSV 설정과 참고 CSV를 관리합니다.
 - `code/backend/src/main/python/crawling`: 크롤링 입력 키워드, 실행 스크립트, 원본 결과 CSV를 관리합니다.
 - `code/backend/src/main/python/preprocessing`: 향후 DB 저장 전 전처리 스크립트를 둘 예정이며 현재는 `.gitkeep`만 있습니다.
+- `code/backend/src/main/python/supabase_repository.py`: Supabase 상품 조회와 CSV fallback을 분리하기 위한 Python 저장소 모듈입니다.
+- `code/backend/src/main/python/apply_supabase_schema.py`: Supabase/PostgreSQL 스키마를 로컬에서 적용하는 스크립트입니다.
+- `code/backend/src/main/python/import_csv_to_supabase.py`: 크롤링 CSV 데이터를 Supabase 테이블로 적재하는 스크립트입니다.
 - `code/frontend/Hama`: Vite + React + TypeScript 기반 프론트엔드 앱 영역입니다.
+- `code/supabase/migrations`: Supabase/PostgreSQL 테이블 생성 migration을 보관합니다.
 - `code/frontend/Hama/src/App.tsx`: 페이지 전환과 앱 최상위 레이아웃을 관리합니다.
 - `code/frontend/Hama/src/api`: 프론트엔드에서 백엔드 또는 목 API 형태로 상품 데이터를 읽는 모듈을 관리합니다.
 - `code/frontend/Hama/src/components`: 검색바, 상품 카드, 가격 차트, 인증 모달 등 재사용 UI 컴포넌트를 작성합니다.
@@ -182,5 +197,7 @@ code/backend/src/main/python
 - [검색 결과 정합성 판별 모델 진행 계획](./search_relevance_plan.md): 크롤링 결과 정합성 판별 모델의 현재 진행 상황과 다음 작업 계획
 - [API 명세서](./api_spec.md): API 명세서
 - [DB 테이블 생성 SQL](./db_schema.sql): 18개 테이블 기준 DB 테이블 생성 SQL
+- [Supabase 스키마](./supabase_schema.sql): Supabase/PostgreSQL 기준 테이블 생성 SQL
+- [Supabase 설정 문서](./supabase_setup.md): 로컬 환경 변수, 스키마 적용, CSV 적재 방법
 - [ERD 이미지](./ERD.drawio.png): ERD 이미지
 - [데이터 명세서](./데이터%20명세서.xlsx): 18개 테이블 기준 데이터 명세서

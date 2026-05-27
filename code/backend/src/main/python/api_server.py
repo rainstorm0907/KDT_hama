@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import random
 import re
 import zlib
 from dataclasses import asdict, is_dataclass
@@ -16,6 +17,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from hama_data_pipeline import HamaDataPipeline
 from product_matching import ProductMatchIndex
+from supabase_repository import (
+    SupabaseRepositoryError,
+    find_product_from_supabase,
+    is_supabase_configured,
+    load_products_from_supabase,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -53,7 +60,10 @@ app.add_middleware(
 
 @app.get("/api/health")
 def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "dataSource": "supabase" if is_supabase_configured() else "csv",
+    }
 
 
 @app.get("/api/products/search")
@@ -64,14 +74,14 @@ def search_products(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=5000, ge=1, le=5000),
 ) -> dict[str, object]:
-    del platforms, sort
-
     query = normalize_text(q)
+    platform_filter = parse_platform_filter(platforms)
     products = [
         product
         for product in load_products()
-        if not query or query in normalize_text(product["_searchText"])
+        if matches_query(product, query) and matches_platform(product, platform_filter)
     ]
+    products = sort_search_products(products, sort, query)
 
     start_index = (page - 1) * limit
     paged_products = products[start_index : start_index + limit]
@@ -82,13 +92,23 @@ def search_products(
         "total": len(products),
         "page": page,
         "limit": limit,
-        # TODO(BE): MVP에서는 프론트의 temporarySearchCalculations.ts가 최저가/평균가를 계산합니다.
-        # DB 기반 검색으로 넘어가면 여기서 필터 적용 전체 결과 기준 summary를 계산하고 프론트 임시 코드를 제거합니다.
-        "summary": {
-            "lowestPrice": 0,
-            "averagePrice": 0,
-            "updatedAt": latest_result_timestamp(),
-        },
+        "summary": search_summary(products),
+    }
+
+
+@app.get("/api/products/recommended")
+def recommended_products(
+    limit: int = Query(default=8, ge=1, le=32),
+) -> dict[str, object]:
+    products = load_products()
+    recommended = random.sample(products, k=min(limit, len(products))) if products else []
+    items = [{key: value for key, value in product.items() if key != "_searchText"} for product in recommended]
+
+    return {
+        "items": items,
+        "total": len(products),
+        "limit": limit,
+        "summary": search_summary(products),
     }
 
 
@@ -113,8 +133,28 @@ def product_detail(platform: str, pid: str) -> dict[str, object]:
     return detail_product
 
 
-@lru_cache(maxsize=1)
 def load_products() -> list[dict[str, object]]:
+    if is_supabase_configured():
+        try:
+            return load_products_from_supabase()
+        except SupabaseRepositoryError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return load_products_from_csv()
+
+
+def find_product(platform: str, pid: str) -> dict[str, object] | None:
+    if is_supabase_configured():
+        try:
+            return find_product_from_supabase(platform, pid)
+        except SupabaseRepositoryError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return find_product_from_csv(platform, pid)
+
+
+@lru_cache(maxsize=1)
+def load_products_from_csv() -> list[dict[str, object]]:
     rows: list[dict[str, str]] = []
     for csv_path in result_files():
         rows.extend(read_csv_rows(csv_path))
@@ -132,8 +172,8 @@ def load_products() -> list[dict[str, object]]:
     return list(products_by_key.values())
 
 
-def find_product(platform: str, pid: str) -> dict[str, object] | None:
-    for product in load_products():
+def find_product_from_csv(platform: str, pid: str) -> dict[str, object] | None:
+    for product in load_products_from_csv():
         if product["platform"] == platform and product["pid"] == pid:
             return product
 
@@ -201,7 +241,7 @@ def to_product(row: dict[str, str], pipeline: HamaDataPipeline) -> dict[str, obj
             "date": date,
             "keyword": keyword,
             "source_keyword": keyword,
-            "priceHistory": temporary_price_history(price),
+            "priceHistory": current_price_history(price, date),
             "category": clean_value(row.get("category")),
             "canonical_name": clean_value(row.get("canonical_name")),
             "matched_keywords": clean_value(row.get("matched_keywords")),
@@ -302,16 +342,27 @@ def normalize_image_url(value: str) -> str | None:
     return value.replace("{res}", "720")
 
 
-def temporary_price_history(price: int) -> list[dict[str, int | str]]:
-    labels = ["05.02", "05.03", "05.04", "05.05", "05.06", "05.07", "05.08"]
-    multipliers = [1.08, 1.04, 1.02, 1.01, 0.99, 1.01, 1]
+def current_price_history(price: int, date_text: str) -> list[dict[str, int | str]]:
     return [
         {
-            "label": label,
-            "price": max(1000, round(price * multiplier / 1000) * 1000),
+            "label": format_price_history_label(date_text),
+            "price": price,
         }
-        for label, multiplier in zip(labels, multipliers)
     ]
+
+
+def format_price_history_label(date_text: str) -> str:
+    text = clean_value(date_text)
+    if not text:
+        return "현재"
+
+    for date_format in ("%Y-%m-%d %H:%M", "%Y.%m.%d %H:%M", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text, date_format).strftime("%m.%d")
+        except ValueError:
+            pass
+
+    return text[:5] or "현재"
 
 
 def model_to_dict(model: object) -> dict[str, object]:
@@ -320,6 +371,119 @@ def model_to_dict(model: object) -> dict[str, object]:
     if hasattr(model, "model_dump"):
         return model.model_dump()  # type: ignore[attr-defined]
     return model.dict()  # type: ignore[attr-defined]
+
+
+def search_summary(products: list[dict[str, object]]) -> dict[str, object]:
+    prices = [
+        price
+        for price in (product_price(product) for product in products)
+        if price is not None and price > 0
+    ]
+    if not prices:
+        return {
+            "lowestPrice": 0,
+            "averagePrice": 0,
+            "updatedAt": latest_result_timestamp(),
+        }
+
+    return {
+        "lowestPrice": min(prices),
+        "averagePrice": round(sum(prices) / len(prices)),
+        "updatedAt": latest_product_timestamp(products) or latest_result_timestamp(),
+    }
+
+
+def parse_platform_filter(platforms: str) -> set[str]:
+    return {
+        clean_value(platform)
+        for platform in platforms.split(",")
+        if clean_value(platform)
+    }
+
+
+def matches_query(product: dict[str, object], query: str) -> bool:
+    return not query or query in normalize_text(product.get("_searchText", ""))
+
+
+def matches_platform(product: dict[str, object], platform_filter: set[str]) -> bool:
+    if not platform_filter:
+        return True
+    return clean_value(str(product.get("platform", ""))) in platform_filter
+
+
+def sort_search_products(
+    products: list[dict[str, object]],
+    sort: str,
+    query: str,
+) -> list[dict[str, object]]:
+    if sort == "low-price":
+        return sorted(products, key=lambda product: product_price(product) or 0)
+    if sort == "recent":
+        return sorted(
+            products,
+            key=lambda product: clean_value(str(product.get("date", ""))),
+            reverse=True,
+        )
+
+    # TODO(BE): 정확도순은 이후 검색 랭킹 모델/DB 점수로 교체합니다.
+    # 현재는 API 계약 안정화를 위한 임시 점수입니다.
+    prices = [price for price in (product_price(item) for item in products) if price]
+    average_price = sum(prices) / len(prices) if prices else 0
+    return sorted(
+        products,
+        key=lambda product: relevance_score(product, query, average_price),
+        reverse=True,
+    )
+
+
+def relevance_score(
+    product: dict[str, object],
+    query: str,
+    average_price: float,
+) -> float:
+    search_text = normalize_text(product.get("_searchText", ""))
+    tokens = tokenize_query(query)
+    matched_token_count = sum(1 for token in tokens if token in search_text)
+    token_score = matched_token_count / len(tokens) if tokens else 0
+    exact_query_bonus = 0.35 if query and query in search_text else 0
+    price = product_price(product) or 0
+    price_distance = abs(price - average_price) / max(average_price, 1)
+    price_score = max(0, 1 - price_distance)
+    stable_shuffle = stable_random(
+        f"{query}:{product.get('platform', '')}:{product.get('pid', '')}"
+    )
+
+    return token_score * 8 + exact_query_bonus + price_score * 2 + stable_shuffle
+
+
+def tokenize_query(query: str) -> list[str]:
+    return [
+        normalize_text(token)
+        for token in re.findall(r"[a-z]+[0-9]+|[가-힣]+|[a-z]+|\d+", query.lower())
+        if normalize_text(token)
+    ]
+
+
+def stable_random(seed: str) -> float:
+    return zlib.crc32(seed.encode("utf-8")) / 0xFFFFFFFF
+
+
+def product_price(product: dict[str, object]) -> int | None:
+    price = product.get("price")
+    if isinstance(price, int):
+        return price
+    if isinstance(price, str) and price.isdigit():
+        return int(price)
+    return None
+
+
+def latest_product_timestamp(products: list[dict[str, object]]) -> str:
+    timestamps = sorted(
+        clean_value(str(product.get("date", "")))
+        for product in products
+        if clean_value(str(product.get("date", "")))
+    )
+    return timestamps[-1] if timestamps else ""
 
 
 def latest_result_timestamp() -> str:
