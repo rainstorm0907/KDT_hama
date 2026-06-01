@@ -1,3 +1,7 @@
+-- 현재 DDL은 Oracle 계열 문법 기준입니다.
+-- PostgreSQL 또는 Supabase에 적용할 경우 NUMBER, VARCHAR2, SYSDATE 등을 변환해야 합니다.
+-- 실제 Entity 작성 시에는 사용하는 DB와 컬럼명을 다시 맞춰야 합니다.
+
 -- [1. 사용자 및 보안 관리]
 CREATE TABLE Users (
     user_id         NUMBER PRIMARY KEY,
@@ -10,6 +14,7 @@ CREATE TABLE Users (
     privacy_agreed_at TIMESTAMP NOT NULL,
     marketing_agreed_at TIMESTAMP,
     account_status  VARCHAR2(20) DEFAULT 'ACTIVE',
+    phone_number    VARCHAR2(20) not null,
     created_at      TIMESTAMP DEFAULT SYSDATE,
     updated_at      TIMESTAMP DEFAULT SYSDATE,
     CONSTRAINT uq_users_nickname UNIQUE (nickname),
