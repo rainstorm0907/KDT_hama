@@ -1,8 +1,8 @@
 # 프로젝트 구조 문서
 
-이 문서는 프로젝트 폴더 구조, 폴더별 역할, 참고 문서 위치를 정리합니다.
+현재 프로젝트의 주요 폴더와 파일 역할을 정리합니다.
 
-## 프로젝트 폴더 구조
+## 전체 구조
 
 ```text
 kdtproject
@@ -11,19 +11,8 @@ kdtproject
 │   ├── backend
 │   │   └── src/main
 │   │       ├── java/com/used/service
-│   │       │   ├── config
-│   │       │   ├── controller
-│   │       │   ├── service
-│   │       │   ├── repository
-│   │       │   ├── dto
-│   │       │   ├── entity
-│   │       │   ├── scheduler
-│   │       │   ├── notification
-│   │       │   ├── chatbot
-│   │       │   └── exception
 │   │       ├── python
 │   │       │   ├── analysis
-│   │       │   ├── archive
 │   │       │   ├── config
 │   │       │   ├── crawling
 │   │       │   ├── preprocessing
@@ -76,86 +65,145 @@ kdtproject
     └── 데이터 명세서.xlsx
 ```
 
-주요 프론트엔드 파일:
+## Backend Java
+
+기준 위치:
+
+```text
+code/backend/src/main/java/com/used/service
+```
+
+현재 이 위치는 계층별 폴더만 준비되어 있고, 실제 Java 기능 코드는 아직 `.gitkeep` 상태입니다.
+
+```text
+com/used/service
+├── chatbot
+├── config
+├── controller
+├── dto
+├── entity
+├── exception
+├── notification
+├── repository
+├── scheduler
+└── service
+```
+
+`정지원_boot` 폴더는 별도 제출용 Spring Boot 프로젝트입니다. 메인 서비스 코드 위치인 `code/backend/src/main/java`와 분리해서 관리합니다.
+
+## Backend Python
+
+기준 위치:
+
+```text
+code/backend/src/main/python
+```
+
+주요 파일:
+
+```text
+python
+├── api_server.py
+├── generate_config_reference_csv.py
+├── hama_data_pipeline.py
+├── product_matching.py
+├── requirements.txt
+├── analysis
+│   ├── check_title_keyword_accuracy.py
+│   ├── cluster_bracket_contents.py
+│   ├── compare_platform_data.py
+│   └── results
+├── config
+├── crawling
+│   ├── update_keyword_list.py
+│   ├── archive
+│   └── results
+└── preprocessing
+```
+
+역할:
+
+- `crawling`: 중고거래 플랫폼 크롤링 스크립트와 결과 CSV 관리
+- `analysis`: 크롤링 결과 검증, 가격 이상치 분석, 토큰/대괄호 분석
+- `config`: 상품명 매칭, 카테고리 규칙, 제외 토큰 CSV 관리
+- `hama_data_pipeline.py`: 설정 CSV 기반 상품 매칭 파이프라인
+- `api_server.py`: Python 파이프라인 확인용 FastAPI 서버
+
+## Frontend
+
+기준 위치:
 
 ```text
 code/frontend/Hama/src
+```
+
+현재 주요 구조:
+
+```text
+src
+├── AppRoot.tsx
+├── main.tsx
+├── index.css
 ├── api
 │   └── products.ts
 ├── components
 │   ├── AuthModal.tsx
 │   ├── Banner.tsx
 │   ├── CategoryGrid.tsx
-│   ├── Footer.tsx
 │   ├── Header.tsx
 │   ├── PlatformPill.tsx
 │   ├── PriceInsightChart.tsx
 │   ├── ProductCard.tsx
 │   ├── ProductDetailModal.tsx
 │   ├── ProductVisual.tsx
+│   ├── RefreshProductsButton.tsx
+│   ├── RowsMenu.tsx
+│   ├── ScrollToTopButton.tsx
 │   ├── SearchBar.tsx
+│   ├── SiteFooter.tsx
 │   └── SortControls.tsx
 ├── data
-│   ├── categories.ts
-│   └── mockProducts.ts
-├── design-prototypes
-│   ├── price-insight-a
-│   ├── price-insight-b
-│   └── price-insight-c
+│   └── categories.ts
+├── lib
+│   └── queryClient.ts
 ├── pages
-│   ├── DesignLabPage.tsx
-│   ├── DesignPreviewPage.tsx
 │   ├── HomePage.tsx
+│   ├── LegalPage.tsx
 │   ├── MyPage.tsx
 │   └── SearchResultsPage.tsx
+├── queries
+│   └── productQueries.ts
 ├── styles
 │   └── hairline.ts
 ├── types
-│   └── product.ts
-├── utils
-│   ├── format.ts
-│   ├── recentSearches.ts
-│   └── temporarySearchCalculations.ts
-├── App.css
-├── App.tsx
-├── index.css
-└── main.tsx
+│   ├── product.ts
+│   └── productList.ts
+└── utils
+    ├── format.ts
+    ├── recentSearches.ts
+    └── userProductLists.ts
 ```
 
-주요 Python 분석/파이프라인 파일:
+## Docs
 
 ```text
-code/backend/src/main/python
-├── analysis
-│   ├── cluster_bracket_contents.py
-│   └── results
-│       ├── bracket_contents
-│       └── bracket_clusters
-├── config
-│   ├── README.md
-│   ├── category_rules.csv
-│   ├── product_token_dictionary.csv
-│   ├── token_exclude_list.csv
-│   └── reference
-├── crawling
-│   ├── keyword_list.csv
-│   ├── update_keyword_list.py
-│   ├── archive
-│   └── results
-├── preprocessing
-│   └── .gitkeep
-├── api_server.py
-├── apply_supabase_schema.py
-├── generate_config_reference_csv.py
-├── hama_data_pipeline.py
-├── import_csv_to_supabase.py
-├── product_matching.py
-├── supabase_repository.py
-└── requirements.txt
+docs
+├── api_spec.md
+├── db_schema.sql
+├── document_checklist.md
+├── project_structure.md
+├── requirements.md
+├── search_relevance_plan.md
+├── supabase_schema.sql
+├── supabase_setup.md
+├── ERD.drawio.png
+└── 데이터 명세서.xlsx
 ```
 
-## 폴더별 설명
+참고:
 
+- `db_schema.sql`은 Oracle 계열 문법 기준 DDL입니다.
+- PostgreSQL 또는 Supabase에 적용할 경우 `NUMBER`, `VARCHAR2`, `SYSDATE` 등을 변환해야 합니다.
 - `code/backend`: Spring Boot 기반 백엔드 코드 영역입니다.
 - `code/backend/src/main/java/com/used/service/controller`: 사용자 요청을 받는 REST API 컨트롤러를 작성합니다.
 - `code/backend/src/main/java/com/used/service/service`: 회원, 상품, 찜, 추천, 검색 등 핵심 비즈니스 로직을 작성합니다.

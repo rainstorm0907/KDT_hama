@@ -1,18 +1,43 @@
 # Compiled class file
 *.class
 
-# Log file
+# Logs
+logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS / editor files
 .DS_Store
+*.local
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Python
 __pycache__/
 *.py[cod]
 .env
 .env.*
 !.env.example
 .venv/
+
+# Node / frontend
 node_modules/
 dist/
+dist-ssr/
+
+# Java / Gradle
 build/
+.gradle/
 code/backend/src/main/python/.env
 code/backend/src/main/python/.venv/
 

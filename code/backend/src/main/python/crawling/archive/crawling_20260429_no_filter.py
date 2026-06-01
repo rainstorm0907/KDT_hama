@@ -14,10 +14,12 @@ import requests
 
 
 # --- 설정 및 입력 ---
-keyword_file = Path(__file__).with_name("keyword_list.csv")
-blacklist_file = Path(__file__).with_name("blacklist_keywords.csv")
-token_blacklist_file = Path(__file__).with_name("blacklist_tokens.csv")
-result_dir = Path(__file__).with_name("results")
+script_dir = Path(__file__).resolve().parent
+crawling_dir = script_dir.parent if script_dir.name == "archive" else script_dir
+keyword_file = crawling_dir / "keyword_list.csv"
+blacklist_file = crawling_dir / "blacklist_keywords.csv"
+token_blacklist_file = crawling_dir / "blacklist_tokens.csv"
+result_dir = crawling_dir / "results"
 keyword_df = pd.read_csv(keyword_file, encoding="utf-8-sig")
 keyword_column = "keyword" if "keyword" in keyword_df.columns else keyword_df.columns[0]
 keywords = keyword_df[keyword_column].dropna().astype(str).str.strip()
