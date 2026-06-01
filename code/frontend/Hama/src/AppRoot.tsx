@@ -5,6 +5,7 @@ import type { AuthMode } from './components/AuthModal';
 import { Header } from './components/Header';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { SiteFooter } from './components/SiteFooter';
+import { AdminPage } from './pages/AdminPage';
 import { HomePage } from './pages/HomePage';
 import { LegalPage } from './pages/LegalPage';
 import { MyPage } from './pages/MyPage';
@@ -16,6 +17,7 @@ export function AppRoot() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isAdmin = isLoggedIn;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -75,8 +77,9 @@ export function AppRoot() {
           />
           <Route
             path="/mypage"
-            element={<MyPage onProductSelect={setSelectedProduct} />}
+            element={<MyPage onProductSelect={setSelectedProduct} isAdmin={isAdmin} />}
           />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="/terms" element={<LegalPage type="terms" />} />
           <Route path="/privacy" element={<LegalPage type="privacy" />} />
         </Routes>

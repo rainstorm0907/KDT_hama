@@ -6,10 +6,22 @@
 .DS_Store
 __pycache__/
 *.py[cod]
+.env
+.env.*
+!.env.example
+.venv/
+node_modules/
+dist/
+build/
+code/backend/src/main/python/.env
+code/backend/src/main/python/.venv/
 
 # Generated crawling/test outputs
 code/backend/src/main/python/TEST/results/
+code/backend/src/main/python/archive/TEST/
 code/backend/src/main/python/archive/TEST/results/
+code/backend/src/main/python/crawling/archive/
+code/backend/src/main/python/crawling/results/
 
 # BlueJ files
 *.ctxt

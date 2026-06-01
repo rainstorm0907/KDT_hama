@@ -48,6 +48,27 @@ code/backend/src/main/python
 - `api_server.py`: Python 파이프라인 확인용 FastAPI 서버
 - `hama_data_pipeline.py`: 상품명 매칭/카테고리 배정 파이프라인
 - `product_matching.py`: 상품명 정규화와 토큰 매칭 보조 로직
+- `supabase_repository.py`: Supabase 상품 조회와 CSV fallback을 분리하는 저장소 모듈
+- `apply_supabase_schema.py`: Supabase/PostgreSQL 스키마 적용 스크립트
+- `import_csv_to_supabase.py`: 크롤링 CSV를 Supabase 테이블로 적재하는 스크립트
+
+### `code/supabase/migrations`
+
+Supabase/PostgreSQL 테이블 생성 migration을 관리합니다.
+
+현재 작성된 파일:
+
+- `20260519000000_hama_schema.sql`: Hama MVP Supabase 스키마
+
+### `backend/src/main/python/preprocessing`
+
+Python 기반 데이터 전처리 스크립트를 관리합니다.
+
+들어갈 수 있는 파일 예시:
+
+- 중복 상품 제거 스크립트
+- 가격, 날짜, 상태값 정규화 스크립트
+- DB 저장 전 데이터 검증 스크립트
 
 작성 기준:
 
