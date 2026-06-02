@@ -1,9 +1,37 @@
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, Bell, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PlatformPill } from './PlatformPill';
+import { ProductVisual } from './ProductVisual';
 import { hairline } from '../styles/hairline';
+import type { Product } from '../types/product';
+import { formatWon } from '../utils/format';
+import {
+  getStoredWishlistProducts,
+  productStorageKey,
+} from '../utils/userProductLists';
 
-export function ScrollToTopButton() {
+type ScrollToTopButtonProps = {
+  onProductSelect?: (product: Product) => void;
+};
+
+type FloatingNotification = {
+  id: string;
+  product: Product;
+};
+
+const notificationReadStorageKey = 'hama-floating-notification-read-keys:guest';
+
+export function ScrollToTopButton({ onProductSelect }: ScrollToTopButtonProps) {
+  const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState<string[]>(
+    getStoredReadNotificationIds
+  );
+  const [notifications, setNotifications] = useState<FloatingNotification[]>(
+    getLocalFloatingNotifications
+  );
 
   useEffect(() => {
     function updateVisibility() {
@@ -16,18 +44,196 @@ export function ScrollToTopButton() {
     return () => window.removeEventListener('scroll', updateVisibility);
   }, []);
 
-  return (
-    <button
-      type="button"
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className={`fixed bottom-8 right-8 z-[80] flex h-14 w-14 items-center justify-center rounded-full text-gray-950 transition-all duration-200 ${hairline.panel} ${hairline.focus} ${
-        isVisible
-          ? 'translate-y-0 opacity-100'
-          : 'pointer-events-none translate-y-3 opacity-0'
-      }`}
-      aria-label="맨 위로 이동"
-    >
-      <ArrowUp className="h-5 w-5" aria-hidden="true" />
-    </button>
+  useEffect(() => {
+    window.localStorage.setItem(
+      notificationReadStorageKey,
+      JSON.stringify(readNotificationIds)
+    );
+  }, [readNotificationIds]);
+
+  useEffect(() => {
+    function refreshNotifications() {
+      setNotifications(getLocalFloatingNotifications());
+    }
+
+    window.addEventListener('storage', refreshNotifications);
+    window.addEventListener('focus', refreshNotifications);
+
+    return () => {
+      window.removeEventListener('storage', refreshNotifications);
+      window.removeEventListener('focus', refreshNotifications);
+    };
+  }, []);
+
+  const unreadNotifications = notifications.filter(
+    (notification) => !readNotificationIds.includes(notification.id)
   );
+
+  const markNotificationRead = (notificationId: string) => {
+    setReadNotificationIds((current) =>
+      current.includes(notificationId) ? current : [notificationId, ...current]
+    );
+  };
+
+  const openNotificationProduct = (notification: FloatingNotification) => {
+    markNotificationRead(notification.id);
+    setIsNotificationOpen(false);
+    onProductSelect?.(notification.product);
+  };
+
+  return (
+    <div className="fixed bottom-8 right-8 z-[80] flex flex-col items-end gap-3">
+      {isNotificationOpen ? (
+        <section
+          className={`mb-1 min-h-[300px] w-[min(414px,calc(100vw-2rem))] overflow-hidden rounded-[26px] ${hairline.panel}`}
+          aria-label="최근 알림"
+        >
+          <div className="flex items-center justify-between border-b border-[#AEB6C2] px-5 py-4">
+            <div>
+              <h2 className="text-base font-black text-gray-950">알림</h2>
+              <p className={`mt-0.5 text-sm font-bold ${hairline.quietText}`}>
+                확인하지 않은 최근 알림
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsNotificationOpen(false)}
+              className={`flex h-11 w-11 items-center justify-center rounded-full text-gray-900 ${hairline.secondaryButton} ${hairline.focus}`}
+              aria-label="알림 팝업 닫기"
+            >
+              <X className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
+            </button>
+          </div>
+
+          {unreadNotifications.length > 0 ? (
+            <ul className="max-h-[390px] min-h-[212px] overflow-y-auto px-3 py-2">
+              {unreadNotifications.slice(0, 5).map((notification) => (
+                <li
+                  key={notification.id}
+                  className="border-b border-[#E6EAF0]/90 last:border-b-0"
+                >
+                  <div className="group flex min-h-[98px] items-center gap-3.5 rounded-[20px] px-2.5 py-2.5 transition-colors hover:bg-white/72">
+                    <button
+                      type="button"
+                      onClick={() => openNotificationProduct(notification)}
+                      className={`flex min-w-0 flex-1 items-center gap-3.5 text-left ${hairline.focus}`}
+                    >
+                      <span className="h-20 w-20 shrink-0 overflow-hidden rounded-[18px] bg-[#F3F4F6]">
+                        <ProductVisual
+                          imageUrl={notification.product.imageUrl}
+                          name={notification.product.name}
+                          variant="thumb"
+                        />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-black text-gray-950">
+                          {notification.product.name}
+                        </span>
+                        <span className="mt-0.5 block text-[13px] font-black text-[#626873]">
+                          {formatWon(notification.product.price)}
+                        </span>
+                        <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <PlatformPill platform={notification.product.platform} size="card" />
+                          <span className={hairline.status}>
+                            {notification.product.status}
+                          </span>
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => markNotificationRead(notification.id)}
+                      className={`ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-[#8B919B] transition-colors hover:bg-white hover:text-gray-950 ${hairline.focus}`}
+                      aria-label={`${notification.product.name} 알림 확인 처리`}
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex min-h-[212px] flex-col items-center justify-center px-6 py-7 text-center">
+              <p className="text-base font-black text-gray-950">
+                최근 알림이 없습니다.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsNotificationOpen(false);
+                  navigate('/mypage');
+                }}
+                className={`mt-4 rounded-full border border-[#B7BEC9] bg-[#E7EBF0]/92 px-5 py-2.5 text-sm font-black text-[#1D1D1F] shadow-[0_10px_22px_rgba(29,29,31,0.08),inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md transition-colors hover:border-[#9EA8B6] hover:bg-[#DDE3EA] ${hairline.focus}`}
+              >
+                알림설정 하기 &gt;
+              </button>
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className={`flex h-14 w-14 items-center justify-center rounded-full text-gray-950 transition-all duration-200 ${hairline.panel} ${hairline.focus} ${
+          isVisible
+            ? 'translate-y-0 opacity-100'
+            : 'pointer-events-none translate-y-3 opacity-0'
+        }`}
+        aria-label="맨 위로 이동"
+      >
+        <ArrowUp className="h-5 w-5" aria-hidden="true" />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setIsNotificationOpen((current) => !current)}
+        className={`relative flex h-14 w-14 items-center justify-center rounded-full text-gray-950 transition-all duration-200 active:scale-95 ${hairline.panel} ${hairline.focus}`}
+        aria-label="최근 알림 보기"
+        aria-expanded={isNotificationOpen}
+      >
+        <Bell className="h-5 w-5" aria-hidden="true" />
+        {unreadNotifications.length > 0 ? (
+          <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#1D1D1F] px-1 text-[10px] font-black text-white shadow-[0_8px_18px_rgba(29,29,31,0.18)]">
+            {Math.min(unreadNotifications.length, 9)}
+          </span>
+        ) : null}
+      </button>
+    </div>
+  );
+}
+
+function getLocalFloatingNotifications(): FloatingNotification[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  return getStoredWishlistProducts().slice(0, 5).map((product) => ({
+    id: `status:${productStorageKey(product)}:${product.status}`,
+    product,
+  }));
+}
+
+function getStoredReadNotificationIds(): string[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  const rawValue = window.localStorage.getItem(notificationReadStorageKey);
+
+  if (!rawValue) {
+    return [];
+  }
+
+  try {
+    const parsedValue: unknown = JSON.parse(rawValue);
+
+    if (!Array.isArray(parsedValue)) {
+      return [];
+    }
+
+    return parsedValue.filter((item): item is string => typeof item === 'string');
+  } catch {
+    return [];
+  }
 }

@@ -113,7 +113,7 @@ export function HomePage({ onProductSelect }: HomePageProps) {
         </div>
       </section>
 
-      <ScrollToTopButton />
+      <ScrollToTopButton onProductSelect={onProductSelect} />
     </main>
   );
 }
