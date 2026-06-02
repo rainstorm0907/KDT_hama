@@ -5,7 +5,7 @@ import { CategoryGrid } from '../components/CategoryGrid';
 import { ProductCard, ProductCardSkeleton } from '../components/ProductCard';
 import { RefreshProductsButton } from '../components/RefreshProductsButton';
 import { RowsMenu } from '../components/RowsMenu';
-import { ScrollToTopButton } from '../components/ScrollToTopButton';
+import { SideButtons } from '../components/SideButtons';
 import { SearchBar } from '../components/SearchBar';
 import { categories } from '../data/categories';
 import { useRecommendedProductsQuery } from '../queries/productQueries';
@@ -113,7 +113,7 @@ export function HomePage({ onProductSelect }: HomePageProps) {
         </div>
       </section>
 
-      <ScrollToTopButton onProductSelect={onProductSelect} />
+      <SideButtons onProductSelect={onProductSelect} />
     </main>
   );
 }
