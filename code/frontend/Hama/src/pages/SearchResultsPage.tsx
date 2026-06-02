@@ -7,7 +7,7 @@ import type { PlatformName } from '../components/PlatformPill';
 import { ProductCard, ProductCardSkeleton } from '../components/ProductCard';
 import { RefreshProductsButton } from '../components/RefreshProductsButton';
 import { RowsMenu } from '../components/RowsMenu';
-import { ScrollToTopButton } from '../components/ScrollToTopButton';
+import { SideButtons } from '../components/SideButtons';
 import { SearchBar } from '../components/SearchBar';
 import { SortControls } from '../components/SortControls';
 import type { SortOption } from '../components/SortControls';
@@ -244,7 +244,7 @@ export function SearchResultsPage({ onProductSelect }: SearchResultsPageProps) {
         </div>
       </section>
 
-      <ScrollToTopButton onProductSelect={onProductSelect} />
+      <SideButtons onProductSelect={onProductSelect} />
     </main>
   );
 }

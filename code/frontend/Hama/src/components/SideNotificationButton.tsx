@@ -1,4 +1,4 @@
-import { ArrowUp, Bell, X } from 'lucide-react';
+import { Bell, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlatformPill } from './PlatformPill';
@@ -11,8 +11,11 @@ import {
   productStorageKey,
 } from '../utils/userProductLists';
 
-type ScrollToTopButtonProps = {
+type SideNotificationButtonProps = {
+  isOpen: boolean;
+  onClose: () => void;
   onProductSelect?: (product: Product) => void;
+  onToggle: () => void;
 };
 
 type FloatingNotification = {
@@ -22,27 +25,19 @@ type FloatingNotification = {
 
 const notificationReadStorageKey = 'hama-floating-notification-read-keys:guest';
 
-export function ScrollToTopButton({ onProductSelect }: ScrollToTopButtonProps) {
+export function SideNotificationButton({
+  isOpen,
+  onClose,
+  onProductSelect,
+  onToggle,
+}: SideNotificationButtonProps) {
   const navigate = useNavigate();
-  const [isVisible, setIsVisible] = useState(false);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>(
     getStoredReadNotificationIds
   );
   const [notifications, setNotifications] = useState<FloatingNotification[]>(
     getLocalFloatingNotifications
   );
-
-  useEffect(() => {
-    function updateVisibility() {
-      setIsVisible(window.scrollY > 420);
-    }
-
-    updateVisibility();
-    window.addEventListener('scroll', updateVisibility, { passive: true });
-
-    return () => window.removeEventListener('scroll', updateVisibility);
-  }, []);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -77,15 +72,22 @@ export function ScrollToTopButton({ onProductSelect }: ScrollToTopButtonProps) {
 
   const openNotificationProduct = (notification: FloatingNotification) => {
     markNotificationRead(notification.id);
-    setIsNotificationOpen(false);
+    onClose();
     onProductSelect?.(notification.product);
   };
 
   return (
-    <div className="fixed bottom-8 right-8 z-[80] flex flex-col items-end gap-3">
-      {isNotificationOpen ? (
+    <div className="relative">
+      <div
+        className={`fixed bottom-5 right-[calc(1.25rem+4rem+0.75rem)] transition-all duration-200 ease-out md:bottom-6 md:right-[calc(1.5rem+72px+1rem)] ${
+          isOpen
+            ? 'pointer-events-auto translate-x-0 scale-100 opacity-100'
+            : 'pointer-events-none translate-x-3 scale-95 opacity-0'
+        }`}
+        aria-hidden={!isOpen}
+      >
         <section
-          className={`mb-1 min-h-[300px] w-[min(414px,calc(100vw-2rem))] overflow-hidden rounded-[26px] ${hairline.panel}`}
+          className={`min-h-[300px] w-[min(414px,calc(100vw-7rem))] overflow-hidden rounded-[26px] ${hairline.panel}`}
           aria-label="최근 알림"
         >
           <div className="flex items-center justify-between border-b border-[#AEB6C2] px-5 py-4">
@@ -97,7 +99,7 @@ export function ScrollToTopButton({ onProductSelect }: ScrollToTopButtonProps) {
             </div>
             <button
               type="button"
-              onClick={() => setIsNotificationOpen(false)}
+              onClick={onClose}
               className={`flex h-11 w-11 items-center justify-center rounded-full text-gray-900 ${hairline.secondaryButton} ${hairline.focus}`}
               aria-label="알림 팝업 닫기"
             >
@@ -133,7 +135,10 @@ export function ScrollToTopButton({ onProductSelect }: ScrollToTopButtonProps) {
                           {formatWon(notification.product.price)}
                         </span>
                         <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <PlatformPill platform={notification.product.platform} size="card" />
+                          <PlatformPill
+                            platform={notification.product.platform}
+                            size="card"
+                          />
                           <span className={hairline.status}>
                             {notification.product.status}
                           </span>
@@ -160,7 +165,7 @@ export function ScrollToTopButton({ onProductSelect }: ScrollToTopButtonProps) {
               <button
                 type="button"
                 onClick={() => {
-                  setIsNotificationOpen(false);
+                  onClose();
                   navigate('/mypage');
                 }}
                 className={`mt-4 rounded-full border border-[#B7BEC9] bg-[#E7EBF0]/92 px-5 py-2.5 text-sm font-black text-[#1D1D1F] shadow-[0_10px_22px_rgba(29,29,31,0.08),inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md transition-colors hover:border-[#9EA8B6] hover:bg-[#DDE3EA] ${hairline.focus}`}
@@ -170,31 +175,18 @@ export function ScrollToTopButton({ onProductSelect }: ScrollToTopButtonProps) {
             </div>
           )}
         </section>
-      ) : null}
+      </div>
 
       <button
         type="button"
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className={`flex h-14 w-14 items-center justify-center rounded-full text-gray-950 transition-all duration-200 ${hairline.panel} ${hairline.focus} ${
-          isVisible
-            ? 'translate-y-0 opacity-100'
-            : 'pointer-events-none translate-y-3 opacity-0'
-        }`}
-        aria-label="맨 위로 이동"
-      >
-        <ArrowUp className="h-5 w-5" aria-hidden="true" />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => setIsNotificationOpen((current) => !current)}
-        className={`relative flex h-14 w-14 items-center justify-center rounded-full text-gray-950 transition-all duration-200 active:scale-95 ${hairline.panel} ${hairline.focus}`}
+        onClick={onToggle}
+        className={`relative flex h-16 w-16 items-center justify-center rounded-full text-gray-950 ring-1 ring-[#1D1D1F]/75 transition-all duration-200 active:scale-95 md:h-[72px] md:w-[72px] ${hairline.panel} ${hairline.focus}`}
         aria-label="최근 알림 보기"
-        aria-expanded={isNotificationOpen}
+        aria-expanded={isOpen}
       >
-        <Bell className="h-5 w-5" aria-hidden="true" />
+        <Bell className="h-6 w-6" aria-hidden="true" />
         {unreadNotifications.length > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#1D1D1F] px-1 text-[10px] font-black text-white shadow-[0_8px_18px_rgba(29,29,31,0.18)]">
+          <span className="absolute right-1 top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-[#1D1D1F] px-1 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(29,29,31,0.18)]">
             {Math.min(unreadNotifications.length, 9)}
           </span>
         ) : null}
