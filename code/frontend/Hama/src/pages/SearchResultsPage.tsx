@@ -244,7 +244,7 @@ export function SearchResultsPage({ onProductSelect }: SearchResultsPageProps) {
         </div>
       </section>
 
-      <ScrollToTopButton />
+      <ScrollToTopButton onProductSelect={onProductSelect} />
     </main>
   );
 }
