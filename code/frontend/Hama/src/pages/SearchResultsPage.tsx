@@ -8,6 +8,7 @@ import { ProductCard, ProductCardSkeleton } from '../components/ProductCard';
 import { RefreshProductsButton } from '../components/RefreshProductsButton';
 import { RowsMenu } from '../components/RowsMenu';
 import { SideButtons } from '../components/SideButtons';
+import type { SidePanel } from '../components/SideButtons';
 import { SearchBar } from '../components/SearchBar';
 import { SortControls } from '../components/SortControls';
 import type { SortOption } from '../components/SortControls';
@@ -18,16 +19,27 @@ import type { Product } from '../types/product';
 import { formatUpdatedAtTimestamp, formatWon } from '../utils/format';
 
 type SearchResultsPageProps = {
+  activeSidePanel: SidePanel | null;
+  onOpenPriceCompare: () => void;
   onProductSelect: (product: Product) => void;
+  onSidePanelChange: (panel: SidePanel | null) => void;
 };
 
 // TODO(BE): 플랫폼별 결과 수가 필요하면 search API의 facets.platforms에서 받아 렌더링합니다.
 const platformFilters: PlatformName[] = ['번개장터', '중고나라'];
 const PRODUCT_COLUMNS = 4;
 
-export function SearchResultsPage({ onProductSelect }: SearchResultsPageProps) {
+export function SearchResultsPage({
+  activeSidePanel,
+  onOpenPriceCompare,
+  onProductSelect,
+  onSidePanelChange,
+}: SearchResultsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const query = searchParams.get('q')?.trim() || '맥북 air';
+  const query =
+    searchParams.get('q')?.trim() ||
+    searchParams.get('search')?.trim() ||
+    '맥북 air';
   const pageParam = Number(searchParams.get('page') || '1');
   const currentPage = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -244,7 +256,12 @@ export function SearchResultsPage({ onProductSelect }: SearchResultsPageProps) {
         </div>
       </section>
 
-      <SideButtons onProductSelect={onProductSelect} />
+      <SideButtons
+        activePanel={activeSidePanel}
+        onOpenPriceCompare={onOpenPriceCompare}
+        onPanelChange={onSidePanelChange}
+        onProductSelect={onProductSelect}
+      />
     </main>
   );
 }

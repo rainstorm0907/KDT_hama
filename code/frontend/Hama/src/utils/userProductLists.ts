@@ -2,7 +2,9 @@ import type { Product } from '../types/product';
 
 const WISHLIST_KEY = 'hama_wishlist_products';
 const RECENT_PRODUCTS_KEY = 'hama_recent_products';
+const PRICE_COMPARE_PRODUCTS_KEY = 'hama_price_compare_products';
 const MAX_RECENT_PRODUCTS = 12;
+const MAX_PRICE_COMPARE_PRODUCTS = 24;
 
 export function productStorageKey(product: Product): string {
   return `${product.platform}:${product.pid}`;
@@ -14,6 +16,10 @@ export function getStoredWishlistProducts(): Product[] {
 
 export function getStoredRecentProducts(): Product[] {
   return readProductList(RECENT_PRODUCTS_KEY);
+}
+
+export function getStoredPriceCompareProducts(): Product[] {
+  return readProductList(PRICE_COMPARE_PRODUCTS_KEY);
 }
 
 export function isProductWished(product: Product): boolean {
@@ -38,6 +44,39 @@ export function toggleWishlistProduct(product: Product): boolean {
   writeProductList(WISHLIST_KEY, nextProducts);
 
   return !isAlreadyWished;
+}
+
+export function isProductInPriceCompareList(product: Product): boolean {
+  const targetKey = productStorageKey(product);
+
+  return getStoredPriceCompareProducts().some(
+    (item) => productStorageKey(item) === targetKey
+  );
+}
+
+export function addPriceCompareProduct(product: Product): Product[] {
+  const targetKey = productStorageKey(product);
+  const nextProducts = [
+    product,
+    ...getStoredPriceCompareProducts().filter(
+      (item) => productStorageKey(item) !== targetKey
+    ),
+  ].slice(0, MAX_PRICE_COMPARE_PRODUCTS);
+
+  writeProductList(PRICE_COMPARE_PRODUCTS_KEY, nextProducts);
+
+  return nextProducts;
+}
+
+export function removePriceCompareProduct(product: Product): Product[] {
+  const targetKey = productStorageKey(product);
+  const nextProducts = getStoredPriceCompareProducts().filter(
+    (item) => productStorageKey(item) !== targetKey
+  );
+
+  writeProductList(PRICE_COMPARE_PRODUCTS_KEY, nextProducts);
+
+  return nextProducts;
 }
 
 export function removeWishlistProduct(product: Product): Product[] {

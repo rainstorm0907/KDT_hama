@@ -79,7 +79,7 @@ export function SideNotificationButton({
   return (
     <div className="relative">
       <div
-        className={`fixed bottom-5 right-[calc(1.25rem+4rem+0.75rem)] transition-all duration-200 ease-out md:bottom-6 md:right-[calc(1.5rem+72px+1rem)] ${
+        className={`fixed bottom-5 right-[calc(1.25rem+4rem+0.75rem)] z-[160] transition-all duration-200 ease-out md:bottom-6 md:right-[calc(1.5rem+72px+1rem)] ${
           isOpen
             ? 'pointer-events-auto translate-x-0 scale-100 opacity-100'
             : 'pointer-events-none translate-x-3 scale-95 opacity-0'

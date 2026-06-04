@@ -6,14 +6,17 @@ import {
   ChevronRight,
   ExternalLink,
   Heart,
+  ShoppingBasket,
   X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { useProductDetailQuery } from '../queries/productQueries';
 import type { Product } from '../types/product';
 import { hairline } from '../styles/hairline';
 import { formatWon } from '../utils/format';
 import {
+  addPriceCompareProduct,
   isProductWished,
   saveRecentProduct,
   toggleWishlistProduct,
@@ -24,6 +27,8 @@ import { ProductVisual } from './ProductVisual';
 type ProductDetailModalProps = {
   product: Product | null;
   onClose: () => void;
+  onOpenChatbot?: () => void;
+  onOpenPriceCompare?: (product: Product) => void;
 };
 
 type ImageSelectionState = {
@@ -36,7 +41,11 @@ type ImageSelectionState = {
 export function ProductDetailModal({
   product,
   onClose,
+  onOpenChatbot,
+  onOpenPriceCompare,
 }: ProductDetailModalProps) {
+  useModalScrollLock(Boolean(product));
+
   const titleId = useId();
   const navigate = useNavigate();
   const productKey = getProductKey(product);
@@ -52,7 +61,7 @@ export function ProductDetailModal({
     product ? isProductWished(product) : false
   );
   const [isAlertEnabled, setIsAlertEnabled] = useState(false);
-  const [activeToast, setActiveToast] = useState<'wish' | 'alert' | null>(null);
+  const [activeToast, setActiveToast] = useState<'wish' | 'alert' | 'compare' | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   useLayoutEffect(() => {
@@ -66,13 +75,9 @@ export function ProductDetailModal({
       }
     };
 
-    const previousOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose, product]);
@@ -189,6 +194,22 @@ export function ProductDetailModal({
     setActiveToast(null);
     onClose();
     navigate('/mypage');
+  };
+
+  const handleCompareAdd = () => {
+    addPriceCompareProduct(visibleProduct);
+    setActiveToast('compare');
+  };
+
+  const goToPriceCompare = () => {
+    setActiveToast(null);
+    onClose();
+    onOpenPriceCompare?.(visibleProduct);
+  };
+
+  const openChatbot = () => {
+    onClose();
+    onOpenChatbot?.();
   };
 
   return (
@@ -362,13 +383,14 @@ export function ProductDetailModal({
 
             <div className="mt-auto pt-8">
               <div className="h-px w-full bg-[#C9CFDA]" />
-              <div className="mt-5 grid grid-cols-[1fr_64px_64px] gap-3">
+              <div className="mt-5 grid grid-cols-[1fr_64px_64px_64px] gap-3">
                 <button
                   type="button"
+                  onClick={handleCompareAdd}
                   className={`inline-flex h-16 min-h-16 items-center justify-center gap-2.5 rounded-xl px-5 text-lg font-black transition ${hairline.primaryButton} ${hairline.focus}`}
                 >
-                  <Bot className="h-5 w-5" aria-hidden="true" />
-                  살래말래 AI
+                  <ShoppingBasket className="h-5 w-5" aria-hidden="true" />
+                  가격 비교 리스트에 추가
                 </button>
                 <button
                   type="button"
@@ -385,6 +407,14 @@ export function ProductDetailModal({
                     className={isWished ? 'h-6 w-6 fill-current' : 'h-6 w-6'}
                     aria-hidden="true"
                   />
+                </button>
+                <button
+                  type="button"
+                  aria-label="챗봇으로 상품 문의하기"
+                  onClick={openChatbot}
+                  className={`inline-flex h-16 min-h-16 w-16 min-w-16 items-center justify-center rounded-xl border border-[#C9CFDA] bg-white text-gray-950 transition hover:border-[#AEB6C2] hover:bg-[#FDFDFE] ${hairline.focus}`}
+                >
+                  <Bot className="h-6 w-6" aria-hidden="true" />
                 </button>
                 <button
                   type="button"
@@ -412,7 +442,13 @@ export function ProductDetailModal({
         <ActionToast
           type={activeToast}
           onClose={() => setActiveToast(null)}
-          onAction={activeToast === 'wish' ? goToWishlist : goToAlertSettings}
+          onAction={
+            activeToast === 'wish'
+              ? goToWishlist
+              : activeToast === 'alert'
+                ? goToAlertSettings
+                : goToPriceCompare
+          }
         />
       ) : null}
     </div>
@@ -424,12 +460,13 @@ function ActionToast({
   onClose,
   onAction,
 }: {
-  type: 'wish' | 'alert';
+  type: 'wish' | 'alert' | 'compare';
   onClose: () => void;
   onAction: () => void;
 }) {
   const isWish = type === 'wish';
-  const Icon = isWish ? Heart : Bell;
+  const isCompare = type === 'compare';
+  const Icon = isWish ? Heart : isCompare ? ShoppingBasket : Bell;
 
   return (
     <div
@@ -441,13 +478,21 @@ function ActionToast({
       <div className="flex min-w-0 items-center gap-3">
         <span
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-            isWish ? 'bg-rose-50 text-rose-500' : 'bg-amber-50 text-amber-500'
+            isWish
+              ? 'bg-rose-50 text-rose-500'
+              : isCompare
+                ? 'bg-[#F3F4F6] text-gray-950'
+                : 'bg-amber-50 text-amber-500'
           }`}
         >
           <Icon className="h-5 w-5 fill-current" aria-hidden="true" />
         </span>
         <p className="truncate text-base font-black text-gray-900">
-          {isWish ? '찜 목록에 추가되었습니다' : '가격 알림이 설정되었습니다'}
+          {isWish
+            ? '찜 목록에 추가되었습니다'
+            : isCompare
+              ? '추가되었습니다!'
+              : '가격 알림이 설정되었습니다'}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -456,7 +501,7 @@ function ActionToast({
           onClick={onAction}
           className={`rounded-xl px-4 py-2.5 text-sm font-black transition ${hairline.primaryButton} ${hairline.focus}`}
         >
-          {isWish ? '보러가기' : '알림 보기'}
+          {isWish ? '보러가기' : isCompare ? '바로가기 >' : '알림 보기'}
         </button>
         <button
           type="button"
