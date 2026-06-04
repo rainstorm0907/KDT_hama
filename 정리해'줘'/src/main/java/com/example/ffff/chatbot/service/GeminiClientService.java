@@ -306,6 +306,18 @@ public class GeminiClientService {
                 "이하"
         ) && countPriceExpressions(message) >= 2;
 
+        boolean hasPriceReasonExpression = containsAny(
+                normalized,
+                "왜케비",
+                "왜이렇게비",
+                "비싼이유",
+                "비싼거야",
+                "비싼가",
+                "비싸",
+                "가격이높",
+                "가격높"
+        );
+
         String keyword = result.getKeyword();
 
         boolean keywordLooksLikeSentence =
@@ -328,7 +340,10 @@ public class GeminiClientService {
                         "선물",
                         "사무용");
 
-        return hasUseCaseExpression || hasPriceRangeExpression || keywordLooksLikeSentence;
+        return hasUseCaseExpression
+                || hasPriceRangeExpression
+                || hasPriceReasonExpression
+                || keywordLooksLikeSentence;
     }
 
     public String generateGeneralAnswer(String message) {

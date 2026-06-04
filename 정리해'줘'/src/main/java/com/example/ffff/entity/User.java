@@ -43,7 +43,7 @@ public class User {
     @Column(name = "BIRTH_DATE")
     private LocalDate birthDate;
 
-    @Column(name = "PHONE_NUMBER", length = 30)
+    @Transient
     private String phoneNumber;
 
     @Column(name = "NICKNAME", unique = true, nullable = false, length = 50)
@@ -58,7 +58,7 @@ public class User {
     @Column(name = "ACCOUNT_STATUS", length = 20)
     private String accountStatus = "ACTIVE";
 
-    @Column(name = "ROLE", length = 20)
+    @Transient
     private String role = "USER";
 
     @CreationTimestamp

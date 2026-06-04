@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -65,12 +66,18 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("message", "비밀번호를 입력해 주세요."));
         }
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        req.getEmail().trim(),
-                        req.getPassword()
-                )
-        );
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            req.getEmail().trim(),
+                            req.getPassword()
+                    )
+            );
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(401)
+                    .body(Map.of("message", "해당 아이디/비밀번호가 일치하지 않습니다."));
+        }
 
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
