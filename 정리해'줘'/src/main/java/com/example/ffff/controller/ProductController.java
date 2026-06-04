@@ -92,6 +92,14 @@ public class ProductController {
         return productService.getProductDetail(id);
     }
 
+    @GetMapping("/{platform}/{pid}")
+    public ProductResponseDto getProductDetailByPlatformAndPid(
+            @PathVariable String platform,
+            @PathVariable String pid
+    ) {
+        return productService.getProductDetail(platform, pid);
+    }
+
     private String resolveSearchKeyword(String q, String keyword) {
         if (q != null && !q.isBlank()) {
             return q.trim();

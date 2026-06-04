@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ItemRepository extends JpaRepository<Item, Long> {
 
@@ -34,82 +35,12 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                     i.ITEM_URL,
                     (
                         CASE
-                            WHEN LOWER(NVL(i.MODEL_NAME, '')) = LOWER(:keyword) THEN 120
-                            WHEN LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 100
-                            WHEN LOWER(i.TITLE) = LOWER(:keyword) THEN 80
-                            WHEN LOWER(i.TITLE) LIKE '%' || LOWER(:keyword) || '%' THEN 60
-                            WHEN LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 55
-                            ELSE 0
-                        END
-                        +
-                        CASE
-                            WHEN LOWER(NVL(i.BRAND, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 25
-                            ELSE 0
-                        END
-                        +
-                        CASE
-                            WHEN LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 30
-                            ELSE 0
-                        END
-                        +
-                        CASE
-                            WHEN :useCase = 'gaming'
-                             AND :performanceLevel = 'LOW'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'LOW'
-                            THEN 150
-                            WHEN :useCase = 'gaming'
-                             AND :performanceLevel = 'LOW'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'MID'
-                            THEN 125
-                            WHEN :useCase = 'gaming'
-                             AND :performanceLevel = 'LOW'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'HIGH'
-                            THEN 95
-                            WHEN :useCase = 'gaming'
-                             AND :performanceLevel = 'LOW'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
-                            THEN 70
-
-                            WHEN :useCase = 'gaming'
-                             AND :performanceLevel = 'MID'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'MID'
-                            THEN 160
-                            WHEN :useCase = 'gaming'
-                             AND :performanceLevel = 'MID'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'HIGH'
-                            THEN 135
-                            WHEN :useCase = 'gaming'
-                             AND :performanceLevel = 'MID'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
-                            THEN 85
-
-                            WHEN :useCase = 'gaming'
-                             AND :performanceLevel = 'HIGH'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'HIGH'
-                            THEN 165
-                            WHEN :useCase = 'gaming'
-                             AND :performanceLevel = 'HIGH'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
-                            THEN 130
-
-                            WHEN :useCase = 'gaming'
-                             AND :performanceLevel = 'EXTREME'
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
-                            THEN 180
-
-                            WHEN :useCase = 'gaming'
-                             AND (:performanceLevel IS NULL OR :performanceLevel = '')
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'MID'
-                            THEN 130
-                            WHEN :useCase = 'gaming'
-                             AND (:performanceLevel IS NULL OR :performanceLevel = '')
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'HIGH'
-                            THEN 125
-                            WHEN :useCase = 'gaming'
-                             AND (:performanceLevel IS NULL OR :performanceLevel = '')
-                             AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
-                            THEN 100
-
+                            WHEN LOWER(NVL(i.CANONICAL_NAME, '')) = LOWER(:keyword) THEN 120
+                            WHEN LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 100
+                            WHEN LOWER(i.TITLE) = LOWER(:keyword) THEN 90
+                            WHEN LOWER(i.TITLE) LIKE '%' || LOWER(:keyword) || '%' THEN 70
+                            WHEN LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 60
+                            WHEN LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 35
                             ELSE 0
                         END
                         +
@@ -118,33 +49,13 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                              AND (
                                   LOWER(i.TITLE) LIKE '%게이밍%'
                                   OR LOWER(i.TITLE) LIKE '%게임%'
-                                  OR LOWER(i.TITLE) LIKE '%배그%'
-                                  OR LOWER(i.TITLE) LIKE '%배틀그라운드%'
-                                  OR LOWER(i.TITLE) LIKE '%에이펙스%'
-                                  OR LOWER(i.TITLE) LIKE '%에이팩스%'
-                                  OR LOWER(i.TITLE) LIKE '%사이버펑크%'
-                                  OR LOWER(i.TITLE) LIKE '%그래픽카드%'
-                                  OR LOWER(i.TITLE) LIKE '%그래픽%'
                                   OR LOWER(i.TITLE) LIKE '%rtx%'
                                   OR LOWER(i.TITLE) LIKE '%gtx%'
                                   OR LOWER(i.TITLE) LIKE '%rx%'
+                                  OR LOWER(i.TITLE) LIKE '%그래픽%'
+                                  OR LOWER(i.TITLE) LIKE '%그래픽카드%'
                              )
-                            THEN 25
-                            ELSE 0
-                        END
-                        +
-                        CASE
-                            WHEN :useCase = 'student'
-                             AND (
-                                  LOWER(i.TITLE) LIKE '%아이폰 se%'
-                                  OR LOWER(i.TITLE) LIKE '%아이폰 11%'
-                                  OR LOWER(i.TITLE) LIKE '%아이폰 12%'
-                                  OR LOWER(i.TITLE) LIKE '%아이폰 13%'
-                                  OR LOWER(i.TITLE) LIKE '%미니%'
-                                  OR LOWER(i.TITLE) LIKE '%64gb%'
-                                  OR LOWER(i.TITLE) LIKE '%128gb%'
-                             )
-                            THEN 45
+                            THEN 40
                             ELSE 0
                         END
                         +
@@ -188,27 +99,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                   OR LOWER(i.TITLE) LIKE '%슬림%'
                                   OR LOWER(i.TITLE) LIKE '%oled%'
                              )
-                            THEN 80
-
-                            WHEN :productType = 'game_console'
-                             AND (
-                                  LOWER(i.TITLE) LIKE '%닌텐도 스위치%'
-                                  OR LOWER(i.TITLE) LIKE '%닌텐도스위치%'
-                                  OR LOWER(i.TITLE) LIKE '%스위치 oled%'
-                                  OR LOWER(i.TITLE) LIKE '%스위치oled%'
-                                  OR LOWER(i.TITLE) LIKE '%nintendo switch%'
-                                  OR LOWER(i.TITLE) LIKE '%switch oled%'
-                                  OR LOWER(i.TITLE) LIKE '%플스5%'
-                                  OR LOWER(i.TITLE) LIKE '%플레이스테이션5%'
-                                  OR LOWER(i.TITLE) LIKE '%ps5%'
-                                  OR LOWER(i.TITLE) LIKE '%플스4%'
-                                  OR LOWER(i.TITLE) LIKE '%플레이스테이션4%'
-                                  OR LOWER(i.TITLE) LIKE '%ps4%'
-                                  OR LOWER(i.TITLE) LIKE '%스팀덱%'
-                                  OR LOWER(i.TITLE) LIKE '%steamdeck%'
-                             )
-                            THEN 60
-
+                            THEN 90
                             ELSE 0
                         END
                         +
@@ -249,22 +140,10 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         END
                     ) AS SCORE
                 FROM ITEMS i
-                WHERE NVL(i.IS_DELETED, 'N') = 'N'
-                  AND NVL(i.TRADE_STATUS, 'SALE') = 'SALE'
+                WHERE i.SALE_STATUS = 'ON_SALE'
 
-                  AND (
-                        NVL(i.IS_ACCESSORY, 'N') = 'N'
-                        OR LOWER(:keyword) LIKE '%케이스%'
-                        OR LOWER(:keyword) LIKE '%필름%'
-                        OR LOWER(:keyword) LIKE '%충전기%'
-                        OR LOWER(:keyword) LIKE '%어댑터%'
-                        OR LOWER(:keyword) LIKE '%파우치%'
-                        OR LOWER(:keyword) LIKE '%커버%'
-                        OR LOWER(:keyword) LIKE '%보호필름%'
-                        OR LOWER(:keyword) LIKE '%맥세이프%'
-                        OR LOWER(:keyword) LIKE '%카드지갑%'
-                        OR LOWER(:keyword) LIKE '%스트랩%'
-                  )
+                  AND (:minPrice IS NULL OR i.CURRENT_PRICE >= :minPrice)
+                  AND (:maxPrice IS NULL OR i.CURRENT_PRICE <= :maxPrice)
 
                   AND (
                         (
@@ -306,66 +185,10 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         )
                   )
 
-                  AND (:minPrice IS NULL OR i.CURRENT_PRICE >= :minPrice)
-                  AND (:maxPrice IS NULL OR i.CURRENT_PRICE <= :maxPrice)
-
-                  AND (
-                        :productType IS NULL
-                        OR :productType = ''
-                        OR LOWER(NVL(i.PRODUCT_TYPE, '')) = LOWER(:productType)
-                        OR (
-                            :productType = 'desktop'
-                            AND (
-                                LOWER(i.TITLE) LIKE '%컴퓨터%'
-                                OR LOWER(i.TITLE) LIKE '%데스크탑%'
-                                OR LOWER(i.TITLE) LIKE '%본체%'
-                                OR LOWER(i.TITLE) LIKE '%pc%'
-                            )
-                        )
-                        OR (
-                            :productType = 'laptop'
-                            AND (
-                                LOWER(i.TITLE) LIKE '%노트북%'
-                                OR LOWER(i.TITLE) LIKE '%랩탑%'
-                            )
-                        )
-                        OR (
-                            :productType = 'smartphone'
-                            AND (
-                                LOWER(i.TITLE) LIKE '%아이폰%'
-                                OR LOWER(i.TITLE) LIKE '%갤럭시%'
-                                OR LOWER(i.TITLE) LIKE '%스마트폰%'
-                                OR LOWER(i.TITLE) LIKE '%휴대폰%'
-                            )
-                        )
-                        OR (
-                            :productType = 'game_console'
-                            AND (
-                                LOWER(i.TITLE) LIKE '%닌텐도 스위치%'
-                                OR LOWER(i.TITLE) LIKE '%닌텐도스위치%'
-                                OR LOWER(i.TITLE) LIKE '%스위치 oled%'
-                                OR LOWER(i.TITLE) LIKE '%스위치oled%'
-                                OR LOWER(i.TITLE) LIKE '%nintendo switch%'
-                                OR LOWER(i.TITLE) LIKE '%switch oled%'
-                                OR LOWER(i.TITLE) LIKE '%플스5%'
-                                OR LOWER(i.TITLE) LIKE '%플레이스테이션5%'
-                                OR LOWER(i.TITLE) LIKE '%ps5%'
-                                OR LOWER(i.TITLE) LIKE '%플스4%'
-                                OR LOWER(i.TITLE) LIKE '%플레이스테이션4%'
-                                OR LOWER(i.TITLE) LIKE '%ps4%'
-                                OR LOWER(i.TITLE) LIKE '%xbox%'
-                                OR LOWER(i.TITLE) LIKE '%엑스박스%'
-                                OR LOWER(i.TITLE) LIKE '%스팀덱%'
-                                OR LOWER(i.TITLE) LIKE '%steamdeck%'
-                            )
-                        )
-                  )
-
                   AND (
                         LOWER(i.TITLE) LIKE '%' || LOWER(:keyword) || '%'
-                        OR LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(:keyword) || '%'
-                        OR LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%'
-                        OR LOWER(NVL(i.BRAND, '')) LIKE '%' || LOWER(:keyword) || '%'
+                        OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%'
+                        OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(:keyword) || '%'
                         OR LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(:keyword) || '%'
                         OR (
                             :productType = 'desktop'
@@ -374,6 +197,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                 OR LOWER(i.TITLE) LIKE '%데스크탑%'
                                 OR LOWER(i.TITLE) LIKE '%본체%'
                                 OR LOWER(i.TITLE) LIKE '%pc%'
+                                OR LOWER(i.CANONICAL_NAME) LIKE '%컴퓨터%'
                             )
                         )
                         OR (
@@ -381,6 +205,10 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                             AND (
                                 LOWER(i.TITLE) LIKE '%노트북%'
                                 OR LOWER(i.TITLE) LIKE '%랩탑%'
+                                OR LOWER(i.TITLE) LIKE '%그램%'
+                                OR LOWER(i.TITLE) LIKE '%갤럭시북%'
+                                OR LOWER(i.TITLE) LIKE '%맥북%'
+                                OR LOWER(i.CANONICAL_NAME) LIKE '%노트북%'
                             )
                         )
                         OR (
@@ -390,6 +218,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                 OR LOWER(i.TITLE) LIKE '%갤럭시%'
                                 OR LOWER(i.TITLE) LIKE '%스마트폰%'
                                 OR LOWER(i.TITLE) LIKE '%휴대폰%'
+                                OR LOWER(i.CANONICAL_NAME) LIKE '%아이폰%'
+                                OR LOWER(i.CANONICAL_NAME) LIKE '%갤럭시%'
                             )
                         )
                         OR (
@@ -420,19 +250,99 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         OR :performanceLevel = ''
                         OR (
                             :performanceLevel = 'LOW'
-                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('LOW', 'MID', 'HIGH', 'EXTREME')
+                            AND (
+                                LOWER(i.TITLE) LIKE '%gtx1050%'
+                                OR LOWER(i.TITLE) LIKE '%gtx 1050%'
+                                OR LOWER(i.TITLE) LIKE '%gtx950%'
+                                OR LOWER(i.TITLE) LIKE '%gtx 950%'
+                                OR LOWER(i.TITLE) LIKE '%uhd%'
+                                OR LOWER(i.TITLE) LIKE '%내장그래픽%'
+                                OR LOWER(i.TITLE) LIKE '%iris%'
+                                OR LOWER(i.TITLE) LIKE '%vega%'
+                                OR LOWER(i.TITLE) LIKE '%gtx1060%'
+                                OR LOWER(i.TITLE) LIKE '%gtx 1060%'
+                                OR LOWER(i.TITLE) LIKE '%gtx1660%'
+                                OR LOWER(i.TITLE) LIKE '%gtx 1660%'
+                                OR LOWER(i.TITLE) LIKE '%rtx2060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 2060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx3060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 3060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4070%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4070%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4080%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4080%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4090%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4090%'
+                            )
                         )
                         OR (
                             :performanceLevel = 'MID'
-                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('MID', 'HIGH', 'EXTREME')
+                            AND (
+                                LOWER(i.TITLE) LIKE '%gtx1060%'
+                                OR LOWER(i.TITLE) LIKE '%gtx 1060%'
+                                OR LOWER(i.TITLE) LIKE '%gtx1660%'
+                                OR LOWER(i.TITLE) LIKE '%gtx 1660%'
+                                OR LOWER(i.TITLE) LIKE '%gtx1650%'
+                                OR LOWER(i.TITLE) LIKE '%gtx 1650%'
+                                OR LOWER(i.TITLE) LIKE '%rtx2060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 2060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx3060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 3060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4070%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4070%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4080%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4080%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4090%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4090%'
+                                OR LOWER(i.TITLE) LIKE '%rx580%'
+                                OR LOWER(i.TITLE) LIKE '%rx 580%'
+                                OR LOWER(i.TITLE) LIKE '%rx570%'
+                                OR LOWER(i.TITLE) LIKE '%rx 570%'
+                            )
                         )
                         OR (
                             :performanceLevel = 'HIGH'
-                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('HIGH', 'EXTREME')
+                            AND (
+                                LOWER(i.TITLE) LIKE '%rtx2060 super%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 2060 super%'
+                                OR LOWER(i.TITLE) LIKE '%rtx3060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 3060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx3070%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 3070%'
+                                OR LOWER(i.TITLE) LIKE '%rtx3080%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 3080%'
+                                OR LOWER(i.TITLE) LIKE '%rtx3090%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 3090%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4060%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4070%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4070%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4080%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4080%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4090%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4090%'
+                                OR LOWER(i.TITLE) LIKE '%rx6600%'
+                                OR LOWER(i.TITLE) LIKE '%rx 6600%'
+                                OR LOWER(i.TITLE) LIKE '%rx6700%'
+                                OR LOWER(i.TITLE) LIKE '%rx 6700%'
+                                OR LOWER(i.TITLE) LIKE '%rx6800%'
+                                OR LOWER(i.TITLE) LIKE '%rx 6800%'
+                            )
                         )
                         OR (
                             :performanceLevel = 'EXTREME'
-                            AND NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') = 'EXTREME'
+                            AND (
+                                LOWER(i.TITLE) LIKE '%rtx4080%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4080%'
+                                OR LOWER(i.TITLE) LIKE '%rtx4090%'
+                                OR LOWER(i.TITLE) LIKE '%rtx 4090%'
+                                OR LOWER(i.TITLE) LIKE '%rx7900%'
+                                OR LOWER(i.TITLE) LIKE '%rx 7900%'
+                            )
                         )
                   )
 
@@ -441,28 +351,13 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         OR :useCase = ''
                         OR :useCase <> 'gaming'
                         OR (
-                            NVL(i.PERFORMANCE_LEVEL, 'UNKNOWN') IN ('MID', 'HIGH', 'EXTREME')
-                            OR LOWER(i.TITLE) LIKE '%게이밍%'
+                            LOWER(i.TITLE) LIKE '%게이밍%'
                             OR LOWER(i.TITLE) LIKE '%게임%'
-                            OR LOWER(i.TITLE) LIKE '%배그%'
-                            OR LOWER(i.TITLE) LIKE '%배틀그라운드%'
-                            OR LOWER(i.TITLE) LIKE '%에이펙스%'
-                            OR LOWER(i.TITLE) LIKE '%에이팩스%'
-                            OR LOWER(i.TITLE) LIKE '%사이버펑크%'
                             OR LOWER(i.TITLE) LIKE '%rtx%'
                             OR LOWER(i.TITLE) LIKE '%gtx%'
+                            OR LOWER(i.TITLE) LIKE '%rx%'
                             OR LOWER(i.TITLE) LIKE '%그래픽%'
                             OR LOWER(i.TITLE) LIKE '%그래픽카드%'
-                            OR LOWER(i.TITLE) LIKE '%1060%'
-                            OR LOWER(i.TITLE) LIKE '%1650%'
-                            OR LOWER(i.TITLE) LIKE '%1660%'
-                            OR LOWER(i.TITLE) LIKE '%2060%'
-                            OR LOWER(i.TITLE) LIKE '%3060%'
-                            OR LOWER(i.TITLE) LIKE '%4060%'
-                            OR LOWER(i.TITLE) LIKE '%4070%'
-                            OR LOWER(i.TITLE) LIKE '%4080%'
-                            OR LOWER(i.TITLE) LIKE '%4090%'
-                            OR LOWER(i.TITLE) LIKE '%rx%'
                         )
                   )
 
@@ -509,6 +404,31 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 
                   AND (
                         :productType IS NULL
+                        OR :productType <> 'smartphone'
+                        OR (
+                            (
+                                LOWER(:keyword) NOT LIKE '%아이폰%'
+                                OR LOWER(i.TITLE) LIKE '%아이폰%'
+                                OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%아이폰%'
+                                OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%아이폰%'
+                            )
+                            AND (
+                                LOWER(:keyword) NOT LIKE '%갤럭시%'
+                                OR LOWER(i.TITLE) LIKE '%갤럭시%'
+                                OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%갤럭시%'
+                                OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%갤럭시%'
+                            )
+                            AND (
+                                REGEXP_SUBSTR(LOWER(:keyword), '[0-9]{1,2}') IS NULL
+                                OR LOWER(i.TITLE) LIKE '%' || REGEXP_SUBSTR(LOWER(:keyword), '[0-9]{1,2}') || '%'
+                                OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || REGEXP_SUBSTR(LOWER(:keyword), '[0-9]{1,2}') || '%'
+                                OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || REGEXP_SUBSTR(LOWER(:keyword), '[0-9]{1,2}') || '%'
+                            )
+                        )
+                  )
+
+                  AND (
+                        :productType IS NULL
                         OR :productType <> 'laptop'
                         OR (
                             LOWER(i.TITLE) NOT LIKE '%가방%'
@@ -529,6 +449,42 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                             AND LOWER(i.TITLE) NOT LIKE '%부품%'
                             AND LOWER(i.TITLE) NOT LIKE '%수리%'
                             AND LOWER(i.TITLE) NOT LIKE '%액정%'
+                        )
+                  )
+
+                  AND (
+                        :productType IS NULL
+                        OR :productType <> 'desktop'
+                        OR (
+                            (
+                                LOWER(i.TITLE) LIKE '%컴퓨터%'
+                                OR LOWER(i.TITLE) LIKE '%데스크탑%'
+                                OR LOWER(i.TITLE) LIKE '%본체%'
+                                OR LOWER(i.TITLE) LIKE '%pc%'
+                                OR LOWER(i.TITLE) LIKE '%게이밍pc%'
+                                OR LOWER(i.TITLE) LIKE '%게이밍 pc%'
+                            )
+                            OR (
+                                LOWER(i.TITLE) NOT LIKE '%그래픽카드%'
+                                AND LOWER(i.TITLE) NOT LIKE '%그래픽 카드%'
+                                AND LOWER(i.TITLE) NOT LIKE '%pci-e%'
+                                AND LOWER(i.TITLE) NOT LIKE '%pcie%'
+                                AND LOWER(i.TITLE) NOT LIKE '%gpu%'
+                                AND LOWER(i.TITLE) NOT LIKE '%vga%'
+                                AND LOWER(i.TITLE) NOT LIKE '%메인보드%'
+                                AND LOWER(i.TITLE) NOT LIKE '%마더보드%'
+                                AND LOWER(i.TITLE) NOT LIKE '%보드%'
+                                AND LOWER(i.TITLE) NOT LIKE '%램%'
+                                AND LOWER(i.TITLE) NOT LIKE '%ram%'
+                                AND LOWER(i.TITLE) NOT LIKE '%ssd%'
+                                AND LOWER(i.TITLE) NOT LIKE '%hdd%'
+                                AND LOWER(i.TITLE) NOT LIKE '%파워%'
+                                AND LOWER(i.TITLE) NOT LIKE '%케이스%'
+                                AND LOWER(i.TITLE) NOT LIKE '%쿨러%'
+                                AND LOWER(i.TITLE) NOT LIKE '%수냉%'
+                                AND LOWER(i.TITLE) NOT LIKE '%cpu만%'
+                                AND LOWER(i.TITLE) NOT LIKE '%부품%'
+                            )
                         )
                   )
 
@@ -569,26 +525,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                             AND LOWER(i.TITLE) NOT LIKE '%포켓몬%'
                         )
                   )
-
-                  AND LOWER(i.TITLE) NOT LIKE '%쿨러%'
-                  AND LOWER(i.TITLE) NOT LIKE '%파워%'
-                  AND LOWER(i.TITLE) NOT LIKE '%메인보드%'
-                  AND LOWER(i.TITLE) NOT LIKE '%부품%'
-                  AND LOWER(i.TITLE) NOT LIKE '%어댑터%'
-                  AND LOWER(i.TITLE) NOT LIKE '%세팅%'
-                  AND LOWER(i.TITLE) NOT LIKE '%os%'
-                  AND LOWER(i.TITLE) NOT LIKE '%윈도우%'
-                  AND LOWER(i.TITLE) NOT LIKE '%설치%'
-                  AND LOWER(i.TITLE) NOT LIKE '%수리%'
-                  AND LOWER(i.TITLE) NOT LIKE '%대행%'
-                  AND LOWER(i.TITLE) NOT LIKE '%책상%'
-                  AND LOWER(i.TITLE) NOT LIKE '%의자%'
-                  AND LOWER(i.TITLE) NOT LIKE '%내장그래픽%'
-                  AND LOWER(i.TITLE) NOT LIKE '%그래픽카드 없음%'
-                  AND LOWER(i.TITLE) NOT LIKE '%i5-2500%'
-                  AND LOWER(i.TITLE) NOT LIKE '%i5 2500%'
-                  AND LOWER(i.TITLE) NOT LIKE '%i5-6400%'
-                  AND LOWER(i.TITLE) NOT LIKE '%i5 6400%'
             )
             WHERE SCORE > 0
             ORDER BY SCORE DESC, CURRENT_PRICE ASC
@@ -628,21 +564,12 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                     i.ITEM_URL,
                     (
                         CASE
-                            WHEN LOWER(NVL(i.MODEL_NAME, '')) = LOWER(:keyword) THEN 120
-                            WHEN LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 100
-                            WHEN LOWER(i.TITLE) = LOWER(:keyword) THEN 80
-                            WHEN LOWER(i.TITLE) LIKE '%' || LOWER(:keyword) || '%' THEN 60
-                            WHEN LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 55
-                            ELSE 0
-                        END
-                        +
-                        CASE
-                            WHEN LOWER(NVL(i.BRAND, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 25
-                            ELSE 0
-                        END
-                        +
-                        CASE
-                            WHEN LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 30
+                            WHEN LOWER(NVL(i.CANONICAL_NAME, '')) = LOWER(:keyword) THEN 120
+                            WHEN LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 100
+                            WHEN LOWER(i.TITLE) = LOWER(:keyword) THEN 90
+                            WHEN LOWER(i.TITLE) LIKE '%' || LOWER(:keyword) || '%' THEN 70
+                            WHEN LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 60
+                            WHEN LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 35
                             ELSE 0
                         END
                         +
@@ -653,8 +580,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                 WHERE up.USER_ID = :userId
                                   AND (
                                       LOWER(i.TITLE) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
-                                      OR LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
-                                      OR LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
+                                      OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
+                                      OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
                                       OR LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
                                   )
                             ) THEN 35
@@ -670,8 +597,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                   AND sl.KEYWORD IS NOT NULL
                                   AND (
                                       LOWER(i.TITLE) LIKE '%' || LOWER(sl.KEYWORD) || '%'
-                                      OR LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(sl.KEYWORD) || '%'
-                                      OR LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(sl.KEYWORD) || '%'
+                                      OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(sl.KEYWORD) || '%'
+                                      OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(sl.KEYWORD) || '%'
                                   )
                             ) THEN 20
                             ELSE 0
@@ -698,15 +625,12 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         END
                     ) AS SCORE
                 FROM ITEMS i
-                WHERE NVL(i.IS_DELETED, 'N') = 'N'
-                  AND NVL(i.IS_ACCESSORY, 'N') = 'N'
-                  AND NVL(i.TRADE_STATUS, 'SALE') = 'SALE'
+                WHERE i.SALE_STATUS = 'ON_SALE'
                   AND i.CURRENT_PRICE >= 50000
                   AND (
                         LOWER(i.TITLE) LIKE '%' || LOWER(:keyword) || '%'
-                        OR LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(:keyword) || '%'
-                        OR LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%'
-                        OR LOWER(NVL(i.BRAND, '')) LIKE '%' || LOWER(:keyword) || '%'
+                        OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%'
+                        OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(:keyword) || '%'
                         OR LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(:keyword) || '%'
                         OR EXISTS (
                             SELECT 1
@@ -714,8 +638,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                             WHERE up.USER_ID = :userId
                               AND (
                                   LOWER(i.TITLE) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
-                                  OR LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
-                                  OR LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
+                                  OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
+                                  OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
                                   OR LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
                               )
                         )
@@ -755,21 +679,12 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                     i.ITEM_URL,
                     (
                         CASE
-                            WHEN LOWER(NVL(i.MODEL_NAME, '')) = LOWER(:keyword) THEN 120
-                            WHEN LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 100
-                            WHEN LOWER(i.TITLE) = LOWER(:keyword) THEN 80
-                            WHEN LOWER(i.TITLE) LIKE '%' || LOWER(:keyword) || '%' THEN 60
-                            WHEN LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 55
-                            ELSE 0
-                        END
-                        +
-                        CASE
-                            WHEN LOWER(NVL(i.BRAND, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 25
-                            ELSE 0
-                        END
-                        +
-                        CASE
-                            WHEN LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 30
+                            WHEN LOWER(NVL(i.CANONICAL_NAME, '')) = LOWER(:keyword) THEN 120
+                            WHEN LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 100
+                            WHEN LOWER(i.TITLE) = LOWER(:keyword) THEN 90
+                            WHEN LOWER(i.TITLE) LIKE '%' || LOWER(:keyword) || '%' THEN 70
+                            WHEN LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 60
+                            WHEN LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(:keyword) || '%' THEN 35
                             ELSE 0
                         END
                         +
@@ -794,17 +709,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         END
                     ) AS SCORE
                 FROM ITEMS i
-                WHERE NVL(i.IS_DELETED, 'N') = 'N'
-                  AND NVL(i.TRADE_STATUS, 'SALE') = 'SALE'
-                  AND (
-                        NVL(i.IS_ACCESSORY, 'N') = 'N'
-                        OR LOWER(:keyword) LIKE '%케이스%'
-                        OR LOWER(:keyword) LIKE '%필름%'
-                        OR LOWER(:keyword) LIKE '%충전기%'
-                        OR LOWER(:keyword) LIKE '%어댑터%'
-                        OR LOWER(:keyword) LIKE '%파우치%'
-                        OR LOWER(:keyword) LIKE '%커버%'
-                  )
+                WHERE i.SALE_STATUS = 'ON_SALE'
+                  AND i.CURRENT_PRICE <= :maxPrice
                   AND (
                         i.CURRENT_PRICE >= 50000
                         OR LOWER(:keyword) LIKE '%케이스%'
@@ -814,12 +720,10 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         OR LOWER(:keyword) LIKE '%파우치%'
                         OR LOWER(:keyword) LIKE '%커버%'
                   )
-                  AND i.CURRENT_PRICE <= :maxPrice
                   AND (
                         LOWER(i.TITLE) LIKE '%' || LOWER(:keyword) || '%'
-                        OR LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(:keyword) || '%'
-                        OR LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%'
-                        OR LOWER(NVL(i.BRAND, '')) LIKE '%' || LOWER(:keyword) || '%'
+                        OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(:keyword) || '%'
+                        OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(:keyword) || '%'
                         OR LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(:keyword) || '%'
                   )
             )
@@ -865,8 +769,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                   AND sl.KEYWORD IS NOT NULL
                                   AND (
                                       LOWER(i.TITLE) LIKE '%' || LOWER(sl.KEYWORD) || '%'
-                                      OR LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(sl.KEYWORD) || '%'
-                                      OR LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(sl.KEYWORD) || '%'
+                                      OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(sl.KEYWORD) || '%'
+                                      OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(sl.KEYWORD) || '%'
                                   )
                             ) THEN 50
                             ELSE 0
@@ -883,9 +787,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                   AND sl.CLICKED_ITEM_ID IS NOT NULL
                                   AND (
                                       LOWER(NVL(i.CATEGORY_NAME, '')) = LOWER(NVL(clicked.CATEGORY_NAME, ''))
-                                      OR LOWER(NVL(i.PRODUCT_TYPE, '')) = LOWER(NVL(clicked.PRODUCT_TYPE, ''))
-                                      OR LOWER(NVL(i.MODEL_NAME, '')) = LOWER(NVL(clicked.MODEL_NAME, ''))
-                                      OR LOWER(i.TITLE) LIKE '%' || LOWER(NVL(clicked.MODEL_NAME, '')) || '%'
+                                      OR LOWER(NVL(i.CANONICAL_NAME, '')) = LOWER(NVL(clicked.CANONICAL_NAME, ''))
+                                      OR LOWER(i.TITLE) LIKE '%' || LOWER(NVL(clicked.CANONICAL_NAME, '')) || '%'
                                       OR LOWER(i.TITLE) LIKE '%' || LOWER(NVL(clicked.CATEGORY_NAME, '')) || '%'
                                   )
                             ) THEN 45
@@ -899,8 +802,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                 WHERE up.USER_ID = :userId
                                   AND (
                                       LOWER(i.TITLE) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
-                                      OR LOWER(NVL(i.NORMALIZED_TITLE, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
-                                      OR LOWER(NVL(i.MODEL_NAME, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
+                                      OR LOWER(NVL(i.CANONICAL_NAME, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
+                                      OR LOWER(NVL(i.MATCHED_KEYWORDS, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
                                       OR LOWER(NVL(i.CATEGORY_NAME, '')) LIKE '%' || LOWER(up.PREFERRED_TAG) || '%'
                                   )
                             ) THEN 35
@@ -928,9 +831,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         END
                     ) AS SCORE
                 FROM ITEMS i
-                WHERE NVL(i.IS_DELETED, 'N') = 'N'
-                  AND NVL(i.IS_ACCESSORY, 'N') = 'N'
-                  AND NVL(i.TRADE_STATUS, 'SALE') = 'SALE'
+                WHERE i.SALE_STATUS = 'ON_SALE'
                   AND i.CURRENT_PRICE >= 50000
             )
             WHERE SCORE > 0
@@ -942,102 +843,80 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             @Param("userId") Long userId,
             @Param("limit") int limit
     );
-    List<Item> findTop20ByIsDeletedAndTradeStatusAndIsAccessoryOrderByItemIdDesc(
-            String isDeleted,
-            String tradeStatus,
-            String isAccessory
-    );
-    List<Item> findByCategoryNameAndIsDeletedAndTradeStatusAndIsAccessoryOrderByItemIdDesc(
+
+    List<Item> findTop20BySaleStatusOrderByItemIdDesc(String saleStatus);
+
+    List<Item> findByCategoryNameAndSaleStatusOrderByItemIdDesc(
             String categoryName,
-            String isDeleted,
-            String tradeStatus,
-            String isAccessory
+            String saleStatus
     );
 
-    List<Item> findByTitleContainingAndIsDeletedAndTradeStatusAndIsAccessoryOrderByItemIdDesc(
+    List<Item> findByTitleContainingAndSaleStatusOrderByItemIdDesc(
             String keyword,
-            String isDeleted,
-            String tradeStatus,
-            String isAccessory
+            String saleStatus
     );
 
-    long countByIsDeletedAndTradeStatusAndIsAccessory(
-            String isDeleted,
-            String tradeStatus,
-            String isAccessory
+    Optional<Item> findByPlatform_PlatformNameAndOriginalId(
+            String platformName,
+            String originalId
     );
 
-
+    long countBySaleStatus(String saleStatus);
 
     @Query(value = """
-    SELECT
-        target.CURRENT_PRICE AS currentPrice,
+        SELECT
+            target.CURRENT_PRICE AS currentPrice,
 
-        AVG(
-            CASE
-                WHEN NVL(similar.TRADE_STATUS, 'SALE') = 'SALE'
-                THEN similar.CURRENT_PRICE
-            END
-        ) AS averageListingPrice,
+            AVG(
+                CASE
+                    WHEN similar.SALE_STATUS = 'ON_SALE'
+                    THEN similar.CURRENT_PRICE
+                END
+            ) AS averageListingPrice,
 
-        AVG(
-            CASE
-                WHEN NVL(similar.TRADE_STATUS, 'SALE') IN ('SOLD', '판매완료', '거래완료')
-                THEN similar.CURRENT_PRICE
-            END
-        ) AS averageSoldPrice,
+            AVG(
+                CASE
+                    WHEN similar.SALE_STATUS = 'SOLD_OUT'
+                    THEN similar.CURRENT_PRICE
+                END
+            ) AS averageSoldPrice,
 
-        SUM(
-            CASE
-                WHEN NVL(similar.TRADE_STATUS, 'SALE') = 'SALE'
-                THEN 1
-                ELSE 0
-            END
-        ) AS listingCount,
+            SUM(
+                CASE
+                    WHEN similar.SALE_STATUS = 'ON_SALE'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS listingCount,
 
-        SUM(
-            CASE
-                WHEN NVL(similar.TRADE_STATUS, 'SALE') IN ('SOLD', '판매완료', '거래완료')
-                THEN 1
-                ELSE 0
-            END
-        ) AS soldCount
+            SUM(
+                CASE
+                    WHEN similar.SALE_STATUS = 'SOLD_OUT'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS soldCount
 
-    FROM ITEMS target
-    JOIN ITEMS similar
-      ON NVL(similar.IS_DELETED, 'N') = 'N'
-     AND similar.CURRENT_PRICE IS NOT NULL
-     AND similar.CURRENT_PRICE > 0
-     AND similar.ITEM_ID <> target.ITEM_ID
-     AND (
-            (
-                target.MODEL_NAME IS NOT NULL
-                AND similar.MODEL_NAME IS NOT NULL
-                AND LOWER(similar.MODEL_NAME) = LOWER(target.MODEL_NAME)
-            )
-            OR
-            (
-                target.BRAND IS NOT NULL
-                AND similar.BRAND IS NOT NULL
-                AND LOWER(similar.BRAND) = LOWER(target.BRAND)
-                AND target.PRODUCT_TYPE IS NOT NULL
-                AND similar.PRODUCT_TYPE IS NOT NULL
-                AND LOWER(similar.PRODUCT_TYPE) = LOWER(target.PRODUCT_TYPE)
-            )
-            OR
-            (
-                target.CATEGORY_NAME IS NOT NULL
-                AND similar.CATEGORY_NAME IS NOT NULL
-                AND LOWER(similar.CATEGORY_NAME) = LOWER(target.CATEGORY_NAME)
-                AND target.PRODUCT_TYPE IS NOT NULL
-                AND similar.PRODUCT_TYPE IS NOT NULL
-                AND LOWER(similar.PRODUCT_TYPE) = LOWER(target.PRODUCT_TYPE)
-            )
-         )
-    WHERE target.ITEM_ID = :itemId
-    GROUP BY target.CURRENT_PRICE
-    """, nativeQuery = true)
+        FROM ITEMS target
+        JOIN ITEMS similar
+          ON similar.CURRENT_PRICE IS NOT NULL
+         AND similar.CURRENT_PRICE > 0
+         AND similar.ITEM_ID <> target.ITEM_ID
+         AND (
+                (
+                    target.CANONICAL_NAME IS NOT NULL
+                    AND similar.CANONICAL_NAME IS NOT NULL
+                    AND LOWER(similar.CANONICAL_NAME) = LOWER(target.CANONICAL_NAME)
+                )
+                OR
+                (
+                    target.CATEGORY_NAME IS NOT NULL
+                    AND similar.CATEGORY_NAME IS NOT NULL
+                    AND LOWER(similar.CATEGORY_NAME) = LOWER(target.CATEGORY_NAME)
+                )
+             )
+        WHERE target.ITEM_ID = :itemId
+        GROUP BY target.CURRENT_PRICE
+        """, nativeQuery = true)
     PriceStatsProjection findPriceStatsByItemId(@Param("itemId") Long itemId);
-
-    long countByIsDeleted(String isDeleted);
 }

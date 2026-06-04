@@ -23,12 +23,69 @@ public class ChatbotService {
     private final SearchLogService searchLogService;
     private final PriceAdviceService priceAdviceService;
     private final GameSpecGuideService gameSpecGuideService;
+    private final PersonalProductContextService personalProductContextService;
+    private final ChatbotTemplateService chatbotTemplateService;
 
     @Transactional
     public ChatMessageResponse handleMessage(Long userId, ChatMessageRequest request) {
         String userMessage = request.getMessage().trim();
 
+        if (personalProductContextService.supports(userMessage)) {
+            ChatMessageResponse response =
+                    personalProductContextService.handle(userId, userMessage);
+
+            logUserMessage(userMessage);
+            logBotAnswer(response.getAnswer());
+            saveHistory(userId, userMessage, response.getAnswer(), response.getIntent(), response.getResponseType());
+
+            return response;
+        }
+
+        var templateAnswer = chatbotTemplateService.findAnswer(userMessage);
+
+        if (templateAnswer.isPresent()) {
+            ChatbotTemplateService.TemplateAnswer template = templateAnswer.get();
+            String answer = template.getAnswer();
+
+            System.out.println("1. 제미나이 분석 필요: N");
+            System.out.println("2. 제미나이 호출 여부: N");
+
+            logAnalysis(template.getIntent(), "", null, null, null, null, null, null);
+            logUserMessage(userMessage);
+            logBotAnswer(answer);
+
+            saveHistory(userId, userMessage, answer, template.getIntent(), template.getResponseType());
+
+            return ChatMessageResponse.builder()
+                    .answer(answer)
+                    .intent(template.getIntent())
+                    .responseType(template.getResponseType())
+                    .keyword("")
+                    .items(List.of())
+                    .build();
+        }
+
         var faqAnswer = faqService.findAnswer(userMessage);
+
+        if (isLaunchPriceQuestion(userMessage)) {
+            String answer = """
+                    현재 하마는 중고거래 매물의 현재가, 유사 상품 평균가, 거래완료 평균가를 중심으로 비교합니다.
+                    제조사 출시가나 정가는 별도 공식 데이터가 없어 정확히 안내하기 어렵습니다.
+                    대신 지금 등록된 중고 매물 기준으로 가격이 적절한지는 비교해드릴 수 있습니다.
+                    """;
+
+            logUserMessage(userMessage);
+            logBotAnswer(answer);
+            saveHistory(userId, userMessage, answer, "PRICE_INFO_LIMIT", "GUIDE");
+
+            return ChatMessageResponse.builder()
+                    .answer(answer)
+                    .intent("PRICE_INFO_LIMIT")
+                    .responseType("GUIDE")
+                    .keyword("")
+                    .items(List.of())
+                    .build();
+        }
 
         if (isPriceAdviceQuestion(userMessage)) {
             String answer = priceAdviceService.makePriceAdvice(request.getItemId());
@@ -382,7 +439,7 @@ public class ChatbotService {
                         + "원 이하 조건에 맞는 상품을 찾지 못했습니다.";
             }
 
-            return "'" + keyword + "' 관련 추천 상품을 찾지 못했습니다. 상품 데이터가 아직 없거나 검색어가 너무 넓을 수 있습니다.";
+            return "조건에 맞는 추천 상품을 찾지 못했습니다. 상품명이 아직 수집되지 않았거나 검색 범위가 너무 넓을 수 있습니다.";
         }
 
         if (isGaming) {
@@ -431,7 +488,7 @@ public class ChatbotService {
         }
 
         if (items.isEmpty()) {
-            return "'" + keyword + "' 관련 시세 비교 대상 상품을 찾지 못했습니다. 상품 데이터가 수집되면 가격 비교 결과를 보여드릴 수 있습니다.";
+            return "시세 비교 대상 상품을 찾지 못했습니다. 상품명이 아직 수집되지 않았거나 검색 범위가 너무 넓을 수 있습니다.";
         }
 
         Long minPrice = items.stream()
@@ -609,9 +666,31 @@ public class ChatbotService {
                 || normalized.contains("살만해")
                 || normalized.contains("괜찮은가격")
                 || normalized.contains("비싼가")
+                || normalized.contains("비싼")
+                || normalized.contains("비싸")
+                || normalized.contains("왜케비")
+                || normalized.contains("왜이렇게비")
+                || normalized.contains("가격이높")
+                || normalized.contains("가격높")
                 || normalized.contains("싼가")
                 || normalized.contains("적정가")
                 || normalized.contains("살래말래")
                 || normalized.contains("가격괜찮");
+    }
+
+    private boolean isLaunchPriceQuestion(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+
+        String normalized = message.replaceAll("\\s+", "");
+
+        return normalized.contains("출시가")
+                || normalized.contains("정가")
+                || normalized.contains("출고가")
+                || normalized.contains("발매가")
+                || normalized.contains("새제품가격")
+                || normalized.contains("신품가격")
+                || normalized.contains("중고말고");
     }
 }

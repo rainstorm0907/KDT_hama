@@ -1,11 +1,6 @@
 package com.example.ffff.chatbot.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,14 +16,22 @@ public class Item {
     @Column(name = "ITEM_ID")
     private Long itemId;
 
-    @Column(name = "PLATFORM_ID")
-    private Long platformId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "PLATFORM_ID", nullable = false)
+    private Platform platform;
 
     @Column(name = "ORIGINAL_ID", nullable = false, length = 100)
     private String originalId;
 
+    @Column(name = "CANONICAL_NAME", nullable = false, length = 200)
+    private String canonicalName;
+
     @Column(name = "TITLE", nullable = false, length = 300)
     private String title;
+
+    @Lob
+    @Column(name = "DESCRIPTION")
+    private String description;
 
     @Column(name = "CURRENT_PRICE", nullable = false)
     private Long currentPrice;
@@ -39,56 +42,36 @@ public class Item {
     @Column(name = "CATEGORY_NAME", length = 100)
     private String categoryName;
 
+    @Column(name = "MATCHED_KEYWORDS", length = 500)
+    private String matchedKeywords;
+
+    @Column(name = "SALE_STATUS", nullable = false, length = 20)
+    private String saleStatus;
+
+    @Column(name = "SOLD_AT")
+    private LocalDateTime soldAt;
+
     @Column(name = "THUMBNAIL_URL", length = 500)
     private String thumbnailUrl;
 
     @Column(name = "ITEM_URL", nullable = false, length = 500)
     private String itemUrl;
 
+    @Column(name = "URL_CHECKED_AT")
+    private LocalDateTime urlCheckedAt;
+
+    @Column(name = "URL_STATUS", length = 20)
+    private String urlStatus;
+
     @Column(name = "CRAWLED_AT")
     private LocalDateTime crawledAt;
 
-    @Column(name = "IS_DELETED", length = 1)
-    private String isDeleted;
+    @Column(name = "LAST_SEEN_AT")
+    private LocalDateTime lastSeenAt;
 
-    @Column(name = "UPDATED_AT")
-    private LocalDateTime updatedAt;
-
-    @Column(name = "NORMALIZED_TITLE", length = 500)
-    private String normalizedTitle;
-
-    @Column(name = "BRAND", length = 100)
-    private String brand;
-
-    @Column(name = "MODEL_NAME", length = 200)
-    private String modelName;
-
-    @Column(name = "PRODUCT_TYPE", length = 50)
-    private String productType;
-
-    @Column(name = "IS_ACCESSORY", length = 1)
-    private String isAccessory;
-
-    @Column(name = "STORAGE_GB")
-    private Integer storageGb;
-
-    @Column(name = "TRADE_STATUS", length = 20)
-    private String tradeStatus;
-
-    @Column(name = "CPU_NAME", length = 100)
-    private String cpuName;
-
-    @Column(name = "GPU_NAME", length = 100)
-    private String gpuName;
-
-    @Column(name = "RAM_GB")
-    private Integer ramGb;
-
-    @Column(name = "SSD_GB")
-    private Integer ssdGb;
-
-    @Column(name = "PERFORMANCE_LEVEL", length = 30)
-    private String performanceLevel;
+    public String getPlatformName() {
+        return platform == null ? null : platform.getPlatformName();
+    }
 
     @PrePersist
     public void prePersist() {
@@ -98,37 +81,21 @@ public class Item {
             this.crawledAt = now;
         }
 
-        if (this.updatedAt == null) {
-            this.updatedAt = now;
+        if (this.lastSeenAt == null) {
+            this.lastSeenAt = now;
         }
 
-        applyDefaultValues();
+        if (this.saleStatus == null || this.saleStatus.isBlank()) {
+            this.saleStatus = "ON_SALE";
+        }
     }
 
     @PreUpdate
     public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
-        applyDefaultValues();
-    }
+        this.lastSeenAt = LocalDateTime.now();
 
-    private void applyDefaultValues() {
-        if (this.isDeleted == null || this.isDeleted.isBlank()) {
-            this.isDeleted = "N";
-        }
-
-        if (this.isAccessory == null || this.isAccessory.isBlank()) {
-            this.isAccessory = "N";
-        }
-
-        if (this.tradeStatus == null || this.tradeStatus.isBlank()) {
-            this.tradeStatus = "SALE";
-        }
-
-        if (this.normalizedTitle == null || this.normalizedTitle.isBlank()) {
-            this.normalizedTitle = this.title;
-        }
-        if (this.performanceLevel == null || this.performanceLevel.isBlank()) {
-            this.performanceLevel = "UNKNOWN";
+        if (this.saleStatus == null || this.saleStatus.isBlank()) {
+            this.saleStatus = "ON_SALE";
         }
     }
 }

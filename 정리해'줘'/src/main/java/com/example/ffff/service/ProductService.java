@@ -6,6 +6,7 @@ import com.example.ffff.dto.PricePointResponseDto;
 import com.example.ffff.dto.ProductResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -14,13 +15,16 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ProductService {
 
     private final ItemRepository itemRepository;
 
-    private static final String NOT_DELETED = "N";
-    private static final String SALE_STATUS = "SALE";
-    private static final String NOT_ACCESSORY = "N";
+    /*
+     * 팀원 최종 DB 기준:
+     * 기존 TRADE_STATUS = 'SALE' 대신 SALE_STATUS = 'ON_SALE' 사용
+     */
+    private static final String ON_SALE = "ON_SALE";
 
     private static final Map<String, String> CATEGORY_ID_TO_NAME = Map.ofEntries(
             Map.entry("pc", "컴퓨터"),
@@ -39,11 +43,7 @@ public class ProductService {
 
     public List<ProductResponseDto> getRecommendedProducts() {
         return itemRepository
-                .findTop20ByIsDeletedAndTradeStatusAndIsAccessoryOrderByItemIdDesc(
-                        NOT_DELETED,
-                        SALE_STATUS,
-                        NOT_ACCESSORY
-                )
+                .findTop20BySaleStatusOrderByItemIdDesc(ON_SALE)
                 .stream()
                 .map(this::toProductResponseDto)
                 .toList();
@@ -53,11 +53,9 @@ public class ProductService {
         String categoryName = convertCategory(category);
 
         return itemRepository
-                .findByCategoryNameAndIsDeletedAndTradeStatusAndIsAccessoryOrderByItemIdDesc(
+                .findByCategoryNameAndSaleStatusOrderByItemIdDesc(
                         categoryName,
-                        NOT_DELETED,
-                        SALE_STATUS,
-                        NOT_ACCESSORY
+                        ON_SALE
                 )
                 .stream()
                 .map(this::toProductResponseDto)
@@ -66,11 +64,9 @@ public class ProductService {
 
     public List<ProductResponseDto> searchProducts(String keyword) {
         return itemRepository
-                .findByTitleContainingAndIsDeletedAndTradeStatusAndIsAccessoryOrderByItemIdDesc(
+                .findByTitleContainingAndSaleStatusOrderByItemIdDesc(
                         keyword,
-                        NOT_DELETED,
-                        SALE_STATUS,
-                        NOT_ACCESSORY
+                        ON_SALE
                 )
                 .stream()
                 .map(this::toProductResponseDto)
@@ -80,6 +76,15 @@ public class ProductService {
     public ProductResponseDto getProductDetail(Long id) {
         Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. id=" + id));
+
+        return toProductResponseDto(item);
+    }
+
+    public ProductResponseDto getProductDetail(String platform, String pid) {
+        Item item = itemRepository.findByPlatform_PlatformNameAndOriginalId(platform, pid)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Product not found. platform=" + platform + ", pid=" + pid
+                ));
 
         return toProductResponseDto(item);
     }
@@ -99,7 +104,7 @@ public class ProductService {
                 .name(nullToEmpty(item.getTitle()))
                 .brand(brand)
                 .price(price)
-                .status(convertTradeStatus(item.getTradeStatus()))
+                .status(convertSaleStatus(item.getSaleStatus()))
                 .description(createDescription(item, platform))
                 .imageUrl(imageUrl)
                 .images(createImages(imageUrl))
@@ -111,8 +116,17 @@ public class ProductService {
     }
 
     private String resolvePlatform(Item item) {
+        /*
+         * 최종 DB에는 PLATFORM_ID가 없고 PLATFORM_NAME이 있음.
+         * platform_name이 있으면 우선 사용하고, 없으면 URL로 추론.
+         */
+        String platformName = normalizeText(item.getPlatformName());
+
+        if (!platformName.isBlank()) {
+            return platformName;
+        }
+
         String itemUrl = nullToEmpty(item.getItemUrl()).toLowerCase();
-        Long platformId = item.getPlatformId();
 
         if (itemUrl.contains("joongna")) {
             return "중고나라";
@@ -126,22 +140,6 @@ public class ProductService {
             return "당근마켓";
         }
 
-        if (platformId == null) {
-            return "중고거래";
-        }
-
-        if (platformId.equals(1L)) {
-            return "중고나라";
-        }
-
-        if (platformId.equals(2L)) {
-            return "번개장터";
-        }
-
-        if (platformId.equals(3L)) {
-            return "당근마켓";
-        }
-
         return "중고거래";
     }
 
@@ -152,98 +150,113 @@ public class ProductService {
             return categoryName;
         }
 
-        String productType = normalizeText(item.getProductType());
+        /*
+         * 최종 DB에는 PRODUCT_TYPE 컬럼이 없으므로 제목/표준명 기준으로 추론.
+         */
+        String inferred = inferCategoryFromText(
+                nullToEmpty(item.getTitle()) + " " + nullToEmpty(item.getCanonicalName())
+        );
 
-        if (productType.equalsIgnoreCase("desktop")) {
-            return "컴퓨터";
-        }
-
-        if (productType.equalsIgnoreCase("laptop")) {
-            return "노트북";
-        }
-
-        if (productType.equalsIgnoreCase("smartphone")) {
-            return "핸드폰";
-        }
-
-        if (productType.equalsIgnoreCase("game_console")) {
-            return "게임기";
-        }
-
-        return inferCategoryFromTitle(item.getTitle());
-    }
-
-    private String inferCategoryFromTitle(String title) {
-        String lowerTitle = nullToEmpty(title).toLowerCase();
-
-        if (lowerTitle.contains("노트북") || lowerTitle.contains("랩탑")
-                || lowerTitle.contains("그램") || lowerTitle.contains("갤럭시북")
-                || lowerTitle.contains("thinkpad") || lowerTitle.contains("씽크패드")) {
-            return "노트북";
-        }
-
-        if (lowerTitle.contains("컴퓨터") || lowerTitle.contains("데스크탑")
-                || lowerTitle.contains("본체") || lowerTitle.contains("pc")) {
-            return "컴퓨터";
-        }
-
-        if (lowerTitle.contains("아이폰") || lowerTitle.contains("갤럭시")
-                || lowerTitle.contains("스마트폰") || lowerTitle.contains("휴대폰")
-                || lowerTitle.contains("핸드폰")) {
-            return "핸드폰";
-        }
-
-        if (lowerTitle.contains("자전거")) {
-            return "자전거";
-        }
-
-        if (lowerTitle.contains("카메라") || lowerTitle.contains("디카")) {
-            return "카메라";
-        }
-
-        if (lowerTitle.contains("닌텐도") || lowerTitle.contains("스위치")
-                || lowerTitle.contains("플스") || lowerTitle.contains("ps5")
-                || lowerTitle.contains("ps4") || lowerTitle.contains("xbox")
-                || lowerTitle.contains("스팀덱")) {
-            return "게임기";
-        }
-
-        if (lowerTitle.contains("의류") || lowerTitle.contains("원피스")
-                || lowerTitle.contains("자켓") || lowerTitle.contains("셔츠")
-                || lowerTitle.contains("바지")) {
-            return "의류";
-        }
-
-        if (lowerTitle.contains("신발") || lowerTitle.contains("운동화")
-                || lowerTitle.contains("스니커즈")) {
-            return "신발";
-        }
-
-        if (lowerTitle.contains("가구") || lowerTitle.contains("테이블")
-                || lowerTitle.contains("의자") || lowerTitle.contains("책상")) {
-            return "가구";
-        }
-
-        if (lowerTitle.contains("기타") || lowerTitle.contains("피아노")
-                || lowerTitle.contains("악기")) {
-            return "악기";
-        }
-
-        if (lowerTitle.contains("캠핑") || lowerTitle.contains("텐트")) {
-            return "캠핑";
+        if (!inferred.isBlank()) {
+            return inferred;
         }
 
         return "기타";
     }
 
-    private String resolveBrand(Item item, String category) {
-        String brand = normalizeText(item.getBrand());
+    private String inferCategoryFromText(String text) {
+        String lowerText = nullToEmpty(text).toLowerCase();
 
-        if (!brand.isBlank()) {
-            return brand;
+        if (lowerText.contains("노트북") || lowerText.contains("랩탑")
+                || lowerText.contains("그램") || lowerText.contains("갤럭시북")
+                || lowerText.contains("thinkpad") || lowerText.contains("씽크패드")
+                || lowerText.contains("맥북")) {
+            return "노트북";
         }
 
-        String titleBrand = inferBrandFromTitle(item.getTitle());
+        if (lowerText.contains("컴퓨터") || lowerText.contains("데스크탑")
+                || lowerText.contains("본체") || lowerText.contains("게이밍 pc")
+                || lowerText.contains("게이밍pc") || lowerText.contains("pc본체")) {
+            return "컴퓨터";
+        }
+
+        if (lowerText.contains("아이폰") || lowerText.contains("갤럭시")
+                || lowerText.contains("스마트폰") || lowerText.contains("휴대폰")
+                || lowerText.contains("핸드폰")) {
+            return "핸드폰";
+        }
+
+        if (lowerText.contains("자전거")) {
+            return "자전거";
+        }
+
+        if (lowerText.contains("카메라") || lowerText.contains("디카")) {
+            return "카메라";
+        }
+
+        if (lowerText.contains("닌텐도") || lowerText.contains("스위치")
+                || lowerText.contains("플스") || lowerText.contains("플레이스테이션")
+                || lowerText.contains("ps5") || lowerText.contains("ps4")
+                || lowerText.contains("xbox") || lowerText.contains("엑스박스")
+                || lowerText.contains("스팀덱")) {
+            return "게임기";
+        }
+
+        if (lowerText.contains("아이패드") || lowerText.contains("갤럭시탭")
+                || lowerText.contains("태블릿")) {
+            return "태블릿";
+        }
+
+        if (lowerText.contains("에어팟") || lowerText.contains("버즈")
+                || lowerText.contains("이어폰") || lowerText.contains("헤드셋")
+                || lowerText.contains("헤드폰")) {
+            return "이어폰";
+        }
+
+        if (lowerText.contains("애플워치") || lowerText.contains("갤럭시워치")
+                || lowerText.contains("스마트워치")) {
+            return "스마트워치";
+        }
+
+        if (lowerText.contains("의류") || lowerText.contains("원피스")
+                || lowerText.contains("자켓") || lowerText.contains("셔츠")
+                || lowerText.contains("바지")) {
+            return "의류";
+        }
+
+        if (lowerText.contains("신발") || lowerText.contains("운동화")
+                || lowerText.contains("스니커즈")) {
+            return "신발";
+        }
+
+        if (lowerText.contains("가구") || lowerText.contains("테이블")
+                || lowerText.contains("의자") || lowerText.contains("책상")) {
+            return "가구";
+        }
+
+        if (lowerText.contains("기타") || lowerText.contains("피아노")
+                || lowerText.contains("악기")) {
+            return "악기";
+        }
+
+        if (lowerText.contains("캠핑") || lowerText.contains("텐트")) {
+            return "캠핑";
+        }
+
+        return "";
+    }
+
+    private String resolveBrand(Item item, String category) {
+        /*
+         * 최종 DB에는 BRAND 컬럼이 없으므로 title/canonical_name/matched_keywords 기준으로 추론.
+         */
+        String sourceText = nullToEmpty(item.getTitle())
+                + " "
+                + nullToEmpty(item.getCanonicalName())
+                + " "
+                + nullToEmpty(item.getMatchedKeywords());
+
+        String titleBrand = inferBrandFromText(sourceText);
 
         if (!titleBrand.isBlank()) {
             return titleBrand;
@@ -256,57 +269,63 @@ public class ProductService {
         return "중고상품";
     }
 
-    private String inferBrandFromTitle(String title) {
-        String lowerTitle = nullToEmpty(title).toLowerCase();
+    private String inferBrandFromText(String text) {
+        String lowerText = nullToEmpty(text).toLowerCase();
 
-        if (lowerTitle.contains("삼성") || lowerTitle.contains("갤럭시")) {
+        if (lowerText.contains("삼성") || lowerText.contains("갤럭시")) {
             return "삼성";
         }
 
-        if (lowerTitle.contains("엘지") || lowerTitle.contains("lg") || lowerTitle.contains("그램")) {
+        if (lowerText.contains("엘지") || lowerText.contains("lg") || lowerText.contains("그램")) {
             return "LG";
         }
 
-        if (lowerTitle.contains("애플") || lowerTitle.contains("아이폰")
-                || lowerTitle.contains("맥북") || lowerTitle.contains("아이패드")) {
+        if (lowerText.contains("애플") || lowerText.contains("아이폰")
+                || lowerText.contains("맥북") || lowerText.contains("아이패드")
+                || lowerText.contains("애플워치") || lowerText.contains("에어팟")) {
             return "Apple";
         }
 
-        if (lowerTitle.contains("레노버") || lowerTitle.contains("lenovo")
-                || lowerTitle.contains("thinkpad") || lowerTitle.contains("씽크패드")) {
+        if (lowerText.contains("레노버") || lowerText.contains("lenovo")
+                || lowerText.contains("thinkpad") || lowerText.contains("씽크패드")) {
             return "Lenovo";
         }
 
-        if (lowerTitle.contains("asus") || lowerTitle.contains("에이수스")) {
+        if (lowerText.contains("asus") || lowerText.contains("에이수스")) {
             return "ASUS";
         }
 
-        if (lowerTitle.contains("msi")) {
+        if (lowerText.contains("msi")) {
             return "MSI";
         }
 
-        if (lowerTitle.contains("닌텐도") || lowerTitle.contains("nintendo")) {
+        if (lowerText.contains("닌텐도") || lowerText.contains("nintendo")) {
             return "Nintendo";
         }
 
-        if (lowerTitle.contains("소니") || lowerTitle.contains("플스")
-                || lowerTitle.contains("플레이스테이션") || lowerTitle.contains("ps5")
-                || lowerTitle.contains("ps4")) {
+        if (lowerText.contains("소니") || lowerText.contains("플스")
+                || lowerText.contains("플레이스테이션") || lowerText.contains("ps5")
+                || lowerText.contains("ps4")) {
             return "Sony";
+        }
+
+        if (lowerText.contains("마이크로소프트") || lowerText.contains("xbox")
+                || lowerText.contains("엑스박스")) {
+            return "Microsoft";
         }
 
         return "";
     }
 
-    private String convertTradeStatus(String tradeStatus) {
-        if (tradeStatus == null || tradeStatus.isBlank()) {
+    private String convertSaleStatus(String saleStatus) {
+        if (saleStatus == null || saleStatus.isBlank()) {
             return "판매중";
         }
 
-        return switch (tradeStatus) {
-            case "SALE", "판매중" -> "판매중";
-            case "RESERVED", "예약중" -> "예약중";
-            case "SOLD", "판매완료" -> "판매완료";
+        return switch (saleStatus) {
+            case "ON_SALE", "SALE", "판매중", "판매 중" -> "판매중";
+            case "RESERVED", "예약중", "예약 중" -> "예약중";
+            case "SOLD_OUT", "SOLD", "판매완료", "판매 완료", "거래완료" -> "판매완료";
             default -> "판매중";
         };
     }
@@ -316,6 +335,12 @@ public class ProductService {
 
         if (title.isBlank()) {
             return "";
+        }
+
+        String description = normalizeText(item.getDescription());
+
+        if (!description.isBlank()) {
+            return description;
         }
 
         if (platform == null || platform.isBlank()) {

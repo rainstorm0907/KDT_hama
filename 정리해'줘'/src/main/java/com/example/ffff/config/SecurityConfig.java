@@ -45,71 +45,34 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-
                 .cors(cors -> {
                 })
-
                 .authenticationProvider(authenticationProvider())
-
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/signup", "/error").permitAll()
+                        .requestMatchers("/", "/error").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
-
-                        // 새 프론트 인증 API
                         .requestMatchers("/api/auth/**").permitAll()
-
-                        // 기존 API
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
-                        .requestMatchers("/api/signup").permitAll()
-
-                        // 로그인 확인 및 사용자 기능
+                        .requestMatchers("/api/gemini/test").permitAll()
                         .requestMatchers("/api/me").authenticated()
                         .requestMatchers("/api/mypage/**").authenticated()
                         .requestMatchers("/api/chatbot/**").authenticated()
-
-                        // 테스트 API는 필요하면 permitAll로 유지 가능
-                        .requestMatchers("/api/gemini/test").permitAll()
-
                         .anyRequest().authenticated()
                 )
-
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
-                            if (request.getRequestURI().startsWith("/api/")) {
-                                response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                                response.setContentType("application/json;charset=UTF-8");
-                                response.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");
-                                return;
-                            }
-
-                            response.sendRedirect("/login");
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");
                         })
                 )
-
-                // 기존 form login도 남겨둠.
-                // /api/auth/login은 AuthController에서 JSON 로그인 처리.
-                .formLogin(form -> form
-                        .loginPage("/login")
-                        .loginProcessingUrl("/login")
-                        .usernameParameter("email")
-                        .passwordParameter("password")
-                        .successHandler((request, response, authentication) -> {
-                            response.setStatus(200);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\":\"로그인 성공\"}");
-                        })
-                        .failureHandler((request, response, exception) -> {
-                            response.setStatus(401);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\":\"이메일 또는 비밀번호가 올바르지 않습니다.\"}");
-                        })
-                        .permitAll()
-                )
-
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(logout -> logout
-                        .logoutUrl("/logout")
+                        .logoutUrl("/api/auth/logout")
                         .logoutSuccessHandler((request, response, authentication) -> {
-                            response.setStatus(200);
+                            response.setStatus(HttpStatus.OK.value());
                             response.setContentType("application/json;charset=UTF-8");
                             response.getWriter().write("{\"message\":\"로그아웃 성공\"}");
                         })

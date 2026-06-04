@@ -66,12 +66,9 @@ public class UserService {
             throw new IllegalArgumentException("비밀번호를 입력해 주세요.");
         }
 
-        if (requestDto.getBirthDate() == null) {
-            throw new IllegalArgumentException("생년월일을 입력해 주세요.");
-        }
-
-        if (requestDto.getFinalPhoneNumber() == null || requestDto.getFinalPhoneNumber().isBlank()) {
-            throw new IllegalArgumentException("휴대폰 번호를 입력해 주세요.");
+        if (requestDto.getPasswordConfirm() != null
+                && !requestDto.getPassword().equals(requestDto.getPasswordConfirm())) {
+            throw new IllegalArgumentException("Password confirmation does not match.");
         }
 
         if (requestDto.getFinalNickname() == null || requestDto.getFinalNickname().isBlank()) {
