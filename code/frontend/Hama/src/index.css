@@ -5,8 +5,9 @@
 html {
   min-height: 100%;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   scrollbar-color: transparent transparent;
-  scrollbar-width: none;
+  scrollbar-width: thin;
 }
 
 html.is-scrolling {
@@ -14,18 +15,24 @@ html.is-scrolling {
   scrollbar-width: thin;
 }
 
-html::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+html.modal-scroll-lock {
+  overflow-y: hidden;
 }
 
-html.is-scrolling::-webkit-scrollbar {
+html::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 html.is-scrolling::-webkit-scrollbar-track {
   background: transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: transparent;
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
 }
 
 html.is-scrolling::-webkit-scrollbar-thumb {
@@ -123,8 +130,9 @@ body {
 }
 
 .transient-scrollbar {
+  scrollbar-gutter: stable;
   scrollbar-color: transparent transparent;
-  scrollbar-width: none;
+  scrollbar-width: thin;
 }
 
 .transient-scrollbar:hover,
@@ -135,13 +143,6 @@ body {
 }
 
 .transient-scrollbar::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-.transient-scrollbar:hover::-webkit-scrollbar,
-.transient-scrollbar:focus-within::-webkit-scrollbar,
-.transient-scrollbar.is-scrolling::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
@@ -151,6 +152,15 @@ body {
 }
 
 .transient-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+.transient-scrollbar:hover::-webkit-scrollbar-thumb,
+.transient-scrollbar:focus-within::-webkit-scrollbar-thumb,
+.transient-scrollbar.is-scrolling::-webkit-scrollbar-thumb {
   background: rgba(17, 24, 39, 0.18);
   background-clip: content-box;
   border: 3px solid transparent;

@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Banner } from '../components/Banner';
-import { CategoryGrid } from '../components/CategoryGrid';
 import { ProductCard, ProductCardSkeleton } from '../components/ProductCard';
+import { RecentKeywordRecommendations } from '../components/RecentKeywordRecommendations';
 import { RefreshProductsButton } from '../components/RefreshProductsButton';
 import { RowsMenu } from '../components/RowsMenu';
 import { SideButtons } from '../components/SideButtons';
+import type { SidePanel } from '../components/SideButtons';
 import { SearchBar } from '../components/SearchBar';
-import { categories } from '../data/categories';
 import { useRecommendedProductsQuery } from '../queries/productQueries';
 import { hairline } from '../styles/hairline';
 import type { RowCountOption } from '../types/productList';
@@ -15,14 +14,20 @@ import type { Product } from '../types/product';
 import { formatUpdatedAtTimestamp } from '../utils/format';
 
 type HomePageProps = {
+  activeSidePanel: SidePanel | null;
+  onOpenPriceCompare: () => void;
   onProductSelect: (product: Product) => void;
+  onSidePanelChange: (panel: SidePanel | null) => void;
 };
 
 const PRODUCT_COLUMNS = 4;
 
-export function HomePage({ onProductSelect }: HomePageProps) {
-  const navigate = useNavigate();
-  const [activeId, setActiveId] = useState('phone');
+export function HomePage({
+  activeSidePanel,
+  onOpenPriceCompare,
+  onProductSelect,
+  onSidePanelChange,
+}: HomePageProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [rowCount, setRowCount] = useState<RowCountOption>(4);
   const recommendedLimit = rowCount * PRODUCT_COLUMNS;
@@ -39,17 +44,6 @@ export function HomePage({ onProductSelect }: HomePageProps) {
     recommendedProductsQuery.dataUpdatedAt
   );
 
-  const handleCategorySelect = (id: string) => {
-    const category = categories.find((item) => item.id === id);
-
-    if (!category) {
-      return;
-    }
-
-    setActiveId(id);
-    navigate(`/search?q=${encodeURIComponent(category.name)}`);
-  };
-
   return (
     <main className={`flex-1 flex flex-col gap-14 md:gap-16 pb-24 ${hairline.page}`}>
       <SearchBar
@@ -58,11 +52,7 @@ export function HomePage({ onProductSelect }: HomePageProps) {
         onClose={() => setIsSearchOpen(false)}
       />
       <Banner />
-      <CategoryGrid
-        categories={categories}
-        activeId={activeId}
-        onSelect={handleCategorySelect}
-      />
+      <RecentKeywordRecommendations onProductSelect={onProductSelect} />
 
       <section id="products" aria-label="추천 상품" className="w-full">
         <div className="max-w-[1440px] mx-auto px-8">
@@ -113,7 +103,12 @@ export function HomePage({ onProductSelect }: HomePageProps) {
         </div>
       </section>
 
-      <SideButtons onProductSelect={onProductSelect} />
+      <SideButtons
+        activePanel={activeSidePanel}
+        onOpenPriceCompare={onOpenPriceCompare}
+        onPanelChange={onSidePanelChange}
+        onProductSelect={onProductSelect}
+      />
     </main>
   );
 }

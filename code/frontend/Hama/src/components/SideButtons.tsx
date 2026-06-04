@@ -6,15 +6,22 @@ import { SidePriceCompareButton } from './SidePriceCompareButton';
 import { hairline } from '../styles/hairline';
 import type { Product } from '../types/product';
 
-type SidePanel = 'chatbot' | 'priceCompare' | 'notification';
+export type SidePanel = 'chatbot' | 'notification';
 
 type SideButtonsProps = {
+  activePanel: SidePanel | null;
   onProductSelect?: (product: Product) => void;
+  onOpenPriceCompare: () => void;
+  onPanelChange: (panel: SidePanel | null) => void;
 };
 
-export function SideButtons({ onProductSelect }: SideButtonsProps) {
+export function SideButtons({
+  activePanel,
+  onOpenPriceCompare,
+  onPanelChange,
+  onProductSelect,
+}: SideButtonsProps) {
   const [isTopButtonVisible, setIsTopButtonVisible] = useState(false);
-  const [activePanel, setActivePanel] = useState<SidePanel | null>(null);
 
   useEffect(() => {
     function updateVisibility() {
@@ -28,11 +35,11 @@ export function SideButtons({ onProductSelect }: SideButtonsProps) {
   }, []);
 
   const togglePanel = (panel: SidePanel) => {
-    setActivePanel((current) => (current === panel ? null : panel));
+    onPanelChange(activePanel === panel ? null : panel);
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-[80] flex flex-col items-end gap-2 md:bottom-6 md:right-6">
+    <div className="fixed bottom-5 right-5 z-[150] flex flex-col items-end gap-2 md:bottom-6 md:right-6">
       <button
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -46,8 +53,10 @@ export function SideButtons({ onProductSelect }: SideButtonsProps) {
         <ArrowUp className="h-6 w-6" aria-hidden="true" />
       </button>
       <SidePriceCompareButton
-        isOpen={activePanel === 'priceCompare'}
-        onToggle={() => togglePanel('priceCompare')}
+        onOpen={() => {
+          onPanelChange(null);
+          onOpenPriceCompare();
+        }}
       />
       <SideChatbotButton
         isOpen={activePanel === 'chatbot'}
@@ -55,7 +64,7 @@ export function SideButtons({ onProductSelect }: SideButtonsProps) {
       />
       <SideNotificationButton
         isOpen={activePanel === 'notification'}
-        onClose={() => setActivePanel(null)}
+        onClose={() => onPanelChange(null)}
         onProductSelect={onProductSelect}
         onToggle={() => togglePanel('notification')}
       />

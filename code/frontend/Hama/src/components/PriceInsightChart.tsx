@@ -61,11 +61,7 @@ export function PriceInsightChart({
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
   const activeKeyword = keywords[activeKeywordIndex] ?? keywords[0];
-  const activePoints = createKeywordPoints(
-    createRangePoints(points, activeRange),
-    activeKeyword,
-    activeRange
-  );
+  const activePoints = createRangePoints(points, activeRange);
 
   if (activePoints.length === 0) {
     return (
@@ -404,27 +400,7 @@ function createRangePoints(points: PricePoint[], rangeId: PriceRangeId) {
   const rangeOption =
     priceRangeOptions.find((option) => option.id === rangeId) ?? priceRangeOptions[0];
 
-  // TODO(BE): 기간별 가격 히스토리 API가 들어오면 이 임시 slice를 제거하고 서버가 준 points를 그대로 사용합니다.
   return rangeOption.take ? points.slice(-rangeOption.take) : points;
-}
-
-function createKeywordPoints(
-  points: PricePoint[],
-  keyword: string,
-  rangeId: PriceRangeId
-) {
-  // TODO(BE): 키워드별 가격 히스토리 API가 들어오면 이 임시 변형을 제거하고 서버 데이터를 그대로 사용합니다.
-  const keywordShift = deterministicRatio(`${keyword}-${rangeId}`) * 0.08 - 0.04;
-
-  return points.map((point, index) => {
-    const wave = Math.sin(index + keyword.length + rangeId.length) * 0.018;
-    const nextPrice = point.price * (1 + keywordShift + wave);
-
-    return {
-      ...point,
-      price: Math.max(1000, Math.round(nextPrice / 1000) * 1000),
-    };
-  });
 }
 
 function buildMarketPath(points: ChartPoint[]) {
@@ -636,17 +612,6 @@ function getBoundsPenalty(box: LabelBox) {
   const bottomPenalty = Math.max(0, box.y + box.height - chartBottom);
 
   return (leftPenalty + rightPenalty + topPenalty + bottomPenalty) * 20;
-}
-
-function deterministicRatio(seed: string) {
-  let hash = 2166136261;
-
-  for (let index = 0; index < seed.length; index += 1) {
-    hash ^= seed.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  return (hash >>> 0) / 4294967295;
 }
 
 function formatCompactWon(value: number) {
