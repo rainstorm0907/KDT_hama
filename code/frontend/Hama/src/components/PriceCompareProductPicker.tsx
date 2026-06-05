@@ -57,7 +57,7 @@ export function PriceCompareProductPicker({
       className={`flex w-full flex-col overflow-hidden rounded-[30px] border border-[#C6CDD8]/90 bg-white shadow-[0_20px_56px_rgba(29,29,31,0.085),inset_0_1px_0_rgba(255,255,255,0.96),inset_0_-1px_0_rgba(0,0,0,0.028)] ${
         viewMode === 'page'
           ? 'h-[clamp(600px,76vh,780px)]'
-          : 'h-[clamp(640px,82vh,840px)]'
+          : 'h-full'
       }`}
       onMouseDown={(event) => event.stopPropagation()}
     >
@@ -113,13 +113,14 @@ export function PriceCompareProductPicker({
         ) : null}
       </div>
 
-      <div className="grid shrink-0 gap-3 border-t border-[#D7DDE7]/86 bg-white px-7 py-4 md:grid-cols-[1fr_auto_1fr] md:items-center md:px-8">
+      <div className="grid min-h-[96px] shrink-0 gap-3 border-t border-[#D7DDE7]/86 bg-white px-7 py-4 md:grid-cols-[1fr_auto_1fr] md:items-center md:px-8">
         <p className="text-base font-black text-[#303743]">
           최소 2개 이상 선택하면 가격 비교 결과를 볼 수 있습니다.
         </p>
         <SelectedSlotPreview
           selectedProducts={selectedProducts}
           maxSelectedCount={maxSelectedCount}
+          onToggleProduct={onToggleProduct}
         />
         <button
           type="button"
@@ -136,21 +137,39 @@ export function PriceCompareProductPicker({
 function SelectedSlotPreview({
   selectedProducts,
   maxSelectedCount,
+  onToggleProduct,
 }: {
   selectedProducts: Product[];
   maxSelectedCount: number;
+  onToggleProduct: (product: Product) => void;
 }) {
   return (
-    <div className="pointer-events-none hidden items-center justify-center gap-2 sm:flex">
+    <div className="hidden items-center justify-center gap-2 sm:flex">
       {Array.from({ length: maxSelectedCount }, (_, index) => {
         const product = selectedProducts[index] ?? null;
         const color = getSlotColor(index);
 
         return (
-          <span
+          <button
             key={product ? productStorageKey(product) : `slot-${index}`}
-            className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-[18px] border border-dashed bg-white/92 shadow-[0_10px_22px_rgba(29,29,31,0.06),inset_0_1px_0_rgba(255,255,255,0.96)]"
+            type="button"
+            disabled={!product}
+            onClick={() => {
+              if (product) {
+                onToggleProduct(product);
+              }
+            }}
+            className={`relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-[18px] border border-dashed bg-white/92 shadow-[0_10px_22px_rgba(29,29,31,0.06),inset_0_1px_0_rgba(255,255,255,0.96)] transition ${
+              product
+                ? `hover:-translate-y-0.5 hover:bg-white ${hairline.focus}`
+                : 'cursor-default'
+            }`}
             style={{ borderColor: `${color}88` }}
+            aria-label={
+              product
+                ? `${index + 1}번 선택 상품 제거`
+                : `${index + 1}번 빈 선택 슬롯`
+            }
           >
             {product ? (
               <ProductVisual
@@ -167,7 +186,15 @@ function SelectedSlotPreview({
             >
               {index + 1}
             </span>
-          </span>
+            {product ? (
+              <span
+                className="absolute right-0.5 top-0.5 z-20 flex h-4 w-4 items-center justify-center rounded-full border border-white/90 bg-[#1D1D1F] text-white shadow-[0_4px_10px_rgba(29,29,31,0.18)]"
+                aria-hidden="true"
+              >
+                <X className="h-2.5 w-2.5" />
+              </span>
+            ) : null}
+          </button>
         );
       })}
     </div>
