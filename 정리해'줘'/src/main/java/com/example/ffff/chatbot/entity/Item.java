@@ -29,8 +29,7 @@ public class Item {
     @Column(name = "TITLE", nullable = false, length = 300)
     private String title;
 
-    @Lob
-    @Column(name = "DESCRIPTION")
+    @Column(name = "DESCRIPTION", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "CURRENT_PRICE", nullable = false)
@@ -45,7 +44,7 @@ public class Item {
     @Column(name = "MATCHED_KEYWORDS", length = 500)
     private String matchedKeywords;
 
-    @Column(name = "SALE_STATUS", nullable = false, length = 20)
+    @Column(name = "STATUS", nullable = false, length = 20)
     private String saleStatus;
 
     @Column(name = "SOLD_AT")
@@ -86,7 +85,7 @@ public class Item {
         }
 
         if (this.saleStatus == null || this.saleStatus.isBlank()) {
-            this.saleStatus = "ON_SALE";
+            this.saleStatus = "판매중";
         }
     }
 
@@ -95,7 +94,7 @@ public class Item {
         this.lastSeenAt = LocalDateTime.now();
 
         if (this.saleStatus == null || this.saleStatus.isBlank()) {
-            this.saleStatus = "ON_SALE";
+            this.saleStatus = "판매중";
         }
     }
 }

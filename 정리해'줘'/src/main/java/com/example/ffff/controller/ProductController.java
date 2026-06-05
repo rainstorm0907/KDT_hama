@@ -21,8 +21,21 @@ public class ProductController {
     // 메인 추천 상품 API
     // GET /api/products/recommended
     @GetMapping("/recommended")
-    public List<ProductResponseDto> getRecommendedProducts() {
-        return productService.getRecommendedProducts();
+    public Map<String, Object> getRecommendedProducts(
+            @RequestParam(required = false, defaultValue = "20") int limit
+    ) {
+        List<ProductResponseDto> products = productService.getRecommendedProducts();
+        int safeLimit = Math.max(limit, 1);
+        List<ProductResponseDto> limitedProducts =
+                products.subList(0, Math.min(products.size(), safeLimit));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("items", limitedProducts);
+        response.put("total", products.size());
+        response.put("limit", safeLimit);
+        response.put("summary", buildSummary(products));
+
+        return response;
     }
 
     // 상품 목록 API

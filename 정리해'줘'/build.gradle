@@ -41,8 +41,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
-    // Oracle
-    runtimeOnly 'com.oracle.database.jdbc:ojdbc11'
+    // Supabase / PostgreSQL
+    runtimeOnly 'org.postgresql:postgresql'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
