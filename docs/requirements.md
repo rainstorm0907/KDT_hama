@@ -10,7 +10,7 @@
 code/backend/src/main/java/com/used/service
 ```
 
-현재 메인 Java 백엔드는 폴더만 준비된 상태입니다. 실제 기능 구현 시 아래 기준으로 작성합니다.
+현재 Java 백엔드는 `code/backend`의 Spring Boot 프로젝트로 통합되어 있습니다. 기능 추가 시 아래 기준으로 작성합니다.
 
 - `config`: 보안, CORS, 외부 연동 설정
 - `controller`: REST API 요청 처리
@@ -39,13 +39,13 @@ code/backend/src/main/java/com/used/service
 code/backend/src/main/python
 ```
 
-현재 Python 영역은 크롤링, 분석, 상품명 매칭 파이프라인을 담당합니다.
+현재 Python 영역은 MVP 상품 API, 크롤링 입력값, 분석, 상품명 매칭 파이프라인, Supabase 적재를 담당합니다.
 
-- `crawling`: 플랫폼 크롤링 스크립트, 키워드 목록, 원본 결과 CSV
+- `crawling`: 키워드 목록, 블랙리스트 설정, 키워드 갱신 스크립트
 - `analysis`: 크롤링 결과 검증, 가격 이상치, 토큰 분석
 - `config`: 상품명 매칭 사전, 카테고리 규칙, 제외 토큰 CSV
 - `preprocessing`: DB 저장 전 전처리 스크립트 위치
-- `api_server.py`: Python 파이프라인 확인용 FastAPI 서버
+- `api_server.py`: 현재 MVP 상품 검색/추천/상세 FastAPI 서버
 - `hama_data_pipeline.py`: 상품명 매칭/카테고리 배정 파이프라인
 - `product_matching.py`: 상품명 정규화와 토큰 매칭 보조 로직
 - `supabase_repository.py`: Supabase 상품 조회와 CSV fallback을 분리하는 저장소 모듈
@@ -72,7 +72,8 @@ Python 기반 데이터 전처리 스크립트를 관리합니다.
 
 작성 기준:
 
-- 크롤링 원본 결과는 `crawling/results`에 보관합니다.
+- 크롤링 원본 결과는 `crawling/results`에 보관합니다. 이 폴더는 대용량 로컬 결과물이라 Git 추적 대상에서 제외될 수 있습니다.
+- 과거/실험용 크롤링 스크립트는 `crawling/archive`에 둘 수 있지만 제출 대상인지 별도로 확인합니다.
 - 분석 결과는 `analysis/results`에 보관합니다.
 - 서비스 실행 코드와 검토용 노트북/분석 스크립트는 분리합니다.
 - DB 저장 전에는 가격, 날짜, 상태값, 중복 상품을 정리합니다.
@@ -91,6 +92,7 @@ code/frontend/Hama/src
 - `main.tsx`: React 렌더링 진입점
 - `components`: 재사용 UI 컴포넌트
 - `pages`: 화면 단위 컴포넌트
+- `hooks`: 화면 상태와 브라우저 동작을 분리한 React hook
 - `api`: API 호출 또는 데이터 접근 함수
 - `queries`: React Query 기반 데이터 조회 로직
 - `lib`: 공통 클라이언트/라이브러리 설정
@@ -120,8 +122,15 @@ PostgreSQL 또는 Supabase에 적용할 경우 아래 항목을 변환해야 합
 
 Entity 작성 시에는 실제 사용하는 DB 문법과 `db_schema.sql`의 컬럼명이 일치하는지 확인해야 합니다.
 
-## 제출용 Spring Boot 프로젝트
+## Spring Boot 실행 기준
 
-`정지원_boot` 폴더는 별도 제출용 Spring Boot REST API 프로젝트입니다.
+Spring Boot 프로젝트 루트는 `code/backend`입니다.
 
-메인 프로젝트 코드와 섞이지 않도록 `정지원_boot` 폴더 안에서만 실행하고 관리합니다.
+기본 설정:
+
+- 패키지명: `com.used.service`
+- 기본 포트: `8080`
+- 설정 파일: `code/backend/src/main/resources/application.yaml`
+- 환경변수 예시: `code/backend/.env.example`
+
+현재 프론트 MVP는 기본적으로 Python FastAPI를 호출합니다. Spring API로 전환하려면 Vite 프록시, CORS, 인증 쿠키 처리를 별도 작업으로 맞춥니다.

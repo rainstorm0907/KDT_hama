@@ -6,12 +6,12 @@ Hama 프론트엔드는 여러 중고거래 플랫폼의 상품을 검색하고,
 
 ## 빠른 실행
 
-프로젝트 루트가 `/Users/wooojin/HamaMain`인 기준입니다.
+프로젝트 루트가 `c:\project\kdtproject\kdtproject`인 기준입니다.
 
-```bash
-cd /Users/wooojin/HamaMain/code/frontend/Hama
+```powershell
+cd "c:\project\kdtproject\kdtproject\code\frontend\Hama"
 npm install
-VITE_CACHE_DIR=/private/tmp/hama-vite-cache npm run dev -- --configLoader runner --host 127.0.0.1 --port 5178 --strictPort --force
+npm run dev -- --host 127.0.0.1 --port 5178 --strictPort --force
 ```
 
 브라우저에서 확인합니다.
@@ -22,12 +22,11 @@ http://127.0.0.1:5178/
 
 검증 명령은 아래 순서로 봅니다.
 
-```bash
-cd /Users/wooojin/HamaMain/code/frontend/Hama
+```powershell
+cd "c:\project\kdtproject\kdtproject\code\frontend\Hama"
 npm run lint
 npx tsc --noEmit
-mkdir -p /Users/wooojin/HamaMain/code/frontend/Hama/dist
-VITE_CACHE_DIR=/private/tmp/hama-vite-cache npm run build -- --configLoader runner
+npm run build
 ```
 
 - `npm run lint`: ESLint 기준으로 코드 실수와 규칙 위반을 확인합니다.
@@ -111,7 +110,7 @@ src
 - `src/utils`: 가격 포맷, 최근 검색어, 찜/알림/가격 비교 로컬 저장 로직입니다.
 - `public`: 배너 이미지처럼 빌드 시 그대로 배포되는 정적 파일입니다.
 
-큰 디자인 기준은 프로젝트 루트의 `DESIGN.md`에 정리되어 있습니다. 새 UI를 만들 때는 먼저 `hairline.ts`, `ProductCard`, `PlatformPill`, `ProductVisual`, `PriceCompare*`, `Side*` 패턴을 확인하는 것이 좋습니다.
+디자인 기준은 현재 코드의 `styles/hairline.ts`와 공통 컴포넌트 패턴에 모여 있습니다. 새 UI를 만들 때는 먼저 `hairline.ts`, `ProductCard`, `PlatformPill`, `ProductVisual`, `PriceCompare*`, `Side*` 패턴을 확인하는 것이 좋습니다.
 
 ## 핵심 컴포넌트
 
@@ -219,7 +218,7 @@ Hama는 쇼핑몰 랜딩 페이지보다 “중고 상품을 검색하고 판단
 - `PriceCompare*` 파일은 기능이 무거워서 이미 역할별로 나누었습니다.
 - `Side*` 파일은 사이드 버튼 기능이 늘어날 것을 보고 버튼별로 분리했습니다.
 - `RecentKeywordRecommendations.tsx`는 홈 화면이 커지지 않도록 별도 컴포넌트로 분리했습니다.
-- `MyPage.tsx`는 아직 가장 큰 파일입니다. 기능이 더 늘어나면 `MyPageNotifications`, `MyPageProductLists`, `MyPageSettings`처럼 탭 단위 분리가 다음 우선순위입니다.
+- `MyPage.tsx`의 탭 UI는 `components/mypage` 하위 파일로 분리되어 있습니다. 탭이 더 늘어나면 같은 폴더에 탭 단위 컴포넌트를 추가합니다.
 - 새 기능을 붙일 때는 `pages`에 모든 코드를 넣기보다, 화면 상태만 `pages`에 두고 반복 UI는 `components`로 빼는 방향이 좋습니다.
 
 ## 발표 전 확인 순서

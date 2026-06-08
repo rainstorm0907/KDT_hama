@@ -19,6 +19,9 @@
 - `crawling_20260429_no_filter.py`를 만들어 필터 미적용 결과와 비교할 수 있게 했습니다.
 - `analysis/cluster_bracket_contents.py`를 추가해 no-filter 결과의 상품명 대괄호(`[]`) 내부 텍스트만 추출하고 클러스터링할 수 있게 했습니다.
 - 대괄호 분석 결과는 `code/backend/src/main/python/analysis/results/bracket_contents`와 `code/backend/src/main/python/analysis/results/bracket_clusters`에 저장합니다.
+- `code/backend/src/main/python/crawling/blacklist_keywords.csv`와 `blacklist_tokens.csv`로 액세서리/노이즈 후보를 별도 관리합니다.
+- 2026-06-05 기준 no-filter 통합 결과(`통합조회_전체_no_filter_20260605_1142.csv`)를 추가로 검토하고 있습니다. 이 파일은 로컬 크롤링 결과 위치인 `crawling/results`에 둘 수 있으며 Git 추적 대상에서 제외될 수 있습니다.
+- 가격 이상치 분석은 `analysis/keyword_price_outliers.ipynb`, `analysis/keyword_price_outliers_first_filter.ipynb`에서 진행하고, 결과는 `analysis/results/price_outliers`에 저장합니다.
 
 ## 확인된 문제
 
@@ -32,6 +35,8 @@
 - no-filter 결과는 수량이 늘지만 상품명 정합성이 낮아져 가격 통계 품질을 떨어뜨릴 수 있습니다.
 
 ## 비교 결과 요약
+
+### 2026-05-07 필터/no-filter 비교
 
 기준 파일:
 
@@ -54,6 +59,18 @@
 - 필터 유무 차이는 대부분 번개장터에서 발생합니다.
 - 중고나라는 검색 결과 자체가 비교적 정제되어 있어 필터 전후 차이가 작습니다.
 - 번개장터는 API가 검색 후보군에 가까운 넓은 결과를 반환하므로 별도 정합성 판별이 중요합니다.
+
+### 2026-06-05 no-filter 후속 데이터
+
+기준 파일:
+
+- `통합조회_전체_no_filter_20260605_1142.csv`
+
+활용 방향:
+
+- 5월 비교에서 확인된 번개장터 오탐 문제를 더 큰 최신 데이터로 재검토합니다.
+- blacklist 후보 단어와 가격 이상치 후보를 함께 확인합니다.
+- 필터 적용 전후의 가격 통계 왜곡을 `analysis/results/price_outliers` 결과와 연결해 봅니다.
 
 ## 현재 적용 중인 필터 조건
 
@@ -114,6 +131,7 @@
 - 여러 모델명을 나열한 상품은 일부 통과할 수 있습니다.
   - 예: `아이폰 13,14,15,16,17 프로`
 - 본체와 액세서리를 구분하는 모델은 아직 없습니다.
+- blacklist CSV는 관리되고 있지만, 모든 크롤링/적재 경로에 일관되게 적용하는 정책은 아직 확정 전입니다.
 
 ### 5. no-filter 버전과의 차이
 
@@ -215,7 +233,9 @@ GROUP BY canonical_name;
 
 1. `17e`, `s25`, `s26`처럼 숫자+문자 모델명을 하나의 토큰으로 처리합니다.
 2. 액세서리 제외 후보 단어를 정리합니다.
-3. 필터 적용 결과와 no-filter 결과를 이용해 라벨 후보 CSV를 생성합니다.
-4. 라벨 후보를 일부 수동 검수해 학습/검증 데이터를 만듭니다.
-5. `scikit-learn` 기반 1차 정합성 분류 모델을 구현합니다.
-6. 모델 점수와 기존 규칙 필터를 함께 사용해 DB 저장 대상을 결정합니다.
+3. `blacklist_keywords.csv`, `blacklist_tokens.csv` 적용 범위를 크롤링/분석/적재 단계별로 정합니다.
+4. 필터 적용 결과와 no-filter 결과를 이용해 라벨 후보 CSV를 생성합니다.
+5. 가격 이상치 후보를 라벨링 우선순위에 반영합니다.
+6. 라벨 후보를 일부 수동 검수해 학습/검증 데이터를 만듭니다.
+7. `scikit-learn` 기반 1차 정합성 분류 모델을 구현합니다.
+8. 모델 점수와 기존 규칙 필터를 함께 사용해 DB 저장 대상을 결정합니다.
