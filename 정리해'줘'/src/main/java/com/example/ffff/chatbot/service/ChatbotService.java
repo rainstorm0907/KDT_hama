@@ -552,7 +552,11 @@ public class ChatbotService {
         history.setIntent(intent);
         history.setResponseType(responseType);
 
-        chatHistoryRepository.save(history);
+        try {
+            chatHistoryRepository.save(history);
+        } catch (RuntimeException exception) {
+            System.err.println("[chatbot] failed to save chat history: " + exception.getMessage());
+        }
     }
 
     private void logAnalysis(

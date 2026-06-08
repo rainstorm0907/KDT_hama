@@ -4,8 +4,6 @@ import { ProductCard, ProductCardSkeleton } from '../components/ProductCard';
 import { RecentKeywordRecommendations } from '../components/RecentKeywordRecommendations';
 import { RefreshProductsButton } from '../components/RefreshProductsButton';
 import { RowsMenu } from '../components/RowsMenu';
-import { SideButtons } from '../components/SideButtons';
-import type { SidePanel } from '../components/SideButtons';
 import { SearchBar } from '../components/SearchBar';
 import { useRecommendedProductsQuery } from '../queries/productQueries';
 import { hairline } from '../styles/hairline';
@@ -14,19 +12,13 @@ import type { Product } from '../types/product';
 import { formatUpdatedAtTimestamp } from '../utils/format';
 
 type HomePageProps = {
-  activeSidePanel: SidePanel | null;
-  onOpenPriceCompare: () => void;
   onProductSelect: (product: Product) => void;
-  onSidePanelChange: (panel: SidePanel | null) => void;
 };
 
 const PRODUCT_COLUMNS = 4;
 
 export function HomePage({
-  activeSidePanel,
-  onOpenPriceCompare,
   onProductSelect,
-  onSidePanelChange,
 }: HomePageProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [rowCount, setRowCount] = useState<RowCountOption>(4);
@@ -102,13 +94,6 @@ export function HomePage({
           ) : null}
         </div>
       </section>
-
-      <SideButtons
-        activePanel={activeSidePanel}
-        onOpenPriceCompare={onOpenPriceCompare}
-        onPanelChange={onSidePanelChange}
-        onProductSelect={onProductSelect}
-      />
     </main>
   );
 }

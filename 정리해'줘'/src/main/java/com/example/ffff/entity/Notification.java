@@ -41,8 +41,7 @@ public class Notification {
     @Column(name = "MESSAGE", length = 1000)
     private String message;
 
-    @Lob
-    @Column(name = "PAYLOAD")
+    @Column(name = "PAYLOAD", columnDefinition = "TEXT")
     private String payload;
 
     @Column(name = "IS_READ", length = 1)

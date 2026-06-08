@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { SideChatbotButton } from './SideChatbotButton';
 import { SideNotificationButton } from './SideNotificationButton';
 import { SidePriceCompareButton } from './SidePriceCompareButton';
-import { sideButtonClass, sideButtonRailClass } from './sideButtonStyles';
+import { hairline } from '../styles/hairline';
 import type { Product } from '../types/product';
 
 export type SidePanel = 'chatbot' | 'notification';
@@ -30,21 +30,8 @@ export function SideButtons({
 
     updateVisibility();
     window.addEventListener('scroll', updateVisibility, { passive: true });
-    window.addEventListener('wheel', updateVisibility, { passive: true });
-    window.addEventListener('touchmove', updateVisibility, { passive: true });
-    document.addEventListener('scroll', updateVisibility, {
-      capture: true,
-      passive: true,
-    });
 
-    return () => {
-      window.removeEventListener('scroll', updateVisibility);
-      window.removeEventListener('wheel', updateVisibility);
-      window.removeEventListener('touchmove', updateVisibility);
-      document.removeEventListener('scroll', updateVisibility, {
-        capture: true,
-      });
-    };
+    return () => window.removeEventListener('scroll', updateVisibility);
   }, []);
 
   const togglePanel = (panel: SidePanel) => {
@@ -52,28 +39,19 @@ export function SideButtons({
   };
 
   return (
-    <div
-      className={sideButtonRailClass}
-      aria-label={isTopButtonVisible ? '확장된 사이드 버튼' : '사이드 버튼'}
-    >
-      <div
-        aria-hidden={!isTopButtonVisible}
-        className={`transition-[max-height,opacity,transform,margin] duration-200 ${
+    <div className="fixed bottom-5 right-5 z-[150] flex flex-col items-end gap-2 md:bottom-6 md:right-6">
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className={`flex h-16 w-16 items-center justify-center rounded-full text-gray-950 ring-1 ring-[#1D1D1F]/75 transition-all duration-200 md:h-[72px] md:w-[72px] ${hairline.panel} ${hairline.focus} ${
           isTopButtonVisible
-            ? 'mb-0 max-h-[58px] translate-y-0 scale-100 overflow-visible opacity-100'
-            : 'pointer-events-none -mb-[9px] max-h-0 translate-y-3 scale-[0.92] overflow-hidden opacity-0'
+            ? 'translate-y-0 opacity-100'
+            : 'pointer-events-none translate-y-3 opacity-0'
         }`}
+        aria-label="맨 위로 이동"
       >
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          tabIndex={isTopButtonVisible ? 0 : -1}
-          className={sideButtonClass}
-          aria-label="맨 위로 이동"
-        >
-          <ArrowUp className="h-6 w-6" aria-hidden="true" />
-        </button>
-      </div>
+        <ArrowUp className="h-6 w-6" aria-hidden="true" />
+      </button>
       <SidePriceCompareButton
         onOpen={() => {
           onPanelChange(null);
@@ -83,10 +61,7 @@ export function SideButtons({
       <SideChatbotButton
         isOpen={activePanel === 'chatbot'}
         onToggle={() => togglePanel('chatbot')}
-        onProductSelect={(product) => {
-          onPanelChange(null);
-          onProductSelect?.(product);
-        }}
+        onProductSelect={onProductSelect}
       />
       <SideNotificationButton
         isOpen={activePanel === 'notification'}

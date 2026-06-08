@@ -213,18 +213,19 @@ export function ProductDetailModal({
   };
 
   return (
-    <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center px-5 py-8 ${hairline.modalOverlay}`}
-      role="presentation"
-      onMouseDown={onClose}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className={`relative max-h-[calc(100vh-72px)] w-full max-w-[1480px] overflow-hidden rounded-[24px] ${hairline.panel}`}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+    <>
+      <div
+        className={`fixed inset-0 z-[130] ${hairline.modalOverlay}`}
+        role="presentation"
+        onMouseDown={onClose}
+      />
+      <div className="pointer-events-none fixed inset-0 z-[150] flex items-center justify-center px-5 py-8">
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          className={`pointer-events-auto relative max-h-[calc(100vh-72px)] w-full max-w-[1480px] overflow-hidden rounded-[24px] ${hairline.panel}`}
+        >
         <button
           type="button"
           aria-label="상품 상세 팝업 닫기"
@@ -436,7 +437,8 @@ export function ProductDetailModal({
             </div>
           </div>
         </div>
-      </section>
+        </section>
+      </div>
 
       {activeToast ? (
         <ActionToast
@@ -451,7 +453,7 @@ export function ProductDetailModal({
           }
         />
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -473,7 +475,7 @@ function ActionToast({
       role="status"
       aria-live="polite"
       onMouseDown={(event) => event.stopPropagation()}
-      className={`fixed bottom-8 left-1/2 z-[140] flex w-[min(540px,calc(100vw-48px))] -translate-x-1/2 items-center justify-between gap-4 rounded-2xl px-5 py-4 ${hairline.panel}`}
+      className={`fixed bottom-8 left-1/2 z-[170] flex w-[min(540px,calc(100vw-48px))] -translate-x-1/2 items-center justify-between gap-4 rounded-2xl px-5 py-4 ${hairline.panel}`}
     >
       <div className="flex min-w-0 items-center gap-3">
         <span

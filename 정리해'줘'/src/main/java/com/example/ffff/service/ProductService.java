@@ -21,10 +21,10 @@ public class ProductService {
     private final ItemRepository itemRepository;
 
     /*
-     * 팀원 최종 DB 기준:
-     * 기존 TRADE_STATUS = 'SALE' 대신 SALE_STATUS = 'ON_SALE' 사용
+     * Supabase/PostgreSQL items.status 기준:
+     * Python 크롤러가 저장하는 판매중 상품만 프론트에 노출한다.
      */
-    private static final String ON_SALE = "ON_SALE";
+    private static final String ON_SALE = "판매중";
 
     private static final Map<String, String> CATEGORY_ID_TO_NAME = Map.ofEntries(
             Map.entry("pc", "컴퓨터"),

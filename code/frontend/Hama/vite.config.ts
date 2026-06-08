@@ -10,7 +10,7 @@ export default defineConfig({
   ...(cacheDir ? { cacheDir } : {}),
   server: {
     host: '127.0.0.1',
-    port: 5173,
+    port: 5178,
     strictPort: true,
     headers: {
       'Cache-Control': 'no-store, max-age=0',

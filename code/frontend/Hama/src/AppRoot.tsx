@@ -5,6 +5,7 @@ import type { AuthMode } from './components/AuthModal';
 import { Header } from './components/Header';
 import { PriceCompareModal } from './components/PriceCompareModal';
 import { ProductDetailModal } from './components/ProductDetailModal';
+import { SideButtons } from './components/SideButtons';
 import type { SidePanel } from './components/SideButtons';
 import { SiteFooter } from './components/SiteFooter';
 import { AdminPage } from './pages/AdminPage';
@@ -23,6 +24,7 @@ export function AppRoot() {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const isAdmin = isLoggedIn;
+  const isBlockingModalOpen = Boolean(selectedProduct) || isPriceCompareOpen;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -85,10 +87,7 @@ export function AppRoot() {
             path="/"
             element={
               <HomePage
-                activeSidePanel={activeSidePanel}
-                onOpenPriceCompare={() => openPriceCompare()}
                 onProductSelect={setSelectedProduct}
-                onSidePanelChange={setActiveSidePanel}
               />
             }
           />
@@ -96,10 +95,7 @@ export function AppRoot() {
             path="/search"
             element={
               <SearchResultsPage
-                activeSidePanel={activeSidePanel}
-                onOpenPriceCompare={() => openPriceCompare()}
                 onProductSelect={setSelectedProduct}
-                onSidePanelChange={setActiveSidePanel}
               />
             }
           />
@@ -113,6 +109,13 @@ export function AppRoot() {
         </Routes>
 
         <SiteFooter />
+
+        <SideButtons
+          activePanel={activeSidePanel}
+          onOpenPriceCompare={() => openPriceCompare()}
+          onPanelChange={setActiveSidePanel}
+          onProductSelect={setSelectedProduct}
+        />
       </div>
 
       <AuthModal
@@ -124,6 +127,21 @@ export function AppRoot() {
           closeAuthModal();
         }}
       />
+      {isBlockingModalOpen ? (
+        <div
+          className={`pointer-events-none fixed inset-0 blur-[6px] ${
+            selectedProduct ? 'z-[140]' : 'z-[110]'
+          }`}
+          aria-hidden="true"
+        >
+          <SideButtons
+            activePanel={null}
+            onOpenPriceCompare={() => undefined}
+            onPanelChange={() => undefined}
+            onProductSelect={() => undefined}
+          />
+        </div>
+      ) : null}
       <ProductDetailModal
         key={selectedProduct?.id ?? 'empty-product-modal'}
         product={selectedProduct}

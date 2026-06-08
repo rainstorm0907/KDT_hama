@@ -41,18 +41,19 @@ export function PriceCompareModal({
   }
 
   return (
-    <div
-      className={`fixed inset-0 z-[115] flex items-center justify-center px-4 py-5 ${hairline.modalOverlay}`}
-      role="presentation"
-      onMouseDown={onClose}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-label="가격 비교"
-        className={`relative max-h-[calc(100vh-40px)] w-full max-w-[1760px] overflow-hidden rounded-[24px] ${hairline.panel}`}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+    <>
+      <div
+        className={`fixed inset-0 z-[100] ${hairline.modalOverlay}`}
+        role="presentation"
+        onMouseDown={onClose}
+      />
+      <div className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center px-4 py-5">
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-label="가격 비교"
+          className={`pointer-events-auto relative max-h-[calc(100vh-40px)] w-full max-w-[1760px] overflow-hidden rounded-[24px] ${hairline.panel}`}
+        >
         <button
           type="button"
           aria-label="가격 비교 팝업 닫기"
@@ -67,7 +68,8 @@ export function PriceCompareModal({
             initialProduct={initialProduct}
           />
         </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </>
   );
 }

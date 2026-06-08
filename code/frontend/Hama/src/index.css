@@ -167,6 +167,89 @@ body {
   border-radius: 999px;
 }
 
+.hama-side-rail {
+  border: 1px solid rgba(174, 182, 194, 0.82);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.9),
+      rgba(238, 242, 247, 0.66)
+    ),
+    rgba(255, 255, 255, 0.68);
+  box-shadow:
+    0 14px 0 rgba(174, 182, 194, 0.14),
+    0 30px 54px rgba(29, 29, 31, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  transition:
+    box-shadow 220ms ease,
+    transform 220ms ease;
+}
+
+.hama-side-button {
+  position: relative;
+  display: flex;
+  width: 58px;
+  height: 58px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(29, 29, 31, 0.14);
+  border-radius: 999px;
+  background:
+    radial-gradient(
+      circle at 32% 22%,
+      rgba(255, 255, 255, 1),
+      rgba(255, 255, 255, 0.84) 48%,
+      rgba(231, 235, 240, 0.82)
+    ),
+    rgba(255, 255, 255, 0.86);
+  color: #111827;
+  box-shadow:
+    0 8px 18px rgba(29, 29, 31, 0.075),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 -7px 12px rgba(29, 29, 31, 0.035);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.hama-side-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(29, 29, 31, 0.22);
+  background:
+    radial-gradient(
+      circle at 32% 22%,
+      rgba(255, 255, 255, 1),
+      rgba(255, 255, 255, 0.9) 48%,
+      rgba(222, 227, 234, 0.9)
+    ),
+    rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 12px 24px rgba(29, 29, 31, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -7px 12px rgba(29, 29, 31, 0.045);
+}
+
+.hama-side-button:focus {
+  outline: none;
+}
+
+.hama-side-button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 12px 24px rgba(29, 29, 31, 0.1),
+    0 0 0 3px rgba(174, 182, 194, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -7px 12px rgba(29, 29, 31, 0.045);
+}
+
+.hama-side-button:active {
+  transform: translateY(0) scale(0.97);
+}
+
 /* 카테고리 인터랙션 */
 .category-item {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
