@@ -1,6 +1,6 @@
-package com.used.service.chatbot.service;
+package com.example.ffff.chatbot.service;
 
-import com.used.service.chatbot.dto.ChatAnalysisResult;
+import com.example.ffff.chatbot.dto.ChatAnalysisResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ public class GeminiClientService {
     private String model;
 
     public String testConnection() {
-        return generateText("?쒓뎅?대줈 'Gemini API ?곌껐 ?깃났'?대씪怨좊쭔 ?듯빐以?", 64);
+        return generateText("한국어로 'Gemini API 연결 성공'이라고만 답해줘.", 64);
     }
 
     public ChatAnalysisResult analyzeMessage(String message) {
@@ -43,8 +43,8 @@ public class GeminiClientService {
             quickResult.setGameName(null);
             quickResult.setPerformanceLevel(null);
 
-            System.out.println("1. ?쒕??섏씠 遺꾩꽍 ?꾩슂: N");
-            System.out.println("2. ?쒕??섏씠 ?몄텧 ?щ?: N");
+            System.out.println("1. 제미나이 분석 필요: N");
+            System.out.println("2. 제미나이 호출 여부: N");
 
             return quickResult;
         }
@@ -52,14 +52,14 @@ public class GeminiClientService {
         boolean needGemini = shouldUseGeminiForSearch(message, quickResult)
                 || "UNKNOWN".equals(safeIntent(quickResult.getIntent()));
 
-        System.out.println("1. ?쒕??섏씠 遺꾩꽍 ?꾩슂: " + (needGemini ? "Y" : "N"));
+        System.out.println("1. 제미나이 분석 필요: " + (needGemini ? "Y" : "N"));
 
         if (!needGemini) {
-            System.out.println("2. ?쒕??섏씠 ?몄텧 ?щ?: N");
+            System.out.println("2. 제미나이 호출 여부: N");
             return normalizeGamingFallback(message, quickResult);
         }
 
-        System.out.println("2. ?쒕??섏씠 ?몄텧 ?щ?: Y");
+        System.out.println("2. 제미나이 호출 여부: Y");
 
         ChatAnalysisResult geminiResult = normalizeGamingFallback(message, analyzeMessageWithGemini(message));
 
@@ -80,100 +80,100 @@ public class GeminiClientService {
 
     public ChatAnalysisResult analyzeMessageWithGemini(String message) {
         String prompt = """
-                ?덈뒗 以묎퀬嫄곕옒 媛寃?鍮꾧탳 ?쒕퉬?ㅼ쓽 寃??議곌굔 遺꾩꽍湲곕떎.
+                너는 중고거래 가격 비교 서비스의 검색 조건 분석기다.
 
-                ?ъ슜?먯쓽 硫붿떆吏瑜?遺꾩꽍?댁꽌 諛섎뱶??JSON留?異쒕젰?대씪.
-                ?ㅻ챸 臾몄옣, 留덊겕?ㅼ슫, 肄붾뱶釉붾줉? 異쒕젰?섏? 留덈씪.
+                사용자의 메시지를 분석해서 반드시 JSON만 출력해라.
+                설명 문장, 마크다운, 코드블록은 출력하지 마라.
 
-                intent 媛믪? ?꾨옒 以??섎굹留??ъ슜?대씪.
+                intent 값은 아래 중 하나만 사용해라.
                 FAQ, GREETING, ITEM_COUNT, WISHLIST_LIST,
                 PRODUCT_RECOMMEND, PERSONAL_RECOMMEND,
                 PRICE_COMPARE, PRICE_ALERT_GUIDE,
                 SEARCH_HELP, UNKNOWN
 
-                keyword??DB ?곹뭹 寃?됱뿉 ?ъ슜???듭떖 ?곹뭹紐낆씠??
-                ?덈? ?ъ슜??臾몄옣 ?꾩껜瑜?keyword濡??ｌ? 留덈씪.
+                keyword는 DB 상품 검색에 사용할 핵심 상품명이다.
+                절대 사용자 문장 전체를 keyword로 넣지 마라.
 
-                ??
-                - "?꾩씠??14 異붿쿇" ??keyword: "?꾩씠??14", productType: "smartphone", useCase: null
-                - "?꾩씠??13 30留뚯썝 ?댄븯" ??keyword: "?꾩씠??13", productType: "smartphone", maxPrice: 300000
-                - "?꾩씠???곹뭹??以묒뿉 以묓븰援?1?숇뀈???ъ슜?좊쭔???? ??keyword: "?꾩씠??, productType: "smartphone", useCase: "student"
-                - "?명듃遺?50留뚯썝?먯꽌 100留뚯썝 ?ъ씠" ??keyword: "?명듃遺?, productType: "laptop", minPrice: 500000, maxPrice: 1000000
-                - "而댄벂??30留뚯썝 ?꾨옒" ??keyword: "而댄벂??, productType: "desktop", maxPrice: 300000
+                예:
+                - "아이폰 14 추천" → keyword: "아이폰 14", productType: "smartphone", useCase: null
+                - "아이폰 13 30만원 이하" → keyword: "아이폰 13", productType: "smartphone", maxPrice: 300000
+                - "아이폰 상품들 중에 중학교 1학년이 사용할만한 폰" → keyword: "아이폰", productType: "smartphone", useCase: "student"
+                - "노트북 50만원에서 100만원 사이" → keyword: "노트북", productType: "laptop", minPrice: 500000, maxPrice: 1000000
+                - "컴퓨터 30만원 아래" → keyword: "컴퓨터", productType: "desktop", maxPrice: 300000
 
-                - "濡?媛?ν븳 而댄벂??蹂댁뿬以? ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "濡?, performanceLevel: "LOW"
-                - "諛곌렇 媛?ν븳 而댄벂??蹂댁뿬以? ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "諛곌렇", performanceLevel: "MID"
-                - "諛곌렇 ???媛?ν븳 而댄벂??蹂댁뿬以? ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "諛곌렇", performanceLevel: "EXTREME"
-                - "?먯씠?숈뒪?덉쟾??媛?ν븳 而댄벂??蹂댁뿬以? ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "?먯씠?숈뒪?덉쟾??, performanceLevel: "MID"
-                - "?먯씠?⑹뒪?덉쟾??媛?ν븳 而댄벂??蹂댁뿬以? ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "?먯씠?숈뒪?덉쟾??, performanceLevel: "MID"
-                - "?먯씠?숈뒪?덉쟾??144hz 媛?ν븳 而댄벂??蹂댁뿬以? ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "?먯씠?숈뒪?덉쟾??, performanceLevel: "HIGH"
-                - "?ъ씠踰꾪럱??媛?ν븳 而댄벂??異붿쿇?댁쨾" ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "?ъ씠踰꾪럱??, performanceLevel: "HIGH"
-                - "?ъ씠踰꾪럱?????而댄벂??異붿쿇?댁쨾" ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "?ъ씠踰꾪럱??, performanceLevel: "EXTREME"
-                - "寃??좏솕 媛?ν븳 而댄벂??異붿쿇" ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "寃??좏솕: ?ㅺ났", performanceLevel: "HIGH"
-                - "寃??좏솕 ???而댄벂??異붿쿇" ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "寃??좏솕: ?ㅺ났", performanceLevel: "EXTREME"
-                - "?ъ뒪??媛?ν븳 而댄벂??異붿쿇" ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "?ъ뒪??, performanceLevel: "MID"
-                - "?ъ뒪??媛?ν븳 而댄벂??異붿쿇" ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: "?ъ뒪??, performanceLevel: "MID"
-                - "紐⑤Ⅴ???ㅽ?寃뚯엫 媛?ν븳 而댄벂??異붿쿇" ??keyword: "而댄벂??, productType: "desktop", useCase: "gaming", gameName: null, performanceLevel: "HIGH"
+                - "롤 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "롤", performanceLevel: "LOW"
+                - "배그 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "배그", performanceLevel: "MID"
+                - "배그 풀옵 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "배그", performanceLevel: "EXTREME"
+                - "에이펙스레전드 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "MID"
+                - "에이팩스레전드 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "MID"
+                - "에이펙스레전드 144hz 가능한 컴퓨터 보여줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "에이펙스레전드", performanceLevel: "HIGH"
+                - "사이버펑크 가능한 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "HIGH"
+                - "사이버펑크 풀옵 컴퓨터 추천해줘" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "사이버펑크", performanceLevel: "EXTREME"
+                - "검은신화 가능한 컴퓨터 추천" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "검은신화: 오공", performanceLevel: "HIGH"
+                - "검은신화 풀옵 컴퓨터 추천" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "검은신화: 오공", performanceLevel: "EXTREME"
+                - "러스트 가능한 컴퓨터 추천" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "러스트", performanceLevel: "MID"
+                - "러스크 가능한 컴퓨터 추천" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: "러스트", performanceLevel: "MID"
+                - "모르는 스팀게임 가능한 컴퓨터 추천" → keyword: "컴퓨터", productType: "desktop", useCase: "gaming", gameName: null, performanceLevel: "HIGH"
 
-                - "?뚰뀗?꾩뒪?꾩튂 異붿쿇" ??keyword: "?뚰뀗???ㅼ쐞移?, productType: "game_console", useCase: null
-                - "?ㅼ쐞移?OLED 異붿쿇" ??keyword: "?뚰뀗???ㅼ쐞移?OLED", productType: "game_console", useCase: null
-                - "?뚯뒪5 異붿쿇" ??keyword: "?뚯뒪5", productType: "game_console", useCase: null
+                - "닌텐도스위치 추천" → keyword: "닌텐도 스위치", productType: "game_console", useCase: null
+                - "스위치 OLED 추천" → keyword: "닌텐도 스위치 OLED", productType: "game_console", useCase: null
+                - "플스5 추천" → keyword: "플스5", productType: "game_console", useCase: null
 
-                媛寃?洹쒖튃:
-                - "30留뚯썝 ?댄븯", "30留뚯썝 ?꾨옒", "30留뚯썝源뚯?"??maxPrice = 300000
-                - "50留뚯썝 ?댁긽", "50留뚯썝遺????minPrice = 500000
-                - "50留뚯썝?먯꽌 100留뚯썝 ?ъ씠", "50留뚯썝 ?댁긽 100留뚯썝 ?댄븯", "50~100留뚯썝"? minPrice = 500000, maxPrice = 1000000
-                - 媛寃?議곌굔???놁쑝硫?null
+                가격 규칙:
+                - "30만원 이하", "30만원 아래", "30만원까지"는 maxPrice = 300000
+                - "50만원 이상", "50만원부터"는 minPrice = 500000
+                - "50만원에서 100만원 사이", "50만원 이상 100만원 이하", "50~100만원"은 minPrice = 500000, maxPrice = 1000000
+                - 가격 조건이 없으면 null
 
-                productType 洹쒖튃:
-                - 而댄벂?? ?곗뒪?ы깙, 蹂몄껜, PC ??"desktop"
-                - ?명듃遺? ?⑺깙 ??"laptop"
-                - ?ㅻ쭏?명룿, ?대??? ?꾩씠?? 媛ㅻ윮????"smartphone"
-                - ?뚰뀗?? ?뚰뀗???ㅼ쐞移? ?ㅼ쐞移?OLED, ?뚯뒪, PS5, PS4, XBOX, ?ㅽ?????"game_console"
-                - 洹??몃뒗 null
+                productType 규칙:
+                - 컴퓨터, 데스크탑, 본체, PC → "desktop"
+                - 노트북, 랩탑 → "laptop"
+                - 스마트폰, 휴대폰, 아이폰, 갤럭시 → "smartphone"
+                - 닌텐도, 닌텐도 스위치, 스위치 OLED, 플스, PS5, PS4, XBOX, 스팀덱 → "game_console"
+                - 그 외는 null
 
-                useCase 洹쒖튃:
-                - 濡? 諛곌렇, 寃뚯엫, 寃뚯씠諛? ???뚯븘媛?? 媛?ν븳, ?뚮젅?? ?ㅽ?寃뚯엫 ??"gaming"
-                - 以묓븰?? 以묓븰援? 珥덈벑?숈깮, 怨좊벑?숈깮, ?숈깮, ?낅Ц?? 泥섏쓬 ?곕뒗, ?ъ슜?좊쭔?? ?몃쭔?? ?먮?, ?꾩씠 ??"student"
-                - ?щТ?? 臾몄꽌?묒뾽 ??"office"
-                - 肄붾뵫, 媛쒕컻 ??"coding"
-                - ?곸긽?몄쭛, ?붿옄????"creative"
-                - ?⑥닚??"異붿쿇", "蹂댁뿬以?, "?곹뭹", "?쒗뭹"留??덈뒗 寃쎌슦 useCase??null
-                - 洹??몃뒗 null
+                useCase 규칙:
+                - 롤, 배그, 게임, 게이밍, 잘 돌아가는, 가능한, 플레이, 스팀게임 → "gaming"
+                - 중학생, 중학교, 초등학생, 고등학생, 학생, 입문용, 처음 쓰는, 사용할만한, 쓸만한, 자녀, 아이 → "student"
+                - 사무용, 문서작업 → "office"
+                - 코딩, 개발 → "coding"
+                - 영상편집, 디자인 → "creative"
+                - 단순히 "추천", "보여줘", "상품", "제품"만 있는 경우 useCase는 null
+                - 그 외는 null
 
-                寃뚯엫紐?/ ?깅뒫 ?깃툒 洹쒖튃:
-                - 濡? 由ш렇?ㅻ툕?덉쟾????gameName: "濡?, performanceLevel: "LOW"
-                - 硫붿씠?? ?쇳뙆, ?쒕뱺, ?ㅽ??щ옒?꾪듃, 諛쒕줈?????performanceLevel: "LOW"
-                - 諛곌렇, 諛고?洹몃씪?대뱶 ??gameName: "諛곌렇", performanceLevel: "MID"
-                - ?먯씠?숈뒪, ?먯씠?숈뒪?덉쟾?? ?먯씠?⑹뒪, ?먯씠?⑹뒪?덉쟾?? apex ??gameName: "?먯씠?숈뒪?덉쟾??, performanceLevel: "MID"
-                - ?ㅻ쾭?뚯튂, 濡쒖뒪?몄븘?? ?ъ뒪?? ?ъ뒪?? Rust ??performanceLevel: "MID"
-                - ?ъ씠踰꾪럱?? ?ъ씠踰꾪럱??077, GTA, GTA5, ?섎뱺留? ?붿븘釉붾줈4, ?덈뜲由? ?덈뱶?곕뱶, ?ㅽ??꾨뱶, 寃??좏솕, 寃??좏솕 ?ㅺ났, Black Myth, Wukong, 理쒖떊 AAA 寃뚯엫, 怨좎궗??寃뚯엫 ??performanceLevel: "HIGH"
-                - ?깅줉?섏? ?딆? 寃뚯엫紐낆씠?쇰룄 "媛?ν븳 而댄벂??, "?뚯븘媛??而댄벂??, "?뚮젅??媛?ν븳 而댄벂??, "?ㅽ?寃뚯엫" ?쒗쁽???덉쑝硫?useCase??"gaming"?대떎.
-                - ?깅줉?섏? ?딆? 寃뚯엫???붽뎄 ?ъ뼇???뺤떊?섍린 ?대젮?곕㈃ performanceLevel? "HIGH"濡??붾떎.
-                - QHD, 144Hz, ?믪??꾨젅?? 怨좏봽?덉엫, 苡뚯쟻, ?곸샃, 怨좎샃 ??performanceLevel: "HIGH"
-                - 4K, ?덉씠?몃젅?댁떛, RT, ??듭뀡, ??? ?명듃?쇱샃?? ?명듃?? 理쒖긽?? 洹뱀긽?? ?ㅻ쾭?쒕씪?대툕 ??performanceLevel: "EXTREME"
+                게임명 / 성능 등급 규칙:
+                - 롤, 리그오브레전드 → gameName: "롤", performanceLevel: "LOW"
+                - 메이플, 피파, 서든, 스타크래프트, 발로란트 → performanceLevel: "LOW"
+                - 배그, 배틀그라운드 → gameName: "배그", performanceLevel: "MID"
+                - 에이펙스, 에이펙스레전드, 에이팩스, 에이팩스레전드, apex → gameName: "에이펙스레전드", performanceLevel: "MID"
+                - 오버워치, 로스트아크, 러스트, 러스크, Rust → performanceLevel: "MID"
+                - 사이버펑크, 사이버펑크2077, GTA, GTA5, 엘든링, 디아블로4, 레데리, 레드데드, 스타필드, 검은신화, 검은신화 오공, Black Myth, Wukong, 최신 AAA 게임, 고사양 게임 → performanceLevel: "HIGH"
+                - 등록되지 않은 게임명이라도 "가능한 컴퓨터", "돌아가는 컴퓨터", "플레이 가능한 컴퓨터", "스팀게임" 표현이 있으면 useCase는 "gaming"이다.
+                - 등록되지 않은 게임의 요구 사양을 확신하기 어려우면 performanceLevel은 "HIGH"로 둔다.
+                - QHD, 144Hz, 높은프레임, 고프레임, 쾌적, 상옵, 고옵 → performanceLevel: "HIGH"
+                - 4K, 레이트레이싱, RT, 풀옵션, 풀옵, 울트라옵션, 울트라, 최상옵, 극상옵, 오버드라이브 → performanceLevel: "EXTREME"
 
-                performanceLevel? ?꾨옒 以??섎굹留??ъ슜?대씪.
+                performanceLevel은 아래 중 하나만 사용해라.
                 LOW, MID, HIGH, EXTREME, UNKNOWN
 
-                excludeAccessory????긽 true濡??붾떎.
-                tradeStatus????긽 "SALE"濡??붾떎.
+                excludeAccessory는 항상 true로 둔다.
+                tradeStatus는 항상 "SALE"로 둔다.
 
-                異쒕젰 ?뺤떇:
+                출력 형식:
                 {
                   "intent": "PRODUCT_RECOMMEND",
-                  "keyword": "而댄벂??,
+                  "keyword": "컴퓨터",
                   "minPrice": null,
                   "maxPrice": null,
                   "productType": "desktop",
                   "useCase": "gaming",
-                  "gameName": "?ъ씠踰꾪럱??,
+                  "gameName": "사이버펑크",
                   "performanceLevel": "HIGH",
                   "excludeAccessory": true,
                   "tradeStatus": "SALE"
                 }
 
-                ?ъ슜??硫붿떆吏:
+                사용자 메시지:
                 %s
                 """.formatted(message);
 
@@ -232,90 +232,90 @@ public class GeminiClientService {
 
         boolean hasUseCaseExpression = containsAny(
                 normalized,
-                "濡?,
-                "諛곌렇",
-                "諛고?洹몃씪?대뱶",
-                "?먯씠?숈뒪",
-                "?먯씠?숈뒪?덉쟾??,
-                "?먯씠?⑹뒪",
-                "?먯씠?⑹뒪?덉쟾??,
+                "롤",
+                "배그",
+                "배틀그라운드",
+                "에이펙스",
+                "에이펙스레전드",
+                "에이팩스",
+                "에이팩스레전드",
                 "apex",
-                "?ъ씠踰꾪럱??,
-                "?ъ씠踰꾪럱??077",
-                "?섎뱺留?,
+                "사이버펑크",
+                "사이버펑크2077",
+                "엘든링",
                 "gta",
-                "?덈뜲由?,
-                "?덈뱶?곕뱶",
-                "?ㅽ??꾨뱶",
-                "寃??좏솕",
-                "寃??좏솕?ㅺ났",
+                "레데리",
+                "레드데드",
+                "스타필드",
+                "검은신화",
+                "검은신화오공",
                 "blackmyth",
                 "wukong",
-                "?ъ뒪??,
-                "?ъ뒪??,
+                "러스트",
+                "러스크",
                 "rust",
-                "?ㅽ?寃뚯엫",
-                "steam寃뚯엫",
-                "?⑤윴?⑥씠??,
-                "寃뚯엫",
-                "寃뚯씠諛?,
-                "媛??,
-                "媛?ν븳",
-                "?섎룎??,
-                "?뚯븘媛??,
-                "?뚮젅??,
-                "怨좎궗??,
-                "理쒖떊寃뚯엫",
+                "스팀게임",
+                "steam게임",
+                "앨런웨이크",
+                "게임",
+                "게이밍",
+                "가능",
+                "가능한",
+                "잘돌아",
+                "돌아가는",
+                "플레이",
+                "고사양",
+                "최신게임",
                 "aaa",
                 "144hz",
                 "qhd",
                 "4k",
-                "?명듃??,
-                "???,
-                "?덉씠?몃젅?댁떛",
-                "?щТ??,
-                "??숈깮",
-                "以묓븰??,
-                "以묓븰援?,
-                "珥덈벑?숈깮",
-                "怨좊벑?숈깮",
-                "?숈깮",
-                "?낅Ц??,
-                "泥섏쓬??,
-                "泥섏쓬?ъ슜",
-                "?ъ슜?좊쭔??,
-                "?몃쭔??,
-                "遺紐⑤떂",
-                "?먮?",
-                "?좊Ъ",
-                "肄붾뵫",
-                "媛쒕컻??,
-                "?곸긽?몄쭛",
-                "?붿옄??,
-                "媛?깅퉬",
-                "愿쒖갖?",
-                "醫뗭?"
+                "울트라",
+                "풀옵",
+                "레이트레이싱",
+                "사무용",
+                "대학생",
+                "중학생",
+                "중학교",
+                "초등학생",
+                "고등학생",
+                "학생",
+                "입문용",
+                "처음쓰",
+                "처음사용",
+                "사용할만한",
+                "쓸만한",
+                "부모님",
+                "자녀",
+                "선물",
+                "코딩",
+                "개발용",
+                "영상편집",
+                "디자인",
+                "가성비",
+                "괜찮은",
+                "좋은"
         );
 
         boolean hasPriceRangeExpression = containsAny(
                 normalized,
-                "?ъ씠",
-                "遺??,
-                "?먯꽌",
-                "?댁긽",
-                "?댄븯"
+                "사이",
+                "부터",
+                "에서",
+                "이상",
+                "이하"
         ) && countPriceExpressions(message) >= 2;
 
         boolean hasPriceReasonExpression = containsAny(
                 normalized,
-                "?쒖?鍮?,
-                "?쒖씠?뉕쾶鍮?,
-                "鍮꾩떬?댁쑀",
-                "鍮꾩떬嫄곗빞",
-                "鍮꾩떬媛",
-                "鍮꾩떥",
-                "媛寃⑹씠??,
-                "媛寃⑸넂"
+                "왜케비",
+                "왜이렇게비",
+                "비싼이유",
+                "비싼거야",
+                "비싼가",
+                "비싸",
+                "가격이높",
+                "가격높"
         );
 
         String keyword = result.getKeyword();
@@ -325,20 +325,20 @@ public class GeminiClientService {
                         && keyword.trim().contains(" ")
                         && keyword.trim().length() >= 8
                         && containsAny(keyword.replaceAll("\\s+", ""),
-                        "媛??,
-                        "媛?깅퉬",
-                        "?섎룎??,
-                        "??숈깮",
-                        "以묓븰??,
-                        "以묓븰援?,
-                        "?숈깮",
-                        "?ъ슜?좊쭔??,
-                        "?몃쭔??,
-                        "?낅Ц??,
-                        "遺紐⑤떂",
-                        "?먮?",
-                        "?좊Ъ",
-                        "?щТ??);
+                        "가능",
+                        "가성비",
+                        "잘돌아",
+                        "대학생",
+                        "중학생",
+                        "중학교",
+                        "학생",
+                        "사용할만한",
+                        "쓸만한",
+                        "입문용",
+                        "부모님",
+                        "자녀",
+                        "선물",
+                        "사무용");
 
         return hasUseCaseExpression
                 || hasPriceRangeExpression
@@ -348,21 +348,21 @@ public class GeminiClientService {
 
     public String generateGeneralAnswer(String message) {
         String prompt = """
-                ?덈뒗 以묎퀬嫄곕옒 媛寃?鍮꾧탳 ?쒕퉬?ㅼ쓽 梨쀫큸?대떎.
+                너는 중고거래 가격 비교 서비스의 챗봇이다.
 
-                ?쒕퉬???ㅻ챸:
-                ???쒕퉬?ㅻ뒗 ?щ윭 以묎퀬嫄곕옒 ?뚮옯?쇱쓽 ?곹뭹???쒓납?먯꽌 寃?됲븯怨?
-                媛寃?鍮꾧탳, 李? 媛寃??뚮┝, ?쒖꽭 ?뺤씤???꾩?二쇰뒗 ?쒕퉬?ㅻ떎.
+                서비스 설명:
+                이 서비스는 여러 중고거래 플랫폼의 상품을 한곳에서 검색하고,
+                가격 비교, 찜, 가격 알림, 시세 확인을 도와주는 서비스다.
 
-                ?듬? 洹쒖튃:
-                - ?쒓뎅?대줈 ?듬??대씪.
-                - 2~3臾몄옣?쇰줈留??듬??대씪.
-                - 臾몄옣??以묎컙???딆? 留먭퀬 ?꾩꽦?대씪.
-                - 留덉?留?臾몄옣? ?꾧껐??臾몄옣?쇰줈 ?앸궡??
-                - ?쒕퉬??湲곕뒫怨?愿?⑤맂 諛⑺뼢?쇰줈 ?덈궡?대씪.
-                - ?뺤떎?섏? ?딆? ?댁슜? ?⑥젙?섏? 留덈씪.
+                답변 규칙:
+                - 한국어로 답변해라.
+                - 2~3문장으로만 답변해라.
+                - 문장을 중간에 끊지 말고 완성해라.
+                - 마지막 문장은 완결된 문장으로 끝내라.
+                - 서비스 기능과 관련된 방향으로 안내해라.
+                - 확실하지 않은 내용은 단정하지 마라.
 
-                ?ъ슜??吏덈Ц:
+                사용자 질문:
                 %s
                 """.formatted(message);
 
@@ -492,7 +492,7 @@ public class GeminiClientService {
         Long maxPrice = extractMaxPrice(message);
         String keyword = extractKeywordByRule(message);
 
-        if (containsAny(normalized, "?덈뀞", "?섏씠", "諛섍???, "hello", "hi")) {
+        if (containsAny(normalized, "안녕", "하이", "반가워", "hello", "hi")) {
             result.setIntent("GREETING");
             result.setKeyword("");
             result.setMinPrice(null);
@@ -516,9 +516,9 @@ public class GeminiClientService {
             return result;
         }
 
-        if (containsAny(normalized, "李쒕ぉ濡?, "?댁컻", "愿?ъ긽??, "愿?щぉ濡?)
-                || (normalized.contains("李?) && containsAny(normalized, "紐⑸줉", "蹂댁뿬", "議고쉶", "?뺤씤"))
-                || (normalized.contains("愿??) && containsAny(normalized, "紐⑸줉", "蹂댁뿬", "議고쉶", "?뺤씤"))) {
+        if (containsAny(normalized, "찜목록", "내찜", "관심상품", "관심목록")
+                || (normalized.contains("찜") && containsAny(normalized, "목록", "보여", "조회", "확인"))
+                || (normalized.contains("관심") && containsAny(normalized, "목록", "보여", "조회", "확인"))) {
             result.setIntent("WISHLIST_LIST");
             result.setKeyword(keyword);
             result.setMinPrice(null);
@@ -526,7 +526,7 @@ public class GeminiClientService {
             return result;
         }
 
-        if (containsAny(normalized, "媛寃⑹븣由?, "?뚮┝?ㅼ젙", "紐⑺몴媛寃?, "?щ쭩媛寃?)) {
+        if (containsAny(normalized, "가격알림", "알림설정", "목표가격", "희망가격")) {
             result.setIntent("PRICE_ALERT_GUIDE");
             result.setKeyword("");
             result.setMinPrice(null);
@@ -534,7 +534,7 @@ public class GeminiClientService {
             return result;
         }
 
-        if (normalized.contains("李?) && containsAny(normalized, "諛⑸쾿", "?대뼸寃?, "?ъ슜踰?, "?섎뒗踰?, "?댁?")) {
+        if (normalized.contains("찜") && containsAny(normalized, "방법", "어떻게", "사용법", "하는법", "어케")) {
             result.setIntent("FAQ");
             result.setKeyword("");
             result.setMinPrice(null);
@@ -542,8 +542,8 @@ public class GeminiClientService {
             return result;
         }
 
-        if (containsAny(normalized, "寃?됰갑踰?, "寃?됲븯?붾쾿", "寃?됱뼱?산쾶", "寃?됰룄?")
-                || (normalized.contains("寃??) && containsAny(normalized, "諛⑸쾿", "?대뼸寃?, "?섎뒗踰?, "?꾩?"))) {
+        if (containsAny(normalized, "검색방법", "검색하는법", "검색어떻게", "검색도움")
+                || (normalized.contains("검색") && containsAny(normalized, "방법", "어떻게", "하는법", "도움"))) {
             result.setIntent("FAQ");
             result.setKeyword("");
             result.setMinPrice(null);
@@ -562,10 +562,10 @@ public class GeminiClientService {
         if (!keyword.isBlank()
                 && (
                 containsAny(normalized,
-                        "異붿쿇", "怨⑤씪", "愿쒖갖?", "??댄븳", "??, "媛?깅퉬",
-                        "李얠븘", "蹂댁뿬", "議고쉶", "寃??,
-                        "?쒗뭹", "留ㅻЪ", "?곹뭹", "寃뚯떆臾?, "寃뚯떆湲",
-                        "?깅줉?쒖긽??, "?깅줉?곹뭹", "援щℓ", "?щ젮怨?, "?대젮怨?)
+                        "추천", "골라", "괜찮은", "저렴한", "싼", "가성비",
+                        "찾아", "보여", "조회", "검색",
+                        "제품", "매물", "상품", "게시물", "게시글",
+                        "등록된상품", "등록상품", "구매", "사려고", "살려고")
                         || isLikelyProductKeyword(keyword)
         )) {
             result.setIntent("PRODUCT_RECOMMEND");
@@ -581,7 +581,7 @@ public class GeminiClientService {
             return normalizeGamingFallback(message, result);
         }
 
-        if (containsAny(normalized, "?쒖꽭", "媛寃⑸퉬援?, "媛寃⑸?", "?쇰쭏", "理쒖?媛")) {
+        if (containsAny(normalized, "시세", "가격비교", "가격대", "얼마", "최저가")) {
             result.setIntent("PRICE_COMPARE");
             result.setKeyword(keyword);
             result.setMinPrice(minPrice);
@@ -635,7 +635,7 @@ public class GeminiClientService {
         }
 
         if (keyword.isBlank()) {
-            keyword = "?곹뭹";
+            keyword = "상품";
         }
 
         result.setKeyword(keyword);
@@ -687,18 +687,18 @@ public class GeminiClientService {
 
         if (prices.size() >= 2 && containsAny(
                 normalized,
-                "?ъ씠",
-                "?먯꽌",
-                "遺??,
+                "사이",
+                "에서",
+                "부터",
                 "~",
                 "-",
-                "??,
-                "??
+                "–",
+                "—"
         )) {
             return prices.get(0);
         }
 
-        if (containsAny(normalized, "?댁긽", "遺??)) {
+        if (containsAny(normalized, "이상", "부터")) {
             return prices.isEmpty() ? null : prices.get(0);
         }
 
@@ -721,22 +721,22 @@ public class GeminiClientService {
 
         if (prices.size() >= 2 && containsAny(
                 normalized,
-                "?ъ씠",
-                "?먯꽌",
-                "遺??,
+                "사이",
+                "에서",
+                "부터",
                 "~",
                 "-",
-                "??,
-                "??
+                "–",
+                "—"
         )) {
             return prices.get(1);
         }
 
-        if (containsAny(normalized, "?댄븯", "誘몃쭔", "?꾨옒", "源뚯?", "?덉궛", "?덉そ")) {
+        if (containsAny(normalized, "이하", "미만", "아래", "까지", "예산", "안쪽")) {
             return prices.get(prices.size() - 1);
         }
 
-        if (prices.size() == 1 && !containsAny(normalized, "?댁긽", "遺??)) {
+        if (prices.size() == 1 && !containsAny(normalized, "이상", "부터")) {
             return prices.get(0);
         }
 
@@ -751,7 +751,7 @@ public class GeminiClientService {
 
         java.util.ArrayList<Long> prices = new java.util.ArrayList<>();
 
-        Pattern rangeManwonPattern = Pattern.compile("(\\d{1,4})\\s*[~\\-?볛?\\s*(\\d{1,4})\\s*留뚯썝");
+        Pattern rangeManwonPattern = Pattern.compile("(\\d{1,4})\\s*[~\\-–—]\\s*(\\d{1,4})\\s*만원");
         Matcher rangeManwonMatcher = rangeManwonPattern.matcher(text);
 
         while (rangeManwonMatcher.find()) {
@@ -768,7 +768,7 @@ public class GeminiClientService {
             return prices;
         }
 
-        Pattern fullRangeManwonPattern = Pattern.compile("(\\d{1,4})\\s*留뚯썝\\s*[~\\-?볛?\\s*(\\d{1,4})\\s*留뚯썝");
+        Pattern fullRangeManwonPattern = Pattern.compile("(\\d{1,4})\\s*만원\\s*[~\\-–—]\\s*(\\d{1,4})\\s*만원");
         Matcher fullRangeManwonMatcher = fullRangeManwonPattern.matcher(text);
 
         while (fullRangeManwonMatcher.find()) {
@@ -785,7 +785,7 @@ public class GeminiClientService {
             return prices;
         }
 
-        Pattern rangeWonPattern = Pattern.compile("(\\d{4,})\\s*[~\\-?볛?\\s*(\\d{4,})\\s*??);
+        Pattern rangeWonPattern = Pattern.compile("(\\d{4,})\\s*[~\\-–—]\\s*(\\d{4,})\\s*원");
         Matcher rangeWonMatcher = rangeWonPattern.matcher(text);
 
         while (rangeWonMatcher.find()) {
@@ -797,7 +797,7 @@ public class GeminiClientService {
             return prices;
         }
 
-        Pattern manwonPattern = Pattern.compile("(\\d{1,4})\\s*留뚯썝");
+        Pattern manwonPattern = Pattern.compile("(\\d{1,4})\\s*만원");
         Matcher manwonMatcher = manwonPattern.matcher(text);
 
         while (manwonMatcher.find()) {
@@ -808,7 +808,7 @@ public class GeminiClientService {
             }
         }
 
-        Pattern wonPattern = Pattern.compile("(\\d{4,})\\s*??);
+        Pattern wonPattern = Pattern.compile("(\\d{4,})\\s*원");
         Matcher wonMatcher = wonPattern.matcher(text);
 
         while (wonMatcher.find()) {
@@ -828,36 +828,36 @@ public class GeminiClientService {
                 .replaceAll("\\s+", "");
 
         if (containsAny(text,
-                "?뚰뀗??,
-                "?뚰뀗?꾩뒪?꾩튂",
-                "?ㅼ쐞移?,
-                "?ㅼ쐞移쁮led",
+                "닌텐도",
+                "닌텐도스위치",
+                "스위치",
+                "스위치oled",
                 "nintendoswitch",
                 "switcholed",
-                "?뚯뒪",
-                "?뚯뒪5",
-                "?뚯뒪4",
-                "?뚮젅?댁뒪?뚯씠??,
-                "?뚮젅?댁뒪?뚯씠??",
-                "?뚮젅?댁뒪?뚯씠??",
+                "플스",
+                "플스5",
+                "플스4",
+                "플레이스테이션",
+                "플레이스테이션5",
+                "플레이스테이션4",
                 "ps5",
                 "ps4",
                 "xbox",
-                "?묒뒪諛뺤뒪",
-                "?ㅽ???,
+                "엑스박스",
+                "스팀덱",
                 "steamdeck")) {
             return "game_console";
         }
 
-        if (containsAny(text, "?명듃遺?, "?⑺깙")) {
+        if (containsAny(text, "노트북", "랩탑")) {
             return "laptop";
         }
 
-        if (containsAny(text, "而댄벂??, "?곗뒪?ы깙", "蹂몄껜", "pc")) {
+        if (containsAny(text, "컴퓨터", "데스크탑", "본체", "pc")) {
             return "desktop";
         }
 
-        if (containsAny(text, "?꾩씠??, "媛ㅻ윮??, "?ㅻ쭏?명룿", "?대???)) {
+        if (containsAny(text, "아이폰", "갤럭시", "스마트폰", "휴대폰")) {
             return "smartphone";
         }
 
@@ -872,50 +872,50 @@ public class GeminiClientService {
         String normalized = message.toLowerCase().replaceAll("\\s+", "");
 
         if (containsAny(normalized,
-                "濡?,
-                "諛곌렇",
-                "諛고?洹몃씪?대뱶",
-                "硫붿씠??,
-                "硫붿씠?뚯뒪?좊━",
-                "?먯씠?숈뒪",
-                "?먯씠?⑹뒪",
-                "?ъ씠踰꾪럱??,
-                "?섎뱺留?,
-                "寃??좏솕",
-                "寃??좏솕?ㅺ났",
+                "롤",
+                "배그",
+                "배틀그라운드",
+                "메이플",
+                "메이플스토리",
+                "에이펙스",
+                "에이팩스",
+                "사이버펑크",
+                "엘든링",
+                "검은신화",
+                "검은신화오공",
                 "blackmyth",
                 "wukong",
-                "?ъ뒪??,
-                "?ъ뒪??,
+                "러스트",
+                "러스크",
                 "rust",
-                "?ㅽ?寃뚯엫",
-                "steam寃뚯엫",
-                "寃뚯엫",
-                "寃뚯씠諛?,
-                "媛??,
-                "媛?ν븳",
-                "?뚯븘媛??,
-                "?섎룎??,
-                "?뚮젅??)) {
+                "스팀게임",
+                "steam게임",
+                "게임",
+                "게이밍",
+                "가능",
+                "가능한",
+                "돌아가는",
+                "잘돌아",
+                "플레이")) {
             return "gaming";
         }
 
         if (containsAny(normalized,
-                "以묓븰??, "以묓븰援?,
-                "珥덈벑?숈깮", "怨좊벑?숈깮",
-                "?숈깮", "?먮?")) {
+                "중학생", "중학교",
+                "초등학생", "고등학생",
+                "학생", "자녀")) {
             return "student";
         }
 
-        if (containsAny(normalized, "?щТ??, "臾몄꽌?묒뾽", "?낅Т??)) {
+        if (containsAny(normalized, "사무용", "문서작업", "업무용")) {
             return "office";
         }
 
-        if (containsAny(normalized, "肄붾뵫", "媛쒕컻??, "?꾨줈洹몃옒諛?)) {
+        if (containsAny(normalized, "코딩", "개발용", "프로그래밍")) {
             return "coding";
         }
 
-        if (containsAny(normalized, "?곸긽?몄쭛", "?붿옄??, "?ы넗??)) {
+        if (containsAny(normalized, "영상편집", "디자인", "포토샵")) {
             return "creative";
         }
 
@@ -924,17 +924,17 @@ public class GeminiClientService {
 
     private boolean isPersonalRecommendQuestion(String normalized) {
         return containsAny(normalized,
-                "?섑븳?뚯텛泥?,
-                "?섏뿉寃뚯텛泥?,
-                "?댁텛泥?,
-                "留욎땄異붿쿇",
-                "媛쒖씤異붿쿇",
-                "異붿쿇?댁쨪留뚰븳",
-                "異붿쿇?좊쭔??,
-                "?닿?醫뗭븘?좊쭔??,
-                "醫뗭븘?좊쭔?쒖긽??,
-                "?섑븳?뚮쭪??,
-                "?섏뿉寃뚮쭪??);
+                "나한테추천",
+                "나에게추천",
+                "내추천",
+                "맞춤추천",
+                "개인추천",
+                "추천해줄만한",
+                "추천할만한",
+                "내가좋아할만한",
+                "좋아할만한상품",
+                "나한테맞는",
+                "나에게맞는");
     }
 
     private boolean isItemCountQuestion(String normalized, String keyword) {
@@ -943,8 +943,8 @@ public class GeminiClientService {
         }
 
         boolean countOrExistQuestion =
-                normalized.contains("?곹뭹")
-                        && containsAny(normalized, "媛쒖닔", "紐뉕컻", "?깅줉", "?щ씪?", "?덉뼱", "?덈굹??, "?곗씠??);
+                normalized.contains("상품")
+                        && containsAny(normalized, "개수", "몇개", "등록", "올라와", "있어", "있나요", "데이터");
 
         if (!countOrExistQuestion) {
             return false;
@@ -961,12 +961,12 @@ public class GeminiClientService {
         String normalizedKeyword = keyword.replaceAll("\\s+", "").toLowerCase();
 
         if (containsAny(normalizedKeyword,
-                "?꾩씠??, "媛ㅻ윮??, "?먯뼱??, "留λ턿", "?꾩씠?⑤뱶",
-                "?좏뵆?뚯튂",
-                "?뚰뀗??, "?ㅼ쐞移?, "?뚰뀗?꾩뒪?꾩튂",
-                "?뚯뒪", "ps5", "ps4", "?ㅽ???, "xbox", "?묒뒪諛뺤뒪",
-                "?명듃遺?, "紐⑤땲??, "?ㅻ낫??, "留덉슦??, "移대찓??,
-                "而댄벂??, "?곗뒪?ы깙", "蹂몄껜", "pc")) {
+                "아이폰", "갤럭시", "에어팟", "맥북", "아이패드",
+                "애플워치",
+                "닌텐도", "스위치", "닌텐도스위치",
+                "플스", "ps5", "ps4", "스팀덱", "xbox", "엑스박스",
+                "노트북", "모니터", "키보드", "마우스", "카메라",
+                "컴퓨터", "데스크탑", "본체", "pc")) {
             return true;
         }
 
@@ -975,21 +975,21 @@ public class GeminiClientService {
 
     private boolean isSiteInfoQuestion(String normalized) {
         return containsAny(normalized,
-                "臾댁뒯?ъ씠??,
-                "?대뼡?ъ씠??,
-                "?ъ씠?몄꽕紐?,
-                "?쒕퉬?ㅼ꽕紐?,
-                "萸먰븯?붿궗?댄듃",
-                "萸먰븯?붿꽌鍮꾩뒪",
-                "?댁궗?댄듃",
-                "?섎쭏?ㅻ챸",
-                "?섎쭏媛萸?,
-                "?섎쭏?붾춴",
-                "?대뼡?쒕퉬??,
-                "?쒕퉬?ㅼ냼媛?)
+                "무슨사이트",
+                "어떤사이트",
+                "사이트설명",
+                "서비스설명",
+                "뭐하는사이트",
+                "뭐하는서비스",
+                "이사이트",
+                "하마설명",
+                "하마가뭐",
+                "하마는뭐",
+                "어떤서비스",
+                "서비스소개")
                 || (
-                containsAny(normalized, "?ъ씠??, "?쒕퉬??, "?섎쭏")
-                        && containsAny(normalized, "?ㅻ챸", "?뚭컻", "萸?, "臾댁뾿", "?뚮젮", "??댁꽌")
+                containsAny(normalized, "사이트", "서비스", "하마")
+                        && containsAny(normalized, "설명", "소개", "뭐", "무엇", "알려", "대해서")
         );
     }
 
@@ -1007,78 +1007,78 @@ public class GeminiClientService {
         String keyword = message;
 
         keyword = keyword
-                .replaceAll("\\d+\\s*留뚯썝\\s*(?댄븯???댄븯|誘몃쭔??誘몃쭔|?꾨옒???꾨옒|?댁긽???댁긽|遺??源뚯?|?덉そ|?|?ъ씠)?", "")
-                .replaceAll("\\d{1,3}(,\\d{3})+\\s*??\s*(?댄븯???댄븯|誘몃쭔??誘몃쭔|?꾨옒???꾨옒|?댁긽???댁긽|遺??源뚯?|?덉そ|?|?ъ씠)?", "")
-                .replaceAll("\\d+\\s*??\s*(?댄븯???댄븯|誘몃쭔??誘몃쭔|?꾨옒???꾨옒|?댁긽???댁긽|遺??源뚯?|?덉そ|?|?ъ씠)?", "")
+                .replaceAll("\\d+\\s*만원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|부터|까지|안쪽|대|사이)?", "")
+                .replaceAll("\\d{1,3}(,\\d{3})+\\s*원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|부터|까지|안쪽|대|사이)?", "")
+                .replaceAll("\\d+\\s*원\\s*(이하인|이하|미만인|미만|아래인|아래|이상인|이상|부터|까지|안쪽|대|사이)?", "")
 
-                .replace("異붿쿇?댁쨾", "")
-                .replace("異붿쿇", "")
-                .replace("怨⑤씪以?, "")
-                .replace("怨⑤씪", "")
-                .replace("李얠븘以?, "")
-                .replace("李얠븘", "")
-                .replace("寃?됲빐以?, "")
-                .replace("寃??, "")
-                .replace("?뚮젮以?, "")
-                .replace("蹂댁뿬以?, "")
-                .replace("蹂댁뿬", "")
-                .replace("議고쉶?댁쨾", "")
-                .replace("議고쉶", "")
-                .replace("?뺤씤?댁쨾", "")
-                .replace("?뺤씤", "")
-                .replace("?댁쨾", "")
+                .replace("추천해줘", "")
+                .replace("추천", "")
+                .replace("골라줘", "")
+                .replace("골라", "")
+                .replace("찾아줘", "")
+                .replace("찾아", "")
+                .replace("검색해줘", "")
+                .replace("검색", "")
+                .replace("알려줘", "")
+                .replace("보여줘", "")
+                .replace("보여", "")
+                .replace("조회해줘", "")
+                .replace("조회", "")
+                .replace("확인해줘", "")
+                .replace("확인", "")
+                .replace("해줘", "")
 
-                .replace("?곹뭹??, "")
-                .replace("?곹뭹", "")
-                .replace("?쒗뭹??, "")
-                .replace("?쒗뭹", "")
-                .replace("留ㅻЪ??, "")
-                .replace("留ㅻЪ", "")
-                .replace("寃뚯떆湲", "")
-                .replace("寃뚯떆臾?, "")
-                .replace("寃껊뱾??, "")
-                .replace("寃껊뱾", "")
-                .replace("寃?, "")
+                .replace("상품들", "")
+                .replace("상품", "")
+                .replace("제품들", "")
+                .replace("제품", "")
+                .replace("매물들", "")
+                .replace("매물", "")
+                .replace("게시글", "")
+                .replace("게시물", "")
+                .replace("것들이", "")
+                .replace("것들", "")
+                .replace("것", "")
 
-                .replace("?쒖꽭", "")
-                .replace("媛寃?, "")
-                .replace("鍮꾧탳", "")
-                .replace("?쇰쭏", "")
-                .replace("理쒖?媛", "")
-                .replace("?쒖씪", "")
-                .replace("媛??, "")
-                .replace("??댄븳", "")
-                .replace("??댄븯寃?, "")
-                .replace("?쇨굅", "")
-                .replace("??嫄?, "")
-                .replace("??, "")
-                .replace("?댄븯??, "")
-                .replace("?댄븯", "")
-                .replace("?꾨옒??, "")
-                .replace("?꾨옒", "")
-                .replace("誘몃쭔??, "")
-                .replace("誘몃쭔", "")
-                .replace("?댁긽??, "")
-                .replace("?댁긽", "")
-                .replace("遺??, "")
-                .replace("源뚯?", "")
-                .replace("?덉そ", "")
-                .replace("?덉궛", "")
+                .replace("시세", "")
+                .replace("가격", "")
+                .replace("비교", "")
+                .replace("얼마", "")
+                .replace("최저가", "")
+                .replace("제일", "")
+                .replace("가장", "")
+                .replace("저렴한", "")
+                .replace("저렴하게", "")
+                .replace("싼거", "")
+                .replace("싼 거", "")
+                .replace("싼", "")
+                .replace("이하인", "")
+                .replace("이하", "")
+                .replace("아래인", "")
+                .replace("아래", "")
+                .replace("미만인", "")
+                .replace("미만", "")
+                .replace("이상인", "")
+                .replace("이상", "")
+                .replace("부터", "")
+                .replace("까지", "")
+                .replace("안쪽", "")
+                .replace("예산", "")
 
-                .replace("?꾩옱", "")
-                .replace("吏湲?, "")
-                .replace("?뱀떆", "")
-                .replace("?대뼡", "")
-                .replace("萸먭?", "")
-                .replace("萸?, "")
-                .replace("?덈뒗", "")
-                .replace("?덉뼱?", "")
-                .replace("?덉뼱", "")
-                .replace("?덈굹??, "")
-                .replace("?덉쓣源?, "")
-                .replace("?덈깘", "")
-                .replace("?덉쓬", "")
-                .replace("醫", "")
+                .replace("현재", "")
+                .replace("지금", "")
+                .replace("혹시", "")
+                .replace("어떤", "")
+                .replace("뭐가", "")
+                .replace("뭐", "")
+                .replace("있는", "")
+                .replace("있어?", "")
+                .replace("있어", "")
+                .replace("있나요", "")
+                .replace("있을까", "")
+                .replace("있냐", "")
+                .replace("있음", "")
+                .replace("좀", "")
 
                 .replace("?", "")
                 .replace("!", "")
@@ -1087,30 +1087,30 @@ public class GeminiClientService {
                 .replace("'", "")
                 .replace("\"", "")
 
-                .replace("?깅줉??, "")
-                .replace("?깅줉?섏뼱?덈뒗", "")
-                .replace("?깅줉?섏뼱", "")
-                .replace("?깅줉", "")
-                .replace("?щ씪??, "")
-                .replace("?щ씪??덈뒗", "")
-                .replace("?щ씪?", "")
+                .replace("등록된", "")
+                .replace("등록되어있는", "")
+                .replace("등록되어", "")
+                .replace("등록", "")
+                .replace("올라온", "")
+                .replace("올라와있는", "")
+                .replace("올라와", "")
 
-                .replace("以묒뿉??, "")
-                .replace("以묒뿉", "")
-                .replace("?먯꽌", "")
-                .replace("?ъ씠", "")
+                .replace("중에서", "")
+                .replace("중에", "")
+                .replace("에서", "")
+                .replace("사이", "")
 
-                .replace("援щℓ?섎젮怨??섎뒗??, "")
-                .replace("援щℓ?섎젮怨?, "")
-                .replace("援щℓ?섍퀬 ?띠???, "")
-                .replace("援щℓ?섍퀬?띠???, "")
-                .replace("?щ젮怨??섎뒗??, "")
-                .replace("?щ젮怨?, "")
-                .replace("?대젮怨??섎뒗??, "")
-                .replace("?대젮怨?, "")
-                .replace("?ш퀬 ?띠???, "")
-                .replace("?ш퀬?띠???, "")
-                .replace("援щℓ", "")
+                .replace("구매하려고 하는데", "")
+                .replace("구매하려고", "")
+                .replace("구매하고 싶은데", "")
+                .replace("구매하고싶은데", "")
+                .replace("사려고 하는데", "")
+                .replace("사려고", "")
+                .replace("살려고 하는데", "")
+                .replace("살려고", "")
+                .replace("사고 싶은데", "")
+                .replace("사고싶은데", "")
+                .replace("구매", "")
 
                 .replaceAll("\\s+", " ")
                 .trim();
@@ -1132,90 +1132,90 @@ public class GeminiClientService {
 
         boolean hasComputerWord = containsAny(
                 compact,
-                "而댄벂??,
-                "?곗뒪?ы깙",
-                "蹂몄껜",
+                "컴퓨터",
+                "데스크탑",
+                "본체",
                 "pc"
         );
 
         boolean hasGameWord = containsAny(
                 compact,
-                "濡?,
-                "由ш렇?ㅻ툕?덉쟾??,
+                "롤",
+                "리그오브레전드",
                 "lol",
-                "硫붿씠??,
-                "硫붿씠?뚯뒪?좊━",
-                "?쇳뙆",
-                "?쒕뱺",
-                "?ㅽ??щ옒?꾪듃",
-                "諛곌렇",
-                "諛고?洹몃씪?대뱶",
+                "메이플",
+                "메이플스토리",
+                "피파",
+                "서든",
+                "스타크래프트",
+                "배그",
+                "배틀그라운드",
                 "pubg",
-                "?먯씠?숈뒪",
-                "?먯씠?⑹뒪",
-                "?먯씠?숈뒪?덉쟾??,
-                "?먯씠?⑹뒪?덉쟾??,
+                "에이펙스",
+                "에이팩스",
+                "에이펙스레전드",
+                "에이팩스레전드",
                 "apex",
-                "?ㅻ쾭?뚯튂",
-                "濡쒖뒪?몄븘??,
-                "濡쒖븘",
-                "諛쒕줈???,
-                "?ъ씠踰꾪럱??,
-                "?섎뱺留?,
+                "오버워치",
+                "로스트아크",
+                "로아",
+                "발로란트",
+                "사이버펑크",
+                "엘든링",
                 "gta",
-                "?붿븘釉붾줈",
-                "?ㅽ??꾨뱶",
-                "寃??좏솕",
-                "寃??좏솕?ㅺ났",
+                "디아블로",
+                "스타필드",
+                "검은신화",
+                "검은신화오공",
                 "blackmyth",
                 "wukong",
-                "?ъ뒪??,
-                "?ъ뒪??,
+                "러스트",
+                "러스크",
                 "rust",
-                "?ㅽ?寃뚯엫"
+                "스팀게임"
         );
 
         if (hasComputerWord && hasGameWord) {
-            return "而댄벂??;
+            return "컴퓨터";
         }
 
         if (containsAny(compact,
-                "?뚰뀗?꾩뒪?꾩튂oled",
-                "?ㅼ쐞移쁮led",
+                "닌텐도스위치oled",
+                "스위치oled",
                 "nintendoswitcholed",
                 "switcholed")) {
-            return "?뚰뀗???ㅼ쐞移?OLED";
+            return "닌텐도 스위치 OLED";
         }
 
         if (containsAny(compact,
-                "?뚰뀗?꾩뒪?꾩튂",
-                "?뚰뀗?꼜witch",
+                "닌텐도스위치",
+                "닌텐도switch",
                 "nintendoswitch")) {
-            return "?뚰뀗???ㅼ쐞移?;
+            return "닌텐도 스위치";
         }
 
-        if (containsAny(compact, "?뚰뀗??)) {
-            return "?뚰뀗??;
+        if (containsAny(compact, "닌텐도")) {
+            return "닌텐도";
         }
 
-        if (containsAny(compact, "?뚯뒪5", "ps5", "?뚮젅?댁뒪?뚯씠??")) {
-            return "?뚯뒪5";
+        if (containsAny(compact, "플스5", "ps5", "플레이스테이션5")) {
+            return "플스5";
         }
 
-        if (containsAny(compact, "?뚯뒪4", "ps4", "?뚮젅?댁뒪?뚯씠??")) {
-            return "?뚯뒪4";
+        if (containsAny(compact, "플스4", "ps4", "플레이스테이션4")) {
+            return "플스4";
         }
 
-        if (containsAny(compact, "?ㅽ???, "steamdeck")) {
-            return "?ㅽ???;
+        if (containsAny(compact, "스팀덱", "steamdeck")) {
+            return "스팀덱";
         }
 
-        if (containsAny(compact, "xbox", "?묒뒪諛뺤뒪")) {
+        if (containsAny(compact, "xbox", "엑스박스")) {
             return "xbox";
         }
 
         Pattern iphonePattern = Pattern.compile(
-                "(?꾩씠??\\s*(\\d{1,2})?\\s*(?꾨줈留μ뒪|?꾨줈\\s*留μ뒪|?꾨줈|max|誘몃땲|mini|plus|?뚮윭???\\s*(?!留뚯썝|??"
+                "(아이폰)\\s*(\\d{1,2})?\\s*(프로맥스|프로\\s*맥스|프로|max|미니|mini|plus|플러스)?\\s*(?!만원|원)"
         );
 
         Matcher iphoneMatcher = iphonePattern.matcher(normalized);
@@ -1241,17 +1241,17 @@ public class GeminiClientService {
             }
 
             if (model != null && !model.isBlank()) {
-                model = model.replace("?꾨줈 留μ뒪", "?꾨줈留μ뒪");
-                model = model.replace("max", "?꾨줈留μ뒪");
-                model = model.replace("mini", "誘몃땲");
-                model = model.replace("plus", "?뚮윭??);
+                model = model.replace("프로 맥스", "프로맥스");
+                model = model.replace("max", "프로맥스");
+                model = model.replace("mini", "미니");
+                model = model.replace("plus", "플러스");
                 keyword.append(" ").append(model);
             }
 
             return keyword.toString().trim();
         }
 
-        Pattern galaxyPattern = Pattern.compile("(媛ㅻ윮??\\s*(s\\d{1,2}|z\\s*?뚮┰\\d*|z\\s*?대뱶\\d*|?뚮┰\\d*|?대뱶\\d*|?명듃\\d*)?");
+        Pattern galaxyPattern = Pattern.compile("(갤럭시)\\s*(s\\d{1,2}|z\\s*플립\\d*|z\\s*폴드\\d*|플립\\d*|폴드\\d*|노트\\d*)?");
         Matcher galaxyMatcher = galaxyPattern.matcher(normalized);
 
         if (galaxyMatcher.find()) {
@@ -1266,74 +1266,74 @@ public class GeminiClientService {
             return base;
         }
 
-        if (normalized.contains("?먯뼱??)) {
-            if (normalized.contains("?꾨줈")) {
-                return "?먯뼱???꾨줈";
+        if (normalized.contains("에어팟")) {
+            if (normalized.contains("프로")) {
+                return "에어팟 프로";
             }
 
-            if (normalized.contains("留μ뒪")) {
-                return "?먯뼱??留μ뒪";
+            if (normalized.contains("맥스")) {
+                return "에어팟 맥스";
             }
 
-            if (normalized.contains("2?몃?")) {
-                return "?먯뼱??2?몃?";
+            if (normalized.contains("2세대")) {
+                return "에어팟 2세대";
             }
 
-            if (normalized.contains("3?몃?")) {
-                return "?먯뼱??3?몃?";
+            if (normalized.contains("3세대")) {
+                return "에어팟 3세대";
             }
 
-            return "?먯뼱??;
+            return "에어팟";
         }
 
-        if (normalized.contains("留λ턿")) {
-            if (normalized.contains("?꾨줈")) {
-                return "留λ턿 ?꾨줈";
+        if (normalized.contains("맥북")) {
+            if (normalized.contains("프로")) {
+                return "맥북 프로";
             }
 
-            if (normalized.contains("?먯뼱")) {
-                return "留λ턿 ?먯뼱";
+            if (normalized.contains("에어")) {
+                return "맥북 에어";
             }
 
-            return "留λ턿";
+            return "맥북";
         }
 
-        if (normalized.contains("?꾩씠?⑤뱶")) {
-            if (normalized.contains("?꾨줈")) {
-                return "?꾩씠?⑤뱶 ?꾨줈";
+        if (normalized.contains("아이패드")) {
+            if (normalized.contains("프로")) {
+                return "아이패드 프로";
             }
 
-            if (normalized.contains("?먯뼱")) {
-                return "?꾩씠?⑤뱶 ?먯뼱";
+            if (normalized.contains("에어")) {
+                return "아이패드 에어";
             }
 
-            if (normalized.contains("誘몃땲")) {
-                return "?꾩씠?⑤뱶 誘몃땲";
+            if (normalized.contains("미니")) {
+                return "아이패드 미니";
             }
 
-            return "?꾩씠?⑤뱶";
+            return "아이패드";
         }
 
-        if (normalized.contains("?좏뵆?뚯튂")) {
-            return "?좏뵆?뚯튂";
+        if (normalized.contains("애플워치")) {
+            return "애플워치";
         }
 
         String[] productWords = {
-                "?명듃遺?,
-                "紐⑤땲??,
-                "?ㅻ낫??,
-                "留덉슦??,
-                "移대찓??,
-                "而댄벂??,
-                "?곗뒪?ы깙",
-                "蹂몄껜",
+                "노트북",
+                "모니터",
+                "키보드",
+                "마우스",
+                "카메라",
+                "컴퓨터",
+                "데스크탑",
+                "본체",
                 "pc"
         };
 
         for (String productWord : productWords) {
             if (normalized.contains(productWord)) {
-                if ("?곗뒪?ы깙".equals(productWord) || "蹂몄껜".equals(productWord) || "pc".equals(productWord)) {
-                    return "而댄벂??;
+                if ("데스크탑".equals(productWord) || "본체".equals(productWord) || "pc".equals(productWord)) {
+                    return "컴퓨터";
                 }
 
                 return productWord;
@@ -1349,11 +1349,11 @@ public class GeminiClientService {
         }
 
         Set<String> removeTokens = Set.of(
-                "?", "??, "??, "媛", "??, "瑜?,
-                "濡?, "?쇰줈", "??, "?먯꽌", "?먭쾶",
-                "??, "??, "??, "留?,
-                "以?, "以묒뿉", "以묒뿉??,
-                "愿??, "???
+                "은", "는", "이", "가", "을", "를",
+                "로", "으로", "에", "에서", "에게",
+                "인", "의", "도", "만",
+                "중", "중에", "중에서",
+                "관련", "대상"
         );
 
         return Arrays.stream(keyword.split("\\s+"))
@@ -1376,8 +1376,8 @@ public class GeminiClientService {
         }
 
         String[] particles = {
-                "?쇰줈", "?먯꽌", "?먭쾶", "遺??, "源뚯?",
-                "?", "??, "??, "媛", "??, "瑜?, "??, "??, "??, "留?, "??
+                "으로", "에서", "에게", "부터", "까지",
+                "은", "는", "이", "가", "을", "를", "에", "의", "도", "만", "인"
         };
 
         for (String particle : particles) {
@@ -1431,44 +1431,44 @@ public class GeminiClientService {
 
         boolean hasRealUseCaseExpression = containsAny(
                 normalized,
-                "?ъ슜?좊쭔??,
-                "?ъ슜?좊쭔",
-                "?몃쭔??,
-                "?몃쭔",
-                "?낅Ц??,
-                "?숈깮",
-                "以묓븰??,
-                "以묓븰援?,
-                "珥덈벑?숈깮",
-                "怨좊벑?숈깮",
-                "遺紐⑤떂",
-                "?먮?",
-                "?좊Ъ",
-                "寃뚯엫",
-                "寃뚯씠諛?,
-                "濡?,
-                "硫붿씠??,
-                "諛곌렇",
-                "諛고?洹몃씪?대뱶",
-                "?먯씠?숈뒪",
-                "?먯씠?⑹뒪",
-                "?ъ씠踰꾪럱??,
-                "寃??좏솕",
-                "?ъ뒪??,
-                "?ъ뒪??,
-                "?ㅽ?寃뚯엫",
-                "媛??,
-                "媛?ν븳",
-                "?뚯븘媛??,
-                "?섎룎??,
-                "?뚮젅??,
-                "?щТ??,
-                "肄붾뵫",
-                "?곸긽?몄쭛",
-                "?붿옄??,
-                "媛?깅퉬",
-                "愿쒖갖?",
-                "醫뗭?"
+                "사용할만한",
+                "사용할만",
+                "쓸만한",
+                "쓸만",
+                "입문용",
+                "학생",
+                "중학생",
+                "중학교",
+                "초등학생",
+                "고등학생",
+                "부모님",
+                "자녀",
+                "선물",
+                "게임",
+                "게이밍",
+                "롤",
+                "메이플",
+                "배그",
+                "배틀그라운드",
+                "에이펙스",
+                "에이팩스",
+                "사이버펑크",
+                "검은신화",
+                "러스트",
+                "러스크",
+                "스팀게임",
+                "가능",
+                "가능한",
+                "돌아가는",
+                "잘돌아",
+                "플레이",
+                "사무용",
+                "코딩",
+                "영상편집",
+                "디자인",
+                "가성비",
+                "괜찮은",
+                "좋은"
         );
 
         return !hasRealUseCaseExpression;
@@ -1504,50 +1504,50 @@ public class GeminiClientService {
 
         boolean hasRealUseCaseExpression = containsAny(
                 normalized,
-                "?ъ슜?좊쭔??,
-                "?ъ슜?좊쭔",
-                "?몃쭔??,
-                "?몃쭔",
-                "?낅Ц??,
-                "?숈깮",
-                "以묓븰??,
-                "以묓븰援?,
-                "珥덈벑?숈깮",
-                "怨좊벑?숈깮",
-                "遺紐⑤떂",
-                "?먮?",
-                "?좊Ъ",
-                "寃뚯엫",
-                "寃뚯씠諛?,
-                "濡?,
-                "硫붿씠??,
-                "諛곌렇",
-                "諛고?洹몃씪?대뱶",
-                "?먯씠?숈뒪",
-                "?먯씠?⑹뒪",
-                "?ъ씠踰꾪럱??,
-                "寃??좏솕",
-                "?ъ뒪??,
-                "?ъ뒪??,
-                "?ㅽ?寃뚯엫",
-                "媛??,
-                "媛?ν븳",
-                "?뚯븘媛??,
-                "?섎룎??,
-                "?뚮젅??,
-                "?щТ??,
-                "肄붾뵫",
-                "?곸긽?몄쭛",
-                "?붿옄??,
-                "媛?깅퉬",
-                "愿쒖갖?",
-                "醫뗭?",
-                "??댄븳",
-                "??,
-                "怨좎궗??,
-                "???,
-                "?곸샃",
-                "苡뚯쟻"
+                "사용할만한",
+                "사용할만",
+                "쓸만한",
+                "쓸만",
+                "입문용",
+                "학생",
+                "중학생",
+                "중학교",
+                "초등학생",
+                "고등학생",
+                "부모님",
+                "자녀",
+                "선물",
+                "게임",
+                "게이밍",
+                "롤",
+                "메이플",
+                "배그",
+                "배틀그라운드",
+                "에이펙스",
+                "에이팩스",
+                "사이버펑크",
+                "검은신화",
+                "러스트",
+                "러스크",
+                "스팀게임",
+                "가능",
+                "가능한",
+                "돌아가는",
+                "잘돌아",
+                "플레이",
+                "사무용",
+                "코딩",
+                "영상편집",
+                "디자인",
+                "가성비",
+                "괜찮은",
+                "좋은",
+                "저렴한",
+                "싼",
+                "고사양",
+                "풀옵",
+                "상옵",
+                "쾌적"
         );
 
         if (hasRealUseCaseExpression) {
@@ -1556,15 +1556,15 @@ public class GeminiClientService {
 
         boolean hasSimpleRequestWord = containsAny(
                 normalized,
-                "異붿쿇",
-                "蹂댁뿬以?,
-                "蹂댁뿬",
-                "李얠븘以?,
-                "李얠븘",
-                "寃??,
-                "?곹뭹",
-                "?쒗뭹",
-                "留ㅻЪ"
+                "추천",
+                "보여줘",
+                "보여",
+                "찾아줘",
+                "찾아",
+                "검색",
+                "상품",
+                "제품",
+                "매물"
         );
 
         boolean isKnownProductSearch =
@@ -1590,54 +1590,54 @@ public class GeminiClientService {
 
         boolean asksPlayableComputer =
                 containsAny(normalized,
-                        "媛?ν븳而댄벂??,
-                        "媛?μ뺨?⑦꽣",
-                        "?뚯븘媛?붿뺨?⑦꽣",
-                        "?섎룎?꾧??붿뺨?⑦꽣",
-                        "?뚮젅?닿???,
-                        "?뚮젅?댄븷?섏엳?붿뺨?⑦꽣",
-                        "?ㅽ?寃뚯엫",
-                        "steam寃뚯엫",
-                        "寃뚯엫??)
+                        "가능한컴퓨터",
+                        "가능컴퓨터",
+                        "돌아가는컴퓨터",
+                        "잘돌아가는컴퓨터",
+                        "플레이가능",
+                        "플레이할수있는컴퓨터",
+                        "스팀게임",
+                        "steam게임",
+                        "게임용")
                         || (
                         containsAny(normalized,
-                                "媛??,
-                                "媛?ν븳",
-                                "?뚯븘媛",
-                                "?섎룎??,
-                                "?뚮젅??)
+                                "가능",
+                                "가능한",
+                                "돌아가",
+                                "잘돌아",
+                                "플레이")
                                 && containsAny(normalized,
-                                "而댄벂??,
-                                "?곗뒪?ы깙",
-                                "蹂몄껜",
+                                "컴퓨터",
+                                "데스크탑",
+                                "본체",
                                 "pc")
                 );
 
         boolean isDesktopRequest =
                 "desktop".equalsIgnoreCase(result.getProductType())
                         || containsAny(normalized,
-                        "而댄벂??,
-                        "?곗뒪?ы깙",
-                        "蹂몄껜",
+                        "컴퓨터",
+                        "데스크탑",
+                        "본체",
                         "pc");
 
         boolean isGameConsoleRequest =
                 "game_console".equalsIgnoreCase(result.getProductType())
                         || containsAny(normalized,
-                        "?뚯뒪",
+                        "플스",
                         "ps5",
                         "ps4",
-                        "?뚰뀗??,
-                        "?ㅼ쐞移?,
+                        "닌텐도",
+                        "스위치",
                         "xbox",
-                        "?ㅽ???);
+                        "스팀덱");
 
         if (!asksPlayableComputer || !isDesktopRequest || isGameConsoleRequest) {
             return result;
         }
 
         result.setIntent("PRODUCT_RECOMMEND");
-        result.setKeyword("而댄벂??);
+        result.setKeyword("컴퓨터");
         result.setProductType("desktop");
 
         if (result.getUseCase() == null || result.getUseCase().isBlank()) {
@@ -1674,21 +1674,21 @@ public class GeminiClientService {
 
         if (!hasKnownGame
                 && "MID".equalsIgnoreCase(result.getPerformanceLevel())
-                && containsAny(normalized, "?ㅽ?寃뚯엫", "steam寃뚯엫", "媛??, "媛?ν븳", "?뚯븘媛??, "?뚮젅??)) {
+                && containsAny(normalized, "스팀게임", "steam게임", "가능", "가능한", "돌아가는", "플레이")) {
             result.setPerformanceLevel("HIGH");
         }
 
         if (containsAny(normalized,
                 "4k",
-                "???,
-                "??듭뀡",
-                "?명듃??,
-                "?명듃?쇱샃??,
-                "理쒖긽??,
-                "洹뱀긽??,
-                "?덉씠?몃젅?댁떛",
+                "풀옵",
+                "풀옵션",
+                "울트라",
+                "울트라옵션",
+                "최상옵",
+                "극상옵",
+                "레이트레이싱",
                 "raytracing",
-                "?ㅻ쾭?쒕씪?대툕")) {
+                "오버드라이브")) {
             result.setPerformanceLevel("EXTREME");
         }
 
@@ -1704,38 +1704,38 @@ public class GeminiClientService {
         }
 
         String cleaned = message
-                .replaceAll("(?i)black\\s*myth", "寃??좏솕")
-                .replaceAll("(?i)wukong", "?ㅺ났")
-                .replaceAll("(?i)rust", "?ъ뒪??)
-                .replace("?ㅽ?寃뚯엫", "")
-                .replace("steam寃뚯엫", "")
-                .replace("以묒뿉", "")
-                .replace("以묒뿉??, "")
-                .replace("媛?ν븳", "")
-                .replace("媛??, "")
-                .replace("?뚯븘媛??, "")
-                .replace("?섎룎?꾧???, "")
-                .replace("?뚮젅??, "")
-                .replace("而댄벂??, "")
-                .replace("?곗뒪?ы깙", "")
-                .replace("蹂몄껜", "")
+                .replaceAll("(?i)black\\s*myth", "검은신화")
+                .replaceAll("(?i)wukong", "오공")
+                .replaceAll("(?i)rust", "러스트")
+                .replace("스팀게임", "")
+                .replace("steam게임", "")
+                .replace("중에", "")
+                .replace("중에서", "")
+                .replace("가능한", "")
+                .replace("가능", "")
+                .replace("돌아가는", "")
+                .replace("잘돌아가는", "")
+                .replace("플레이", "")
+                .replace("컴퓨터", "")
+                .replace("데스크탑", "")
+                .replace("본체", "")
                 .replace("pc", "")
                 .replace("PC", "")
-                .replace("異붿쿇?댁쨾", "")
-                .replace("異붿쿇", "")
-                .replace("蹂댁뿬以?, "")
-                .replace("蹂댁뿬", "")
-                .replace("李얠븘以?, "")
-                .replace("李얠븘", "")
-                .replace("寃뚯엫", "")
-                .replace("寃뚯씠諛?, "")
-                .replace("?곹뭹", "")
-                .replace("?쒗뭹", "")
-                .replace("留ㅻЪ", "")
-                .replace("??듭뀡", "")
-                .replace("???, "")
-                .replace("?명듃?쇱샃??, "")
-                .replace("?명듃??, "")
+                .replace("추천해줘", "")
+                .replace("추천", "")
+                .replace("보여줘", "")
+                .replace("보여", "")
+                .replace("찾아줘", "")
+                .replace("찾아", "")
+                .replace("게임", "")
+                .replace("게이밍", "")
+                .replace("상품", "")
+                .replace("제품", "")
+                .replace("매물", "")
+                .replace("풀옵션", "")
+                .replace("풀옵", "")
+                .replace("울트라옵션", "")
+                .replace("울트라", "")
                 .replace("4k", "")
                 .replace("4K", "")
                 .replace("QHD", "")
@@ -1774,4 +1774,3 @@ public class GeminiClientService {
         return false;
     }
 }
-

@@ -1,11 +1,11 @@
-package com.used.service.chatbot.service;
+package com.example.ffff.chatbot.service;
 
-import com.used.service.chatbot.dto.ChatAnalysisResult;
-import com.used.service.chatbot.dto.ChatMessageRequest;
-import com.used.service.chatbot.dto.ChatMessageResponse;
-import com.used.service.chatbot.dto.RecommendedItemDto;
-import com.used.service.chatbot.entity.ChatHistory;
-import com.used.service.chatbot.repository.ChatHistoryRepository;
+import com.example.ffff.chatbot.dto.ChatAnalysisResult;
+import com.example.ffff.chatbot.dto.ChatMessageRequest;
+import com.example.ffff.chatbot.dto.ChatMessageResponse;
+import com.example.ffff.chatbot.dto.RecommendedItemDto;
+import com.example.ffff.chatbot.entity.ChatHistory;
+import com.example.ffff.chatbot.repository.ChatHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,8 +47,8 @@ public class ChatbotService {
             ChatbotTemplateService.TemplateAnswer template = templateAnswer.get();
             String answer = template.getAnswer();
 
-            System.out.println("1. ?쒕??섏씠 遺꾩꽍 ?꾩슂: N");
-            System.out.println("2. ?쒕??섏씠 ?몄텧 ?щ?: N");
+            System.out.println("1. 제미나이 분석 필요: N");
+            System.out.println("2. 제미나이 호출 여부: N");
 
             logAnalysis(template.getIntent(), "", null, null, null, null, null, null);
             logUserMessage(userMessage);
@@ -69,9 +69,9 @@ public class ChatbotService {
 
         if (isLaunchPriceQuestion(userMessage)) {
             String answer = """
-                    ?꾩옱 ?섎쭏??以묎퀬嫄곕옒 留ㅻЪ???꾩옱媛, ?좎궗 ?곹뭹 ?됯퇏媛, 嫄곕옒?꾨즺 ?됯퇏媛瑜?以묒떖?쇰줈 鍮꾧탳?⑸땲??
-                    ?쒖“??異쒖떆媛???뺢???蹂꾨룄 怨듭떇 ?곗씠?곌? ?놁뼱 ?뺥솗???덈궡?섍린 ?대졄?듬땲??
-                    ???吏湲??깅줉??以묎퀬 留ㅻЪ 湲곗??쇰줈 媛寃⑹씠 ?곸젅?쒖???鍮꾧탳?대뱶由????덉뒿?덈떎.
+                    현재 하마는 중고거래 매물의 현재가, 유사 상품 평균가, 거래완료 평균가를 중심으로 비교합니다.
+                    제조사 출시가나 정가는 별도 공식 데이터가 없어 정확히 안내하기 어렵습니다.
+                    대신 지금 등록된 중고 매물 기준으로 가격이 적절한지는 비교해드릴 수 있습니다.
                     """;
 
             logUserMessage(userMessage);
@@ -106,8 +106,8 @@ public class ChatbotService {
         if (faqAnswer.isPresent()) {
             String answer = faqAnswer.get();
 
-            System.out.println("1. ?쒕??섏씠 遺꾩꽍 ?꾩슂: N");
-            System.out.println("2. ?쒕??섏씠 ?몄텧 ?щ?: N");
+            System.out.println("1. 제미나이 분석 필요: N");
+            System.out.println("2. 제미나이 호출 여부: N");
 
             logAnalysis("FAQ", "", null, null, null, null, null, null);
             logUserMessage(userMessage);
@@ -146,7 +146,7 @@ public class ChatbotService {
         logUserMessage(userMessage);
 
         if ("GREETING".equals(intent)) {
-            String answer = "?덈뀞?섏꽭?? 以묎퀬嫄곕옒 媛寃?鍮꾧탳 ?쒕퉬???섎쭏?낅땲?? ?곹뭹 寃?? 媛寃?鍮꾧탳, 李? ?쒖꽭, 媛寃??뚮┝?????臾쇱뼱蹂댁떎 ???덉뼱??";
+            String answer = "안녕하세요! 중고거래 가격 비교 서비스 하마입니다. 상품 검색, 가격 비교, 찜, 시세, 가격 알림에 대해 물어보실 수 있어요.";
 
             logBotAnswer(answer);
             saveHistory(userId, userMessage, answer, intent, "RULE");
@@ -164,8 +164,8 @@ public class ChatbotService {
             long count = recommendationService.countAvailableItems();
 
             String answer = count > 0
-                    ? "?꾩옱 ?깅줉???곹뭹? 珥?" + count + "媛쒖엯?덈떎. 李얘퀬 ?띠? ?곹뭹紐낆쓣 ?낅젰?섎㈃ 愿???곹뭹??異붿쿇?대뱶由????덉뒿?덈떎."
-                    : "?꾩옱 ?깅줉???곹뭹 ?곗씠?곕뒗 以鍮?以묒엯?덈떎. ?곹뭹 ?곗씠?곌? ?섏쭛?섎㈃ 異붿쿇 寃곌낵瑜??덈궡?대뱶由????덉뒿?덈떎.";
+                    ? "현재 등록된 상품은 총 " + count + "개입니다. 찾고 싶은 상품명을 입력하면 관련 상품을 추천해드릴 수 있습니다."
+                    : "현재 등록된 상품 데이터는 준비 중입니다. 상품 데이터가 수집되면 추천 결과를 안내해드릴 수 있습니다.";
 
             logBotAnswer(answer);
             saveHistory(userId, userMessage, answer, intent, "RULE");
@@ -180,7 +180,7 @@ public class ChatbotService {
         }
 
         if ("WISHLIST_LIST".equals(intent)) {
-            String answer = "?꾩옱 李?紐⑸줉 議고쉶 湲곕뒫? 以鍮?以묒엯?덈떎. ?곹뭹 ?곗씠?곗? 李??곗씠?곌? ?곌껐?섎㈃ 李쒗븳 ?곹뭹 紐⑸줉??蹂댁뿬?쒕┫ ???덉뒿?덈떎.";
+            String answer = "현재 찜 목록 조회 기능은 준비 중입니다. 상품 데이터와 찜 데이터가 연결되면 찜한 상품 목록을 보여드릴 수 있습니다.";
 
             logBotAnswer(answer);
             saveHistory(userId, userMessage, answer, intent, "RULE");
@@ -196,7 +196,7 @@ public class ChatbotService {
 
         if ("PERSONAL_RECOMMEND".equals(intent)) {
             if (!recommendationService.hasAvailableItems()) {
-                String answer = "?꾩쭅 ?깅줉???곹뭹 ?곗씠?곌? ?놁뒿?덈떎. ?곹뭹 ?곗씠?곌? ?섏쭛?섎㈃ 寃??湲곕줉怨??대┃ 湲곕줉??諛뷀깢?쇰줈 留욎땄 ?곹뭹??異붿쿇?대뱶由????덉뒿?덈떎.";
+                String answer = "아직 등록된 상품 데이터가 없습니다. 상품 데이터가 수집되면 검색 기록과 클릭 기록을 바탕으로 맞춤 상품을 추천해드릴 수 있습니다.";
 
                 logBotAnswer(answer);
                 saveHistory(userId, userMessage, answer, intent, "DB_PERSONAL_RECOMMEND");
@@ -214,8 +214,8 @@ public class ChatbotService {
                     recommendationService.recommendPersonalized(userId);
 
             String answer = items.isEmpty()
-                    ? "?꾩쭅 留욎땄 異붿쿇???ъ슜??寃??湲곕줉?대굹 ?대┃ 湲곕줉??遺議깊빀?덈떎. 愿???덈뒗 ?곹뭹??寃?됲븯嫄곕굹 ?곹뭹???뺤씤?섎㈃ ???뺥솗??異붿쿇??諛쏆쓣 ???덉뒿?덈떎."
-                    : "理쒓렐 寃??湲곕줉怨??뺤씤???곹뭹??諛뷀깢?쇰줈 留욎땄 ?곹뭹??異붿쿇?대뱶由닿쾶??";
+                    ? "아직 맞춤 추천에 사용할 검색 기록이나 클릭 기록이 부족합니다. 관심 있는 상품을 검색하거나 상품을 확인하면 더 정확한 추천을 받을 수 있습니다."
+                    : "최근 검색 기록과 확인한 상품을 바탕으로 맞춤 상품을 추천해드릴게요.";
 
             logBotAnswer(answer);
             saveHistory(userId, userMessage, answer, intent, "DB_PERSONAL_RECOMMEND");
@@ -231,7 +231,7 @@ public class ChatbotService {
 
         if ("PRODUCT_RECOMMEND".equals(intent)) {
             if (keyword == null || keyword.isBlank()) {
-                String answer = "李얘퀬 ?띠? ?곹뭹紐낆쓣 ?④퍡 ?낅젰??二쇱꽭?? ?덈? ?ㅼ뼱 '?꾩씠??13 蹂댁뿬以?, '?꾩씠??以묒뿉 30留뚯썝 ?댄븯 ?곹뭹 蹂댁뿬以?泥섎읆 臾쇱뼱蹂댁떎 ???덉뒿?덈떎.";
+                String answer = "찾고 싶은 상품명을 함께 입력해 주세요. 예를 들어 '아이폰 13 보여줘', '아이폰 중에 30만원 이하 상품 보여줘'처럼 물어보실 수 있습니다.";
 
                 logBotAnswer(answer);
                 saveHistory(userId, userMessage, answer, intent, "GUIDE");
@@ -248,7 +248,7 @@ public class ChatbotService {
             searchLogService.saveSearchKeyword(userId, keyword);
 
             if (!recommendationService.hasAvailableItems()) {
-                String answer = "?꾩쭅 ?깅줉???곹뭹 ?곗씠?곌? ?놁뒿?덈떎. ?곹뭹 ?곗씠?곌? ?섏쭛?섎㈃ 議곌굔??留욌뒗 ?곹뭹??異붿쿇?대뱶由????덉뒿?덈떎.";
+                String answer = "아직 등록된 상품 데이터가 없습니다. 상품 데이터가 수집되면 조건에 맞는 상품을 추천해드릴 수 있습니다.";
 
                 logBotAnswer(answer);
                 saveHistory(userId, userMessage, answer, intent, "DB_RECOMMEND");
@@ -266,11 +266,11 @@ public class ChatbotService {
                     recommendationService.recommendByAnalysisResult(userId, analysis);
 
             /*
-             * 以묒슂:
-             * ?ш린??Gemini瑜??ㅼ떆 ?몄텧?섏? ?딅뒗??
-             * analyzeMessage() ?④퀎?먯꽌 ?대? Gemini 遺꾩꽍???앸궗湲??뚮Ц??
-             * 寃??寃곌낵媛 ?녿떎怨??ㅼ떆 analyzeMessageWithGemini()瑜??몄텧?섎㈃
-             * keyword媛 鍮?媛믪쑝濡???씠嫄곕굹 議곌굔???붾뱾由????덈떎.
+             * 중요:
+             * 여기서 Gemini를 다시 호출하지 않는다.
+             * analyzeMessage() 단계에서 이미 Gemini 분석이 끝났기 때문에,
+             * 검색 결과가 없다고 다시 analyzeMessageWithGemini()를 호출하면
+             * keyword가 빈 값으로 덮이거나 조건이 흔들릴 수 있다.
              */
 
             String answer = makeRecommendationAnswer(
@@ -297,7 +297,7 @@ public class ChatbotService {
 
         if ("PRICE_COMPARE".equals(intent)) {
             if (keyword == null || keyword.isBlank()) {
-                String answer = "?쒖꽭瑜??뺤씤???곹뭹紐낆쓣 ?④퍡 ?낅젰??二쇱꽭?? ?덈? ?ㅼ뼱 '?꾩씠??14 ?쒖꽭 ?뚮젮以?泥섎읆 臾쇱뼱蹂댁떎 ???덉뒿?덈떎.";
+                String answer = "시세를 확인할 상품명을 함께 입력해 주세요. 예를 들어 '아이폰 14 시세 알려줘'처럼 물어보실 수 있습니다.";
 
                 logBotAnswer(answer);
                 saveHistory(userId, userMessage, answer, intent, "GUIDE");
@@ -312,7 +312,7 @@ public class ChatbotService {
             }
 
             if (!recommendationService.hasAvailableItems()) {
-                String answer = "?꾩쭅 ?깅줉???곹뭹 ?곗씠?곌? ?놁뒿?덈떎. ?곹뭹 ?곗씠?곌? ?섏쭛?섎㈃ ?쒖꽭? 媛寃?鍮꾧탳 寃곌낵瑜?蹂댁뿬?쒕┫ ???덉뒿?덈떎.";
+                String answer = "아직 등록된 상품 데이터가 없습니다. 상품 데이터가 수집되면 시세와 가격 비교 결과를 보여드릴 수 있습니다.";
 
                 logBotAnswer(answer);
                 saveHistory(userId, userMessage, answer, intent, "DB_PRICE_COMPARE");
@@ -347,8 +347,8 @@ public class ChatbotService {
 
         if ("PRICE_ALERT_GUIDE".equals(intent)) {
             String answer = """
-                    媛寃??뚮┝? ?곹뭹??李쒗븳 ??紐⑺몴 媛寃⑹쓣 ?ㅼ젙?섎㈃ ?ъ슜?????덉뒿?덈떎.
-                    ?대떦 ?곹뭹???꾩옱 媛寃⑹씠 紐⑺몴 媛寃??댄븯濡??대젮媛硫??뚮┝ ??곸쑝濡?泥섎━?????덉뒿?덈떎.
+                    가격 알림은 상품을 찜한 뒤 목표 가격을 설정하면 사용할 수 있습니다.
+                    해당 상품의 현재 가격이 목표 가격 이하로 내려가면 알림 대상으로 처리할 수 있습니다.
                     """;
 
             logBotAnswer(answer);
@@ -364,7 +364,7 @@ public class ChatbotService {
         }
 
         if ("SEARCH_HELP".equals(intent)) {
-            String answer = "寃?됱갹???곹뭹紐낆쓣 ?낅젰?섎㈃ ?щ윭 以묎퀬嫄곕옒 ?뚮옯?쇱쓽 ?곹뭹???쒓납?먯꽌 鍮꾧탳?????덉뒿?덈떎. ?덈? ?ㅼ뼱 '?꾩씠??14', '媛ㅻ윮??S23', '?먯뼱???꾨줈'泥섎읆 ?낅젰?섎㈃ ?⑸땲??";
+            String answer = "검색창에 상품명을 입력하면 여러 중고거래 플랫폼의 상품을 한곳에서 비교할 수 있습니다. 예를 들어 '아이폰 14', '갤럭시 S23', '에어팟 프로'처럼 입력하면 됩니다.";
 
             logBotAnswer(answer);
             saveHistory(userId, userMessage, answer, intent, "GUIDE");
@@ -379,9 +379,9 @@ public class ChatbotService {
         }
 
         String defaultAnswer = """
-                ?꾩쭅 洹?吏덈Ц? ?뺥솗???댄빐?섏? 紐삵뻽?댁슂.
-                ?섎쭏?먯꽌???곹뭹 寃?? 媛寃?鍮꾧탳, 李? ?쒖꽭, 媛寃??뚮┝ 愿??吏덈Ц???꾩??쒕┫ ???덉뒿?덈떎.
-                ?덈? ?ㅼ뼱 '?꾩씠??13 ??댄븳 ?곹뭹 李얠븘以?, '李??섎뒗 諛⑸쾿 ?뚮젮以?, '媛寃??뚮┝? ?대뼸寃??ㅼ젙??'泥섎읆 臾쇱뼱蹂댁떎 ???덉뼱??
+                아직 그 질문은 정확히 이해하지 못했어요.
+                하마에서는 상품 검색, 가격 비교, 찜, 시세, 가격 알림 관련 질문을 도와드릴 수 있습니다.
+                예를 들어 '아이폰 13 저렴한 상품 찾아줘', '찜 하는 방법 알려줘', '가격 알림은 어떻게 설정해?'처럼 물어보실 수 있어요.
                 """;
 
         logBotAnswer(defaultAnswer);
@@ -406,7 +406,7 @@ public class ChatbotService {
             List<RecommendedItemDto> items
     ) {
         if (keyword == null || keyword.isBlank()) {
-            return "李얘퀬 ?띠? ?곹뭹紐낆쓣 ?④퍡 ?낅젰??二쇱꽭?? ?덈? ?ㅼ뼱 '?꾩씠??13 蹂댁뿬以?, '諛곌렇 媛?ν븳 而댄벂??蹂댁뿬以?泥섎읆 臾쇱뼱蹂댁떎 ???덉뒿?덈떎.";
+            return "찾고 싶은 상품명을 함께 입력해 주세요. 예를 들어 '아이폰 13 보여줘', '배그 가능한 컴퓨터 보여줘'처럼 물어보실 수 있습니다.";
         }
 
         boolean isGaming = "gaming".equalsIgnoreCase(useCase);
@@ -414,32 +414,32 @@ public class ChatbotService {
 
         if (items.isEmpty()) {
             if (isGaming) {
-                return "'" + keyword + "' 愿???곹뭹 以?"
+                return "'" + keyword + "' 관련 상품 중 "
                         + normalizeGameLabel(gameName)
-                        + " ?뚮젅???꾨낫瑜?"
+                        + " 플레이 후보를 "
                         + performanceLevelToKorean(performanceLevel)
-                        + " 湲곗??쇰줈 李얠? 紐삵뻽?듬땲?? ?꾩옱 ?곹뭹 ?쒕ぉ???ъ뼇 ?뺣낫媛 遺議깊븯嫄곕굹 議곌굔??留욌뒗 ?곹뭹???놁쓣 ???덉뒿?덈떎.";
+                        + " 기준으로 찾지 못했습니다. 현재 상품 제목에 사양 정보가 부족하거나 조건에 맞는 상품이 없을 수 있습니다.";
             }
 
             if (isStudent) {
-                return "'" + keyword + "' 愿???곹뭹 以??숈깮?⑹쑝濡?異붿쿇??留뚰븳 ?곹뭹??李얠? 紐삵뻽?듬땲?? ?곹뭹 ?곗씠?곌? ?꾩쭅 遺議깊븯嫄곕굹 議곌굔??留욌뒗 ?곹뭹???놁쓣 ???덉뒿?덈떎.";
+                return "'" + keyword + "' 관련 상품 중 학생용으로 추천할 만한 상품을 찾지 못했습니다. 상품 데이터가 아직 부족하거나 조건에 맞는 상품이 없을 수 있습니다.";
             }
 
             if (minPrice != null && maxPrice != null) {
-                return "'" + keyword + "' 愿???곹뭹 以?"
+                return "'" + keyword + "' 관련 상품 중 "
                         + String.format("%,d", minPrice)
-                        + "???댁긽 "
+                        + "원 이상 "
                         + String.format("%,d", maxPrice)
-                        + "???댄븯 議곌굔??留욌뒗 ?곹뭹??李얠? 紐삵뻽?듬땲??";
+                        + "원 이하 조건에 맞는 상품을 찾지 못했습니다.";
             }
 
             if (maxPrice != null && maxPrice > 0) {
-                return "'" + keyword + "' 愿???곹뭹 以?"
+                return "'" + keyword + "' 관련 상품 중 "
                         + String.format("%,d", maxPrice)
-                        + "???댄븯 議곌굔??留욌뒗 ?곹뭹??李얠? 紐삵뻽?듬땲??";
+                        + "원 이하 조건에 맞는 상품을 찾지 못했습니다.";
             }
 
-            return "議곌굔??留욌뒗 異붿쿇 ?곹뭹??李얠? 紐삵뻽?듬땲?? ?곹뭹紐낆씠 ?꾩쭅 ?섏쭛?섏? ?딆븯嫄곕굹 寃??踰붿쐞媛 ?덈Т ?볦쓣 ???덉뒿?덈떎.";
+            return "조건에 맞는 추천 상품을 찾지 못했습니다. 상품명이 아직 수집되지 않았거나 검색 범위가 너무 넓을 수 있습니다.";
         }
 
         if (isGaming) {
@@ -447,48 +447,48 @@ public class ChatbotService {
 
             if (specGuide != null && !specGuide.isBlank()) {
                 return specGuide + "\n\n"
-                        + "?꾨옒??"
+                        + "아래는 "
                         + normalizeGameLabel(gameName)
-                        + " ?뚮젅?댁슜?쇰줈 蹂?留뚰븳 以묎퀬 "
+                        + " 플레이용으로 볼 만한 중고 "
                         + keyword
-                        + " ?꾨낫?낅땲??";
+                        + " 후보입니다.";
             }
 
-            return "'" + keyword + "' 愿???곹뭹 以?"
+            return "'" + keyword + "' 관련 상품 중 "
                     + normalizeGameLabel(gameName)
-                    + " ?뚮젅???꾨낫瑜?"
+                    + " 플레이 후보를 "
                     + performanceLevelToKorean(performanceLevel)
-                    + " 湲곗??쇰줈 ?뺣━?덉뒿?덈떎.";
+                    + " 기준으로 정리했습니다.";
         }
 
         if (isStudent) {
-            return "'" + keyword + "' 愿???곹뭹 以??숈깮?⑹쑝濡??곌린 ?곷떦???꾨낫瑜?媛寃⑷낵 異붿쿇 湲곗??쇰줈 ?뺣━?덉뒿?덈떎.";
+            return "'" + keyword + "' 관련 상품 중 학생용으로 쓰기 적당한 후보를 가격과 추천 기준으로 정리했습니다.";
         }
 
         if (minPrice != null && maxPrice != null) {
-            return "'" + keyword + "' 愿???곹뭹 以?"
+            return "'" + keyword + "' 관련 상품 중 "
                     + String.format("%,d", minPrice)
-                    + "???댁긽 "
+                    + "원 이상 "
                     + String.format("%,d", maxPrice)
-                    + "???댄븯 ?곹뭹??異붿쿇?쒖쑝濡??뺣━?덉뒿?덈떎.";
+                    + "원 이하 상품을 추천순으로 정리했습니다.";
         }
 
         if (maxPrice != null && maxPrice > 0) {
-            return "'" + keyword + "' 愿???곹뭹 以?"
+            return "'" + keyword + "' 관련 상품 중 "
                     + String.format("%,d", maxPrice)
-                    + "???댄븯 ?곹뭹??媛寃⑷낵 異붿쿇 湲곗??쇰줈 ?뺣━?덉뒿?덈떎.";
+                    + "원 이하 상품을 가격과 추천 기준으로 정리했습니다.";
         }
 
-        return "'" + keyword + "' 愿???곹뭹 以?媛寃? ?좏샇?? 理쒖떊?깆쓣 湲곗??쇰줈 異붿쿇 ?곹뭹???뺣━?덉뒿?덈떎.";
+        return "'" + keyword + "' 관련 상품 중 가격, 선호도, 최신성을 기준으로 추천 상품을 정리했습니다.";
     }
 
     private String makePriceCompareAnswer(String keyword, List<RecommendedItemDto> items) {
         if (keyword == null || keyword.isBlank()) {
-            return "?쒖꽭瑜??뺤씤???곹뭹紐낆쓣 ?④퍡 ?낅젰??二쇱꽭?? ?덈? ?ㅼ뼱 '?꾩씠??14 ?쒖꽭 ?뚮젮以?泥섎읆 臾쇱뼱蹂댁떎 ???덉뒿?덈떎.";
+            return "시세를 확인할 상품명을 함께 입력해 주세요. 예를 들어 '아이폰 14 시세 알려줘'처럼 물어보실 수 있습니다.";
         }
 
         if (items.isEmpty()) {
-            return "?쒖꽭 鍮꾧탳 ????곹뭹??李얠? 紐삵뻽?듬땲?? ?곹뭹紐낆씠 ?꾩쭅 ?섏쭛?섏? ?딆븯嫄곕굹 寃??踰붿쐞媛 ?덈Т ?볦쓣 ???덉뒿?덈떎.";
+            return "시세 비교 대상 상품을 찾지 못했습니다. 상품명이 아직 수집되지 않았거나 검색 범위가 너무 넓을 수 있습니다.";
         }
 
         Long minPrice = items.stream()
@@ -504,19 +504,19 @@ public class ChatbotService {
                 .orElse(null);
 
         if (minPrice == null || maxPrice == null) {
-            return "'" + keyword + "' 愿???곹뭹??李얠븯?듬땲?? 媛寃??뺣낫媛 ?덈뒗 ?곹뭹 ?꾩＜濡??뺤씤??二쇱꽭??";
+            return "'" + keyword + "' 관련 상품을 찾았습니다. 가격 정보가 있는 상품 위주로 확인해 주세요.";
         }
 
-        return "'" + keyword + "' 愿???곹뭹???꾩옱 媛寃⑸?????"
+        return "'" + keyword + "' 관련 상품의 현재 가격대는 약 "
                 + String.format("%,d", minPrice)
-                + "??~ "
+                + "원 ~ "
                 + String.format("%,d", maxPrice)
-                + "?먯엯?덈떎. ?꾨옒 ?곹뭹?ㅼ쓣 湲곗??쇰줈 鍮꾧탳??蹂댁꽭??";
+                + "원입니다. 아래 상품들을 기준으로 비교해 보세요.";
     }
 
     private String normalizeGameLabel(String gameName) {
         if (gameName == null || gameName.isBlank()) {
-            return "寃뚯엫";
+            return "게임";
         }
 
         return gameName;
@@ -524,17 +524,17 @@ public class ChatbotService {
 
     private String performanceLevelToKorean(String performanceLevel) {
         if (performanceLevel == null || performanceLevel.isBlank()) {
-            return "寃뚯엫??;
+            return "게임용";
         }
 
         return switch (performanceLevel.toUpperCase()) {
-            case "LOW" -> "??? ?ъ뼇";
-            case "MID" -> "以묎컙 ?ъ뼇";
-            case "HIGH" -> "?믪? ?ъ뼇";
-            case "VERY_HIGH" -> "怨좎궗??;
-            case "ULTRA" -> "?곴툒 ?ъ뼇";
-            case "EXTREME" -> "理쒖긽湲??ъ뼇";
-            default -> "寃뚯엫??;
+            case "LOW" -> "낮은 사양";
+            case "MID" -> "중간 사양";
+            case "HIGH" -> "높은 사양";
+            case "VERY_HIGH" -> "고사양";
+            case "ULTRA" -> "상급 사양";
+            case "EXTREME" -> "최상급 사양";
+            default -> "게임용";
         };
     }
 
@@ -569,7 +569,7 @@ public class ChatbotService {
             String gameName,
             String performanceLevel
     ) {
-        System.out.println("3. 梨쀫큸 遺꾩꽍 寃곌낵: "
+        System.out.println("3. 챗봇 분석 결과: "
                 + "intent=" + intent
                 + ", keyword=" + keyword
                 + ", minPrice=" + minPrice
@@ -581,11 +581,11 @@ public class ChatbotService {
     }
 
     private void logUserMessage(String userMessage) {
-        System.out.println("4. ?ъ슜??梨꾪똿: " + userMessage);
+        System.out.println("4. 사용자 채팅: " + userMessage);
     }
 
     private void logBotAnswer(String answer) {
-        System.out.println("5. 梨쀫큸 ?듬?: " + answer.replaceAll("\\s+", " ").trim());
+        System.out.println("5. 챗봇 답변: " + answer.replaceAll("\\s+", " ").trim());
     }
 
     private String safeIntent(String intent) {
@@ -617,41 +617,41 @@ public class ChatbotService {
                 .replaceAll("\\s+", "")
                 .toLowerCase();
 
-        if (normalized.contains("?섑봽??)
+        if (normalized.contains("래프트")
                 || normalized.contains("raft")) {
-            return "?섑봽??;
+            return "래프트";
         }
 
-        if (normalized.contains("諛곌렇")
-                || normalized.contains("諛고?洹몃씪?대뱶")
+        if (normalized.contains("배그")
+                || normalized.contains("배틀그라운드")
                 || normalized.contains("pubg")) {
-            return "諛곌렇";
+            return "배그";
         }
 
-        if (normalized.contains("?ъ뒪??)
+        if (normalized.contains("러스트")
                 || normalized.contains("rust")) {
-            return "?ъ뒪??;
+            return "러스트";
         }
 
-        if (normalized.contains("濡?)
-                || normalized.contains("由ш렇?ㅻ툕?덉쟾??)
+        if (normalized.contains("롤")
+                || normalized.contains("리그오브레전드")
                 || normalized.contains("lol")) {
-            return "濡?;
+            return "롤";
         }
 
-        if (normalized.contains("?ㅻ쾭?뚯튂")
+        if (normalized.contains("오버워치")
                 || normalized.contains("overwatch")) {
-            return "?ㅻ쾭?뚯튂";
+            return "오버워치";
         }
 
-        if (normalized.contains("諛쒕줈???)
+        if (normalized.contains("발로란트")
                 || normalized.contains("valorant")) {
-            return "諛쒕줈???;
+            return "발로란트";
         }
 
-        if (normalized.contains("留덉씤?щ옒?꾪듃")
+        if (normalized.contains("마인크래프트")
                 || normalized.contains("minecraft")) {
-            return "留덉씤?щ옒?꾪듃";
+            return "마인크래프트";
         }
 
         return null;
@@ -664,22 +664,22 @@ public class ChatbotService {
 
         String normalized = message.replaceAll("\\s+", "");
 
-        return normalized.contains("援щℓ?대룄")
-                || normalized.contains("?щ룄??)
-                || normalized.contains("?щ룄??)
-                || normalized.contains("?대쭔??)
-                || normalized.contains("愿쒖갖?媛寃?)
-                || normalized.contains("鍮꾩떬媛")
-                || normalized.contains("鍮꾩떬")
-                || normalized.contains("鍮꾩떥")
-                || normalized.contains("?쒖?鍮?)
-                || normalized.contains("?쒖씠?뉕쾶鍮?)
-                || normalized.contains("媛寃⑹씠??)
-                || normalized.contains("媛寃⑸넂")
-                || normalized.contains("?쇨?")
-                || normalized.contains("?곸젙媛")
-                || normalized.contains("?대옒留먮옒")
-                || normalized.contains("媛寃⑷킐李?);
+        return normalized.contains("구매해도")
+                || normalized.contains("사도돼")
+                || normalized.contains("사도되")
+                || normalized.contains("살만해")
+                || normalized.contains("괜찮은가격")
+                || normalized.contains("비싼가")
+                || normalized.contains("비싼")
+                || normalized.contains("비싸")
+                || normalized.contains("왜케비")
+                || normalized.contains("왜이렇게비")
+                || normalized.contains("가격이높")
+                || normalized.contains("가격높")
+                || normalized.contains("싼가")
+                || normalized.contains("적정가")
+                || normalized.contains("살래말래")
+                || normalized.contains("가격괜찮");
     }
 
     private boolean isLaunchPriceQuestion(String message) {
@@ -689,13 +689,12 @@ public class ChatbotService {
 
         String normalized = message.replaceAll("\\s+", "");
 
-        return normalized.contains("異쒖떆媛")
-                || normalized.contains("?뺢?")
-                || normalized.contains("異쒓퀬媛")
-                || normalized.contains("諛쒕ℓ媛")
-                || normalized.contains("?덉젣?덇?寃?)
-                || normalized.contains("?좏뭹媛寃?)
-                || normalized.contains("以묎퀬留먭퀬");
+        return normalized.contains("출시가")
+                || normalized.contains("정가")
+                || normalized.contains("출고가")
+                || normalized.contains("발매가")
+                || normalized.contains("새제품가격")
+                || normalized.contains("신품가격")
+                || normalized.contains("중고말고");
     }
 }
-

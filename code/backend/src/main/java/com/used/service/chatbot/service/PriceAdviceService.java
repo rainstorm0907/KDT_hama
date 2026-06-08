@@ -1,7 +1,7 @@
-package com.used.service.chatbot.service;
+package com.example.ffff.chatbot.service;
 
-import com.used.service.chatbot.repository.ItemRepository;
-import com.used.service.chatbot.repository.projection.PriceStatsProjection;
+import com.example.ffff.chatbot.repository.ItemRepository;
+import com.example.ffff.chatbot.repository.projection.PriceStatsProjection;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,13 +18,13 @@ public class PriceAdviceService {
     @Transactional(readOnly = true)
     public String makePriceAdvice(Long itemId) {
         if (itemId == null) {
-            return "?꾩옱 蹂닿퀬 ?덈뒗 ?곹뭹 ?뺣낫瑜?李얠? 紐삵뻽?듬땲?? ?곹뭹 ?곸꽭?섏씠吏?먯꽌 ?ㅼ떆 吏덈Ц??二쇱꽭??";
+            return "현재 보고 있는 상품 정보를 찾지 못했습니다. 상품 상세페이지에서 다시 질문해 주세요.";
         }
 
         PriceStatsProjection stats = itemRepository.findPriceStatsByItemId(itemId);
 
         if (stats == null || stats.getCurrentPrice() == null) {
-            return "???곹뭹??媛寃??뺣낫瑜?李얠? 紐삵뻽?듬땲??";
+            return "이 상품의 가격 정보를 찾지 못했습니다.";
         }
 
         long currentPrice = stats.getCurrentPrice();
@@ -35,9 +35,9 @@ public class PriceAdviceService {
         long soldCount = stats.getSoldCount() == null ? 0 : stats.getSoldCount();
 
         if (averageListingPrice == null || listingCount < 3) {
-            return "鍮꾩듂???곹뭹 ?곗씠?곌? ?꾩쭅 遺議깊빐???됯퇏 媛寃⑷낵 鍮꾧탳?섍린 ?대졄?듬땲?? ?꾩옱 媛寃⑹? "
+            return "비슷한 상품 데이터가 아직 부족해서 평균 가격과 비교하기 어렵습니다. 현재 가격은 "
                     + won(currentPrice)
-                    + "?낅땲??";
+                    + "입니다.";
         }
 
         long avgListing = Math.round(averageListingPrice);
@@ -45,57 +45,57 @@ public class PriceAdviceService {
 
         StringBuilder answer = new StringBuilder();
 
-        answer.append("???곹뭹???꾩옱媛??")
+        answer.append("이 상품의 현재가는 ")
                 .append(won(currentPrice))
-                .append("?낅땲??\n");
+                .append("입니다.\n");
 
-        answer.append("鍮꾩듂???곹뭹 ")
+        answer.append("비슷한 상품 ")
                 .append(listingCount)
-                .append("媛쒖쓽 ?됯퇏 留ㅻЪ媛??")
+                .append("개의 평균 매물가는 ")
                 .append(won(avgListing))
-                .append("?낅땲??\n");
+                .append("입니다.\n");
 
         if (averageSoldPrice != null && soldCount > 0) {
             long avgSold = Math.round(averageSoldPrice);
             long diffFromSold = avgSold - currentPrice;
 
-            answer.append("嫄곕옒?꾨즺 ?곹뭹 ")
+            answer.append("거래완료 상품 ")
                     .append(soldCount)
-                    .append("媛쒖쓽 ?됯퇏 嫄곕옒媛??")
+                    .append("개의 평균 거래가는 ")
                     .append(won(avgSold))
-                    .append("?낅땲??\n");
+                    .append("입니다.\n");
 
             if (diffFromSold > 0) {
-                answer.append("?됯퇏 嫄곕옒媛蹂대떎 ??")
+                answer.append("평균 거래가보다 약 ")
                         .append(won(diffFromSold))
-                        .append(" ??댄빐?? 吏湲?媛寃⑹? 苑?愿쒖갖? ?몄엯?덈떎.");
+                        .append(" 저렴해서, 지금 가격은 꽤 괜찮은 편입니다.");
             } else if (diffFromSold < 0) {
-                answer.append("?됯퇏 嫄곕옒媛蹂대떎 ??")
+                answer.append("평균 거래가보다 약 ")
                         .append(won(Math.abs(diffFromSold)))
-                        .append(" 鍮꾩떥?? 議곌툑 ??媛寃⑹쓣 鍮꾧탳?대낫??寃?醫뗭뒿?덈떎.");
+                        .append(" 비싸서, 조금 더 가격을 비교해보는 게 좋습니다.");
             } else {
-                answer.append("?됯퇏 嫄곕옒媛? 嫄곗쓽 鍮꾩듂???섏??낅땲??");
+                answer.append("평균 거래가와 거의 비슷한 수준입니다.");
             }
 
             return answer.toString();
         }
 
         if (diffFromListing > 0) {
-            answer.append("?됯퇏 留ㅻЪ媛蹂대떎 ??")
+            answer.append("평균 매물가보다 약 ")
                     .append(won(diffFromListing))
-                    .append(" ??댄빀?덈떎. 嫄곕옒?꾨즺 ?곗씠?곕뒗 遺議깊븯吏留? ?꾩옱 留ㅻЪ 湲곗??쇰줈??醫뗭? 媛寃⑹엯?덈떎.");
+                    .append(" 저렴합니다. 거래완료 데이터는 부족하지만, 현재 매물 기준으로는 좋은 가격입니다.");
         } else if (diffFromListing < 0) {
-            answer.append("?됯퇏 留ㅻЪ媛蹂대떎 ??")
+            answer.append("평균 매물가보다 약 ")
                     .append(won(Math.abs(diffFromListing)))
-                    .append(" 鍮꾩뙃?덈떎. 諛붾줈 援щℓ?섍린蹂대떎??鍮꾩듂???곹뭹????鍮꾧탳?대낫??寃?醫뗭뒿?덈떎.");
+                    .append(" 비쌉니다. 바로 구매하기보다는 비슷한 상품을 더 비교해보는 게 좋습니다.");
         } else {
-            answer.append("?됯퇏 留ㅻЪ媛? 嫄곗쓽 鍮꾩듂???섏??낅땲??");
+            answer.append("평균 매물가와 거의 비슷한 수준입니다.");
         }
 
         return answer.toString();
     }
 
     private String won(long price) {
-        return NumberFormat.getNumberInstance(Locale.KOREA).format(price) + "??;
+        return NumberFormat.getNumberInstance(Locale.KOREA).format(price) + "원";
     }
 }

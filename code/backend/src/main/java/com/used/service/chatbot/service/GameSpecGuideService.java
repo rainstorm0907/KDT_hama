@@ -1,4 +1,4 @@
-package com.used.service.chatbot.service;
+package com.example.ffff.chatbot.service;
 
 import org.springframework.stereotype.Service;
 
@@ -14,19 +14,19 @@ public class GameSpecGuideService {
                 .replaceAll("\\s+", "")
                 .toLowerCase();
 
-        if (normalizedGameName.contains("諛곌렇")
-                || normalizedGameName.contains("諛고?洹몃씪?대뱶")
+        if (normalizedGameName.contains("배그")
+                || normalizedGameName.contains("배틀그라운드")
                 || normalizedGameName.contains("pubg")) {
             return makePubgGuide(performanceLevel);
         }
 
-        if (normalizedGameName.contains("?ъ뒪??)
+        if (normalizedGameName.contains("러스트")
                 || normalizedGameName.contains("rust")) {
             return makeRustGuide(performanceLevel);
         }
 
-        if (normalizedGameName.contains("濡?)
-                || normalizedGameName.contains("由ш렇?ㅻ툕?덉쟾??)
+        if (normalizedGameName.contains("롤")
+                || normalizedGameName.contains("리그오브레전드")
                 || normalizedGameName.contains("lol")) {
             return makeLolGuide(performanceLevel);
         }
@@ -37,52 +37,52 @@ public class GameSpecGuideService {
     private String makePubgGuide(String performanceLevel) {
         if ("HIGH".equalsIgnoreCase(performanceLevel)) {
             return """
-                    諛고?洹몃씪?대뱶瑜??먰솢?섍쾶 ?섎젮硫??믪? ?듭뀡 湲곗??쇰줈 ?꾨옒 ?뺣룄瑜?異붿쿇?⑸땲??
+                    배틀그라운드를 원활하게 하려면 높은 옵션 기준으로 아래 정도를 추천합니다.
 
-                    CPU: ?명뀛 i5 12?몃? ?댁긽 ?먮뒗 ?쇱씠??5 5600 ?댁긽
-                    GPU: RTX 3060 / RTX 4060 ?댁긽
-                    RAM: 16GB ?댁긽, 媛?ν븯硫?32GB
-                    ??μ옣移? SSD 512GB ?댁긽
+                    CPU: 인텔 i5 12세대 이상 또는 라이젠 5 5600 이상
+                    GPU: RTX 3060 / RTX 4060 이상
+                    RAM: 16GB 이상, 가능하면 32GB
+                    저장장치: SSD 512GB 이상
 
-                    以묎퀬 援щℓ 湲곗??쇰줈??70留?110留??먮? 寃뚯씠諛?蹂몄껜瑜??곗꽑 ?뺤씤?섎뒗 寃?醫뗭뒿?덈떎.
+                    중고 구매 기준으로는 70만~110만 원대 게이밍 본체를 우선 확인하는 게 좋습니다.
                     """;
         }
 
         return """
-                諛고?洹몃씪?대뱶瑜?以묎컙 ?듭뀡 湲곗??쇰줈 利먭린?ㅻ㈃ ?꾨옒 ?뺣룄瑜?異붿쿇?⑸땲??
+                배틀그라운드를 중간 옵션 기준으로 즐기려면 아래 정도를 추천합니다.
 
-                CPU: ?명뀛 i5 9?몃? ?댁긽 ?먮뒗 ?쇱씠??5 3600 ?댁긽
-                GPU: GTX 1660 Super / RTX 2060 / RTX 3060湲?
-                RAM: 16GB ?댁긽
-                ??μ옣移? SSD 512GB ?댁긽
+                CPU: 인텔 i5 9세대 이상 또는 라이젠 5 3600 이상
+                GPU: GTX 1660 Super / RTX 2060 / RTX 3060급
+                RAM: 16GB 이상
+                저장장치: SSD 512GB 이상
 
-                以묎퀬 援щℓ 湲곗??쇰줈??50留?90留??먮? 寃뚯씠諛?蹂몄껜瑜?癒쇱? ?뺤씤?섎뒗 寃?醫뗭뒿?덈떎.
+                중고 구매 기준으로는 50만~90만 원대 게이밍 본체를 먼저 확인하는 게 좋습니다.
                 """;
     }
 
     private String makeRustGuide(String performanceLevel) {
         return """
-                ?ъ뒪?몃? ?먰솢?섍쾶 ?뚮젅?댄븯?ㅻ㈃ 硫붾え由ъ? 洹몃옒?쎌뭅?쒓? 以묒슂?⑸땲??
+                러스트를 원활하게 플레이하려면 메모리와 그래픽카드가 중요합니다.
 
-                CPU: ?명뀛 i5 10?몃? ?댁긽 ?먮뒗 ?쇱씠??5 3600 ?댁긽
-                GPU: GTX 1660 Super / RTX 2060 ?댁긽
-                RAM: 16GB ?댁긽, 媛?ν븯硫?32GB
-                ??μ옣移? SSD 512GB ?댁긽
+                CPU: 인텔 i5 10세대 이상 또는 라이젠 5 3600 이상
+                GPU: GTX 1660 Super / RTX 2060 이상
+                RAM: 16GB 이상, 가능하면 32GB
+                저장장치: SSD 512GB 이상
 
-                以묎퀬 援щℓ 湲곗??쇰줈??60留?100留??먮? 寃뚯씠諛?蹂몄껜瑜?異붿쿇?⑸땲??
+                중고 구매 기준으로는 60만~100만 원대 게이밍 본체를 추천합니다.
                 """;
     }
 
     private String makeLolGuide(String performanceLevel) {
         return """
-                由ш렇 ?ㅻ툕 ?덉쟾?쒕뒗 鍮꾧탳??媛踰쇱슫 寃뚯엫?대씪 怨좎궗??而댄벂?곌퉴吏???꾩슂?섏? ?딆뒿?덈떎.
+                리그 오브 레전드는 비교적 가벼운 게임이라 고사양 컴퓨터까지는 필요하지 않습니다.
 
-                CPU: ?명뀛 i3 8?몃? ?댁긽 ?먮뒗 ?쇱씠??3 ?댁긽
-                GPU: GTX 1050 / ?댁옣 洹몃옒???쇰? 紐⑤뜽??媛??
-                RAM: 8GB ?댁긽, ?ъ쑀 ?덇쾶??16GB
-                ??μ옣移? SSD 256GB ?댁긽
+                CPU: 인텔 i3 8세대 이상 또는 라이젠 3 이상
+                GPU: GTX 1050 / 내장 그래픽 일부 모델도 가능
+                RAM: 8GB 이상, 여유 있게는 16GB
+                저장장치: SSD 256GB 이상
 
-                以묎퀬 援щℓ 湲곗??쇰줈??20留?50留??먮? 蹂몄껜??異⑸텇???꾨낫媛 ?????덉뒿?덈떎.
+                중고 구매 기준으로는 20만~50만 원대 본체도 충분히 후보가 될 수 있습니다.
                 """;
     }
 }

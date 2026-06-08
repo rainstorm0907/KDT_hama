@@ -1,4 +1,4 @@
-package com.used.service.chatbot.service;
+package com.example.ffff.chatbot.service;
 
 import org.springframework.stereotype.Component;
 
@@ -12,76 +12,76 @@ public class GamePerformanceResolver {
 
         String text = normalize(message);
 
-        if (containsAny(text, "濡?, "由ш렇?ㅻ툕?덉쟾??, "leagueoflegends", "lol")) {
-            return "濡?;
+        if (containsAny(text, "롤", "리그오브레전드", "leagueoflegends", "lol")) {
+            return "롤";
         }
 
-        if (containsAny(text, "諛쒕줈???, "valorant")) {
-            return "諛쒕줈???;
+        if (containsAny(text, "발로란트", "valorant")) {
+            return "발로란트";
         }
 
-        if (containsAny(text, "諛곌렇", "諛고?洹몃씪?대뱶", "pubg")) {
-            return "諛곌렇";
+        if (containsAny(text, "배그", "배틀그라운드", "pubg")) {
+            return "배그";
         }
 
-        if (containsAny(text, "?먯씠?숈뒪", "?먯씠?숈뒪?덉쟾??, "?먯씠?⑹뒪", "?먯씠?⑹뒪?덉쟾??, "apex")) {
-            return "?먯씠?숈뒪?덉쟾??;
+        if (containsAny(text, "에이펙스", "에이펙스레전드", "에이팩스", "에이팩스레전드", "apex")) {
+            return "에이펙스레전드";
         }
 
-        if (containsAny(text, "?ㅻ쾭?뚯튂", "?ㅻ쾭?뚯튂2", "overwatch")) {
-            return "?ㅻ쾭?뚯튂2";
+        if (containsAny(text, "오버워치", "오버워치2", "overwatch")) {
+            return "오버워치2";
         }
 
-        if (containsAny(text, "濡쒖뒪?몄븘??, "濡쒖븘", "lostark")) {
-            return "濡쒖뒪?몄븘??;
+        if (containsAny(text, "로스트아크", "로아", "lostark")) {
+            return "로스트아크";
         }
 
-        if (containsAny(text, "?섎뱺留?, "eldenring")) {
-            return "?섎뱺留?;
+        if (containsAny(text, "엘든링", "eldenring")) {
+            return "엘든링";
         }
 
-        if (containsAny(text, "?ъ씠踰꾪럱??, "?ъ씠踰꾪럱??077", "cyberpunk")) {
-            return "?ъ씠踰꾪럱??;
+        if (containsAny(text, "사이버펑크", "사이버펑크2077", "cyberpunk")) {
+            return "사이버펑크";
         }
 
         if (containsAny(text, "gta", "gta5")) {
             return "GTA5";
         }
 
-        if (containsAny(text, "?붿븘釉붾줈4", "diablo4")) {
-            return "?붿븘釉붾줈4";
+        if (containsAny(text, "디아블로4", "diablo4")) {
+            return "디아블로4";
         }
 
-        if (containsAny(text, "?덈뜲由?, "?덈뱶?곕뱶", "reddead")) {
-            return "?덈뱶?곕뱶由щ???";
+        if (containsAny(text, "레데리", "레드데드", "reddead")) {
+            return "레드데드리뎀션2";
         }
 
-        if (containsAny(text, "?ㅽ??꾨뱶", "starfield")) {
-            return "?ㅽ??꾨뱶";
+        if (containsAny(text, "스타필드", "starfield")) {
+            return "스타필드";
         }
 
-        if (containsAny(text, "寃??좏솕", "寃??좏솕?ㅺ났", "blackmyth", "wukong")) {
-            return "寃??좏솕: ?ㅺ났";
+        if (containsAny(text, "검은신화", "검은신화오공", "blackmyth", "wukong")) {
+            return "검은신화: 오공";
         }
 
-        if (containsAny(text, "?ъ뒪??, "?ъ뒪??, "rust")) {
-            return "?ъ뒪??;
+        if (containsAny(text, "러스트", "러스크", "rust")) {
+            return "러스트";
         }
 
-        if (containsAny(text, "硫붿씠??, "硫붿씠?뚯뒪?좊━", "maplestory")) {
-            return "硫붿씠?뚯뒪?좊━";
+        if (containsAny(text, "메이플", "메이플스토리", "maplestory")) {
+            return "메이플스토리";
         }
 
-        if (containsAny(text, "?쇳뙆", "fc?⑤씪??, "fconline", "fifa")) {
-            return "FC?⑤씪??;
+        if (containsAny(text, "피파", "fc온라인", "fconline", "fifa")) {
+            return "FC온라인";
         }
 
-        if (containsAny(text, "?쒕뱺", "?쒕뱺?댄깮")) {
-            return "?쒕뱺?댄깮";
+        if (containsAny(text, "서든", "서든어택")) {
+            return "서든어택";
         }
 
-        if (containsAny(text, "?ㅽ?", "?ㅽ??щ옒?꾪듃", "starcraft")) {
-            return "?ㅽ??щ옒?꾪듃";
+        if (containsAny(text, "스타", "스타크래프트", "starcraft")) {
+            return "스타크래프트";
         }
 
         return null;
@@ -99,122 +99,122 @@ public class GamePerformanceResolver {
         String text = normalize(message);
 
         /*
-         * ?듭뀡 ?ㅼ썙???곗꽑.
-         * 媛숈? 寃뚯엫?대씪??4K/RT/??듭씠硫?怨듭떇 沅뚯옣 ?ъ뼇蹂대떎 ?믪? ?깃툒?쇰줈 蹂몃떎.
+         * 옵션 키워드 우선.
+         * 같은 게임이라도 4K/RT/풀옵이면 공식 권장 사양보다 높은 등급으로 본다.
          */
         if (containsAny(text,
                 "4k",
-                "?덉씠?몃젅?댁떛",
+                "레이트레이싱",
                 "raytracing",
-                "?ㅻ쾭?쒕씪?대툕",
+                "오버드라이브",
                 "overdrive",
                 "165hz",
-                "???,
-                "??듭뀡",
-                "?명듃??,
-                "?명듃?쇱샃??,
-                "理쒖긽??,
-                "洹뱀긽??)) {
+                "풀옵",
+                "풀옵션",
+                "울트라",
+                "울트라옵션",
+                "최상옵",
+                "극상옵")) {
             return "EXTREME";
         }
 
         if (containsAny(text,
                 "qhd",
                 "144hz",
-                "?믪??꾨젅??,
-                "怨좏봽?덉엫",
-                "苡뚯쟻",
-                "?곸샃",
-                "怨좎샃",
-                "怨좎샃??,
-                "?믪??듭뀡")) {
+                "높은프레임",
+                "고프레임",
+                "쾌적",
+                "상옵",
+                "고옵",
+                "고옵션",
+                "높은옵션")) {
             return "HIGH";
         }
 
         /*
-         * 怨좎궗??寃뚯엫.
+         * 고사양 게임.
          */
         if (containsAny(text,
-                "?ъ씠踰꾪럱??,
-                "?ъ씠踰꾪럱??077",
+                "사이버펑크",
+                "사이버펑크2077",
                 "cyberpunk",
-                "?섎뱺留?,
+                "엘든링",
                 "eldenring",
                 "gta",
                 "gta5",
-                "?붿븘釉붾줈4",
+                "디아블로4",
                 "diablo4",
-                "?덈뜲由?,
-                "?덈뱶?곕뱶",
+                "레데리",
+                "레드데드",
                 "reddead",
-                "?ㅽ??꾨뱶",
+                "스타필드",
                 "starfield",
-                "寃??좏솕",
-                "寃??좏솕?ㅺ났",
+                "검은신화",
+                "검은신화오공",
                 "blackmyth",
                 "wukong",
-                "理쒖떊aaa",
-                "aaa寃뚯엫",
-                "理쒖떊寃뚯엫",
-                "怨좎궗??)) {
+                "최신aaa",
+                "aaa게임",
+                "최신게임",
+                "고사양")) {
             return "HIGH";
         }
 
         /*
-         * 以묎컙 ?ъ뼇 寃뚯엫.
+         * 중간 사양 게임.
          */
         if (containsAny(text,
-                "諛곌렇",
-                "諛고?洹몃씪?대뱶",
+                "배그",
+                "배틀그라운드",
                 "pubg",
-                "?먯씠?숈뒪",
-                "?먯씠?숈뒪?덉쟾??,
-                "?먯씠?⑹뒪",
-                "?먯씠?⑹뒪?덉쟾??,
+                "에이펙스",
+                "에이펙스레전드",
+                "에이팩스",
+                "에이팩스레전드",
                 "apex",
-                "?ㅻ쾭?뚯튂",
-                "?ㅻ쾭?뚯튂2",
+                "오버워치",
+                "오버워치2",
                 "overwatch",
-                "濡쒖뒪?몄븘??,
-                "濡쒖븘",
+                "로스트아크",
+                "로아",
                 "lostark",
-                "?ъ뒪??,
-                "?ъ뒪??,
+                "러스트",
+                "러스크",
                 "rust")) {
             return "MID";
         }
 
         /*
-         * ??? ?ъ뼇 寃뚯엫.
+         * 낮은 사양 게임.
          */
         if (containsAny(text,
-                "濡?,
-                "由ш렇?ㅻ툕?덉쟾??,
+                "롤",
+                "리그오브레전드",
                 "leagueoflegends",
                 "lol",
-                "諛쒕줈???,
+                "발로란트",
                 "valorant",
-                "硫붿씠??,
-                "硫붿씠?뚯뒪?좊━",
-                "?쇳뙆",
-                "fc?⑤씪??,
+                "메이플",
+                "메이플스토리",
+                "피파",
+                "fc온라인",
                 "fconline",
                 "fifa",
-                "?쒕뱺",
-                "?쒕뱺?댄깮",
-                "?ㅽ?",
-                "?ㅽ??щ옒?꾪듃")) {
+                "서든",
+                "서든어택",
+                "스타",
+                "스타크래프트")) {
             return "LOW";
         }
 
         /*
-         * ?깅줉?섏? ?딆? ?ㅽ?/理쒖떊 寃뚯엫? ?쇰컲 寃뚯엫蹂대떎 ?믨쾶 蹂몃떎.
+         * 등록되지 않은 스팀/최신 게임은 일반 게임보다 높게 본다.
          */
-        if (containsAny(text, "?ㅽ?寃뚯엫", "steam寃뚯엫", "理쒖떊寃뚯엫", "aaa寃뚯엫")) {
+        if (containsAny(text, "스팀게임", "steam게임", "최신게임", "aaa게임")) {
             return "HIGH";
         }
 
-        if (containsAny(text, "寃뚯엫", "寃뚯씠諛?)) {
+        if (containsAny(text, "게임", "게이밍")) {
             return "MID";
         }
 
@@ -227,7 +227,7 @@ public class GamePerformanceResolver {
 
         /*
          * EXTREME:
-         * 4K / RT / ????꾨낫.
+         * 4K / RT / 풀옵 후보.
          */
         if (containsAny(gpu,
                 "rtx4090",
@@ -240,7 +240,7 @@ public class GamePerformanceResolver {
 
         /*
          * HIGH:
-         * 怨좎궗??寃뚯엫 怨듭떇 沅뚯옣 ?ъ뼇 ?댁긽.
+         * 고사양 게임 공식 권장 사양 이상.
          */
         if (containsAny(gpu,
                 "rtx4070ti",
@@ -277,7 +277,7 @@ public class GamePerformanceResolver {
 
         /*
          * MID:
-         * PUBG, Apex 沅뚯옣 ?ъ뼇 洹쇱쿂.
+         * PUBG, Apex 권장 사양 근처.
          */
         if (containsAny(gpu,
                 "rtx2060",
@@ -301,7 +301,7 @@ public class GamePerformanceResolver {
 
         /*
          * LOW:
-         * 濡? 諛쒕줈???60FPS, 硫붿씠?? ?쇳뙆 ????ъ뼇 寃뚯엫 ?꾨낫.
+         * 롤, 발로란트 60FPS, 메이플, 피파 등 저사양 게임 후보.
          */
         if (containsAny(gpu,
                 "gtx1050ti",
@@ -320,7 +320,7 @@ public class GamePerformanceResolver {
             return "LOW";
         }
 
-        if (containsAny(gpu, "?댁옣洹몃옒??, "uhd", "iris", "vega")) {
+        if (containsAny(gpu, "내장그래픽", "uhd", "iris", "vega")) {
             return "LOW";
         }
 

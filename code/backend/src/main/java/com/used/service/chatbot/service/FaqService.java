@@ -1,7 +1,7 @@
-package com.used.service.chatbot.service;
+package com.example.ffff.chatbot.service;
 
-import com.used.service.chatbot.entity.ChatFaq;
-import com.used.service.chatbot.repository.ChatFaqRepository;
+import com.example.ffff.chatbot.entity.ChatFaq;
+import com.example.ffff.chatbot.repository.ChatFaqRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -36,85 +36,85 @@ public class FaqService {
 
         String normalizedPattern = normalize(pattern);
 
-        // 1. 湲곕낯 ?ы븿 留ㅼ묶
+        // 1. 기본 포함 매칭
         if (normalizedMessage.contains(normalizedPattern)
                 || normalizedPattern.contains(normalizedMessage)) {
             return true;
         }
 
-        // 2. FAQ ?⑦꽩蹂??숈쓽???좎궗 ?쒗쁽 留ㅼ묶
+        // 2. FAQ 패턴별 동의어/유사 표현 매칭
         return isSynonymMatched(normalizedMessage, normalizedPattern);
     }
 
     private boolean isSynonymMatched(String message, String pattern) {
-        // 媛寃??뚮┝
-        if (pattern.equals("媛寃⑹븣由?)
-                || pattern.equals("?뚮┝")
-                || pattern.equals("紐⑺몴媛寃?)
-                || pattern.equals("?щ쭩媛寃?)) {
+        // 가격 알림
+        if (pattern.equals("가격알림")
+                || pattern.equals("알림")
+                || pattern.equals("목표가격")
+                || pattern.equals("희망가격")) {
             return containsAny(message,
-                    "媛寃⑹븣由?,
-                    "?뚮┝?ㅼ젙",
-                    "紐⑺몴媛寃?,
-                    "?щ쭩媛寃?,
-                    "媛寃⑸궡?ㅺ?硫?,
-                    "?대젮媛硫댁븣由?,
-                    "?뚮젮以?
+                    "가격알림",
+                    "알림설정",
+                    "목표가격",
+                    "희망가격",
+                    "가격내려가면",
+                    "내려가면알림",
+                    "알려줘"
             );
         }
 
-        // 李??ъ슜踰?
-        if (pattern.equals("李?)
-                || pattern.equals("李쒗븯?붾갑踰?)
-                || pattern.equals("李쒕갑踰?)
-                || pattern.equals("愿?ъ긽??)) {
-            return containsAny(message, "李?, "愿?ъ긽??, "愿??, "???)
-                    && containsAny(message, "諛⑸쾿", "?대뼸寃?, "?ъ슜踰?, "?섎뒗踰?, "?댁?", "?깅줉");
+        // 찜 사용법
+        if (pattern.equals("찜")
+                || pattern.equals("찜하는방법")
+                || pattern.equals("찜방법")
+                || pattern.equals("관심상품")) {
+            return containsAny(message, "찜", "관심상품", "관심", "저장")
+                    && containsAny(message, "방법", "어떻게", "사용법", "하는법", "어케", "등록");
         }
 
-        // ?쒖꽭
-        if (pattern.equals("?쒖꽭")
-                || pattern.equals("媛寃⑸???)
-                || pattern.equals("媛寃⑷린濡?)) {
+        // 시세
+        if (pattern.equals("시세")
+                || pattern.equals("가격변동")
+                || pattern.equals("가격기록")) {
             return containsAny(message,
-                    "?쒖꽭",
-                    "媛寃⑸???,
-                    "媛寃⑷린濡?,
-                    "媛寃⑹텛??,
-                    "媛寃⑺쓲由?,
-                    "?쇰쭏?뺣룄",
-                    "媛寃⑸?"
+                    "시세",
+                    "가격변동",
+                    "가격기록",
+                    "가격추이",
+                    "가격흐름",
+                    "얼마정도",
+                    "가격대"
             );
         }
 
-        // 寃??
-        if (pattern.equals("寃??)
-                || pattern.equals("寃?됰갑踰?)
-                || pattern.equals("?곹뭹寃??)) {
-            return containsAny(message, "寃??, "李얜뒗踰?, "李얠븘", "議고쉶")
-                    && containsAny(message, "諛⑸쾿", "?대뼸寃?, "?섎뒗踰?, "?댁?", "?ъ슜");
+        // 검색
+        if (pattern.equals("검색")
+                || pattern.equals("검색방법")
+                || pattern.equals("상품검색")) {
+            return containsAny(message, "검색", "찾는법", "찾아", "조회")
+                    && containsAny(message, "방법", "어떻게", "하는법", "어케", "사용");
         }
 
-        // ?ъ씠???ㅻ챸
-        if (pattern.equals("臾댁뒯?ъ씠??)
-                || pattern.equals("?ъ씠?몄꽕紐?)
-                || pattern.equals("?댁궗?댄듃")
-                || pattern.equals("?쒕퉬?ㅼ꽕紐?)
-                || pattern.equals("?섎쭏")) {
-            return containsAny(message, "?ъ씠??, "?쒕퉬??, "?섎쭏")
-                    && containsAny(message, "?ㅻ챸", "?뚭컻", "萸?, "臾댁뾿", "?대뼡", "?뚮젮", "??댁꽌");
+        // 사이트 설명
+        if (pattern.equals("무슨사이트")
+                || pattern.equals("사이트설명")
+                || pattern.equals("이사이트")
+                || pattern.equals("서비스설명")
+                || pattern.equals("하마")) {
+            return containsAny(message, "사이트", "서비스", "하마")
+                    && containsAny(message, "설명", "소개", "뭐", "무엇", "어떤", "알려", "대해서");
         }
 
-        // 媛寃?鍮꾧탳
-        if (pattern.equals("媛寃⑸퉬援?)
-                || pattern.equals("鍮꾧탳")) {
-            return containsAny(message, "媛寃⑸퉬援?, "鍮꾧탳", "?붿떬", "??댄븳", "理쒖?媛");
+        // 가격 비교
+        if (pattern.equals("가격비교")
+                || pattern.equals("비교")) {
+            return containsAny(message, "가격비교", "비교", "더싼", "저렴한", "최저가");
         }
 
-        // ?곹뭹 異붿쿇
-        if (pattern.equals("?곹뭹異붿쿇")
-                || pattern.equals("異붿쿇")) {
-            return containsAny(message, "異붿쿇", "怨⑤씪", "愿쒖갖?", "媛?깅퉬", "??댄븳", "??);
+        // 상품 추천
+        if (pattern.equals("상품추천")
+                || pattern.equals("추천")) {
+            return containsAny(message, "추천", "골라", "괜찮은", "가성비", "저렴한", "싼");
         }
 
         return false;

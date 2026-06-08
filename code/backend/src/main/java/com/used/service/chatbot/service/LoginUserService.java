@@ -1,7 +1,7 @@
-package com.used.service.chatbot.service;
+package com.example.ffff.chatbot.service;
 
-import com.used.service.entity.User;
-import com.used.service.repository.UserRepository;
+import com.example.ffff.entity.User;
+import com.example.ffff.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -15,17 +15,17 @@ public class LoginUserService {
 
     public Long getLoginUserId(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new AccessDeniedException("濡쒓렇?몄씠 ?꾩슂?⑸땲??");
+            throw new AccessDeniedException("로그인이 필요합니다.");
         }
 
         String email = authentication.getName();
 
         if (email == null || email.isBlank() || "anonymousUser".equals(email)) {
-            throw new AccessDeniedException("濡쒓렇?몄씠 ?꾩슂?⑸땲??");
+            throw new AccessDeniedException("로그인이 필요합니다.");
         }
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AccessDeniedException("濡쒓렇???ъ슜?먮? 李얠쓣 ???놁뒿?덈떎."));
+                .orElseThrow(() -> new AccessDeniedException("로그인 사용자를 찾을 수 없습니다."));
 
         return user.getUserId();
     }

@@ -1,7 +1,7 @@
-package com.used.service.chatbot.service;
+package com.example.ffff.chatbot.service;
 
-import com.used.service.chatbot.entity.SearchLog;
-import com.used.service.chatbot.repository.SearchLogRepository;
+import com.example.ffff.chatbot.entity.SearchLog;
+import com.example.ffff.chatbot.repository.SearchLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +34,7 @@ public class SearchLogService {
 
         SearchLog log = new SearchLog();
         log.setUserId(userId);
-        log.setKeyword(keyword == null || keyword.isBlank() ? "?곹뭹 ?대┃" : keyword.trim());
+        log.setKeyword(keyword == null || keyword.isBlank() ? "상품 클릭" : keyword.trim());
         log.setClickedItemId(itemId);
 
         searchLogRepository.save(log);

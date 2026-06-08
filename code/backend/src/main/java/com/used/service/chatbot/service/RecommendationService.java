@@ -1,12 +1,12 @@
-package com.used.service.chatbot.service;
+package com.example.ffff.chatbot.service;
 
-import com.used.service.chatbot.dto.ChatAnalysisResult;
-import com.used.service.chatbot.dto.RecommendedItemDto;
-import com.used.service.chatbot.entity.Item;
-import com.used.service.chatbot.entity.RecommendedItem;
-import com.used.service.chatbot.repository.ItemRepository;
-import com.used.service.chatbot.repository.RecommendedItemRepository;
-import com.used.service.chatbot.repository.projection.RecommendedItemProjection;
+import com.example.ffff.chatbot.dto.ChatAnalysisResult;
+import com.example.ffff.chatbot.dto.RecommendedItemDto;
+import com.example.ffff.chatbot.entity.Item;
+import com.example.ffff.chatbot.entity.RecommendedItem;
+import com.example.ffff.chatbot.repository.ItemRepository;
+import com.example.ffff.chatbot.repository.RecommendedItemRepository;
+import com.example.ffff.chatbot.repository.projection.RecommendedItemProjection;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -21,7 +21,7 @@ import java.util.List;
 public class RecommendationService {
 
     private static final String RECOMMEND_TYPE_CHATBOT = "CHATBOT_RECOMMEND";
-    private static final String ON_SALE = "?먮ℓ以?;
+    private static final String ON_SALE = "판매중";
 
     private final ItemRepository itemRepository;
     private final RecommendedItemRepository recommendedItemRepository;
@@ -43,7 +43,7 @@ public class RecommendationService {
             return List.of();
         }
 
-        System.out.println("[異붿쿇 寃??議곌굔] "
+        System.out.println("[추천 검색 조건] "
                 + "keyword=" + keyword
                 + ", minPrice=" + minPrice
                 + ", maxPrice=" + maxPrice
@@ -199,10 +199,10 @@ public class RecommendationService {
         String category = normalizeText(item.getCategoryName());
 
         return switch (productType) {
-            case "desktop" -> containsAny(title + " " + category, "而댄벂??, "?곗뒪?ы깙", "蹂몄껜", "pc") ? 80 : -80;
-            case "laptop" -> containsAny(title + " " + category, "?명듃遺?, "?⑺깙", "留λ턿", "洹몃옩") ? 80 : -80;
-            case "smartphone" -> containsAny(title + " " + category, "?꾩씠??, "媛ㅻ윮??, "?ㅻ쭏?명룿", "?대???, "?몃뱶??) ? 80 : -80;
-            case "game_console" -> containsAny(title + " " + category, "?ㅼ쐞移?, "?뚰뀗??, "ps5", "ps4", "xbox", "?뚯뒪") ? 80 : -80;
+            case "desktop" -> containsAny(title + " " + category, "컴퓨터", "데스크탑", "본체", "pc") ? 80 : -80;
+            case "laptop" -> containsAny(title + " " + category, "노트북", "랩탑", "맥북", "그램") ? 80 : -80;
+            case "smartphone" -> containsAny(title + " " + category, "아이폰", "갤럭시", "스마트폰", "휴대폰", "핸드폰") ? 80 : -80;
+            case "game_console" -> containsAny(title + " " + category, "스위치", "닌텐도", "ps5", "ps4", "xbox", "플스") ? 80 : -80;
             default -> 0;
         };
     }
@@ -215,7 +215,7 @@ public class RecommendationService {
             return 0;
         }
 
-        if (containsAny(title, "rtx", "gtx", "rx ", "寃뚯씠諛?, "洹몃옒??, "gpu")) {
+        if (containsAny(title, "rtx", "gtx", "rx ", "게이밍", "그래픽", "gpu")) {
             return 40;
         }
 
@@ -328,14 +328,14 @@ public class RecommendationService {
         }
 
         if (isLowestPriceLevel(item)) {
-            return "?꾩옱媛媛 理쒓렐 理쒖?媛??媛源뚯썙 媛寃?硫붾━?멸? ?덈뒗 ?곹뭹?낅땲??";
+            return "현재가가 최근 최저가에 가까워 가격 메리트가 있는 상품입니다.";
         }
 
         if (item.getScore() != null && item.getScore() >= 100) {
-            return "寃?됱뼱, ?좏샇 ?쒓렇, 媛寃?議곌굔怨???留욌뒗 ?곹뭹?낅땲??";
+            return "검색어, 선호 태그, 가격 조건과 잘 맞는 상품입니다.";
         }
 
-        return "寃?됱뼱? 愿?⑥꽦???믪? ?곹뭹?낅땲??";
+        return "검색어와 관련성이 높은 상품입니다.";
     }
 
     private String makeGamingReason(
@@ -344,55 +344,55 @@ public class RecommendationService {
             String performanceLevel,
             String gameName
     ) {
-        String targetGame = gameName.isBlank() ? "?붿껌??寃뚯엫" : gameName;
-        boolean hasGpu = containsAny(normalizedTitle, "rtx", "gtx", "rx ", "洹몃옒??, "gpu");
+        String targetGame = gameName.isBlank() ? "요청한 게임" : gameName;
+        boolean hasGpu = containsAny(normalizedTitle, "rtx", "gtx", "rx ", "그래픽", "gpu");
         boolean hasMemory16 = containsAny(normalizedTitle, "16g", "16gb", "32g", "32gb");
-        boolean hasDesktopHint = containsAny(normalizedTitle, "蹂몄껜", "?곗뒪?ы깙", "pc", "而댄벂??);
+        boolean hasDesktopHint = containsAny(normalizedTitle, "본체", "데스크탑", "pc", "컴퓨터");
 
         if ("LOW".equals(performanceLevel)) {
             if (hasGpu && hasMemory16) {
-                return targetGame + "?⑹쑝濡?異⑸텇??洹몃옒???깅뒫怨?16GB湲?硫붾え由щ? 湲곕??????덈뒗 ?곹뭹?낅땲??";
+                return targetGame + "용으로 충분한 그래픽 성능과 16GB급 메모리를 기대할 수 있는 상품입니다.";
             }
             if (hasGpu) {
-                return targetGame + "泥섎읆 媛踰쇱슫 寃뚯엫???뚮━湲?醫뗭? 洹몃옒??援ъ꽦??蹂댁씠???꾨낫?낅땲??";
+                return targetGame + "처럼 가벼운 게임을 돌리기 좋은 그래픽 구성이 보이는 후보입니다.";
             }
             if (hasDesktopHint) {
-                return targetGame + " ?낅Ц?⑹쑝濡?蹂?留뚰븳 ?곗뒪?ы깙 ?꾨낫?낅땲?? 援щℓ ??RAM怨?洹몃옒???ъ뼇???뺤씤??二쇱꽭??";
+                return targetGame + " 입문용으로 볼 만한 데스크탑 후보입니다. 구매 전 RAM과 그래픽 사양을 확인해 주세요.";
             }
-            return targetGame + " ?뚮젅??議곌굔怨?愿?⑥꽦???믪? ?곹뭹?낅땲?? ?곸꽭 ?ъ뼇 ?뺤씤??異붿쿇?⑸땲??";
+            return targetGame + " 플레이 조건과 관련성이 높은 상품입니다. 상세 사양 확인을 추천합니다.";
         }
 
         if ("MID".equals(performanceLevel)) {
             if (containsAny(normalizedTitle, "rtx 3060", "rtx3060", "rtx 2060", "rtx2060", "1660", "4060")) {
-                return targetGame + " 以묎컙 ?듭뀡?⑹쑝濡?蹂?留뚰븳 洹몃옒?쎌뭅?쒓? ?ы븿???곹뭹?낅땲??";
+                return targetGame + " 중간 옵션용으로 볼 만한 그래픽카드가 포함된 상품입니다.";
             }
             if (hasGpu && hasMemory16) {
-                return targetGame + "?⑹쑝濡?洹몃옒?쎌뭅?쒖? 硫붾え由?援ъ꽦??臾대궃???꾨낫?낅땲??";
+                return targetGame + "용으로 그래픽카드와 메모리 구성이 무난한 후보입니다.";
             }
-            return targetGame + " 沅뚯옣 ?ъ뼇怨?鍮꾧탳??蹂?留뚰븳 ?꾨낫?낅땲?? 洹몃옒?쎌뭅??紐⑤뜽???뺤씤??二쇱꽭??";
+            return targetGame + " 권장 사양과 비교해 볼 만한 후보입니다. 그래픽카드 모델을 확인해 주세요.";
         }
 
         if ("HIGH".equals(performanceLevel) || "EXTREME".equals(performanceLevel)) {
             if (containsAny(normalizedTitle, "rtx 4070", "rtx4070", "rtx 4080", "rtx4080", "rtx 4090", "rtx4090")) {
-                return targetGame + " 怨좎샃???뚮젅?대? 湲곕??????덈뒗 怨좎꽦??洹몃옒?쎌뭅???꾨낫?낅땲??";
+                return targetGame + " 고옵션 플레이를 기대할 수 있는 고성능 그래픽카드 후보입니다.";
             }
             if (containsAny(normalizedTitle, "rtx", "4060", "3070", "3080")) {
-                return targetGame + " 怨좎궗???뚮젅???꾨낫濡?蹂?留뚰빀?덈떎. ?듭뀡 ????щ?瑜??④퍡 ?뺤씤??二쇱꽭??";
+                return targetGame + " 고사양 플레이 후보로 볼 만합니다. 옵션 타협 여부를 함께 확인해 주세요.";
             }
-            return targetGame + " 怨좎궗??議곌굔怨?鍮꾧탳媛 ?꾩슂???곹뭹?낅땲?? CPU? GPU 紐⑤뜽 ?뺤씤???꾩슂?⑸땲??";
+            return targetGame + " 고사양 조건과 비교가 필요한 상품입니다. CPU와 GPU 모델 확인이 필요합니다.";
         }
 
         if (hasGpu) {
-            return "寃뚯엫?⑹쑝濡?蹂?留뚰븳 洹몃옒??援ъ꽦???덈뒗 ?곹뭹?낅땲??";
+            return "게임용으로 볼 만한 그래픽 구성이 있는 상품입니다.";
         }
 
-        return "?붿껌??寃뚯엫 議곌굔怨?愿?⑥꽦???믪? 而댄벂???꾨낫?낅땲??";
+        return "요청한 게임 조건과 관련성이 높은 컴퓨터 후보입니다.";
     }
 
     private boolean isComputerProduct(String productType, String normalizedTitle) {
         return "desktop".equals(productType)
                 || "laptop".equals(productType)
-                || containsAny(normalizedTitle, "而댄벂??, "pc", "蹂몄껜", "?곗뒪?ы깙", "?명듃遺?);
+                || containsAny(normalizedTitle, "컴퓨터", "pc", "본체", "데스크탑", "노트북");
     }
 
     private boolean isLowestPriceLevel(RecommendedItemProjection item) {
@@ -507,4 +507,3 @@ public class RecommendationService {
         }
     }
 }
-
