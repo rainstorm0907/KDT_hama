@@ -1,4 +1,4 @@
-package com.example.ffff.chatbot.config;
+package com.used.service.chatbot.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -15,7 +15,7 @@ public class GeminiConfig {
             @Value("${gemini.api-key}") String apiKey
     ) {
         if (!StringUtils.hasText(apiKey)) {
-            throw new IllegalStateException("GEMINI_API_KEY 환경변수가 설정되지 않았습니다.");
+            throw new IllegalStateException("GEMINI_API_KEY environment variable is not configured.");
         }
 
         return WebClient.builder()

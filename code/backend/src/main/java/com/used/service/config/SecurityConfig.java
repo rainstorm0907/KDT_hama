@@ -64,7 +64,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\":\"濡쒓렇?몄씠 ?꾩슂?⑸땲??\"}");
+                            response.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");
                         })
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -74,7 +74,7 @@ public class SecurityConfig {
                         .logoutSuccessHandler((request, response, authentication) -> {
                             response.setStatus(HttpStatus.OK.value());
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\":\"濡쒓렇?꾩썐 ?깃났\"}");
+                            response.getWriter().write("{\"message\":\"로그아웃 성공\"}");
                         })
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
@@ -84,4 +84,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-

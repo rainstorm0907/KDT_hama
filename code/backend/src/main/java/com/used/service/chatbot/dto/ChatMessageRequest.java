@@ -1,4 +1,4 @@
-package com.example.ffff.chatbot.dto;
+package com.used.service.chatbot.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;

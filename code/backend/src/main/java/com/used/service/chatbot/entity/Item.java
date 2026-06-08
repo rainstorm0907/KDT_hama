@@ -1,4 +1,4 @@
-package com.example.ffff.chatbot.entity;
+package com.used.service.chatbot.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -75,15 +75,12 @@ public class Item {
     @PrePersist
     public void prePersist() {
         LocalDateTime now = LocalDateTime.now();
-
         if (this.crawledAt == null) {
             this.crawledAt = now;
         }
-
         if (this.lastSeenAt == null) {
             this.lastSeenAt = now;
         }
-
         if (this.saleStatus == null || this.saleStatus.isBlank()) {
             this.saleStatus = "판매중";
         }
@@ -92,7 +89,6 @@ public class Item {
     @PreUpdate
     public void preUpdate() {
         this.lastSeenAt = LocalDateTime.now();
-
         if (this.saleStatus == null || this.saleStatus.isBlank()) {
             this.saleStatus = "판매중";
         }

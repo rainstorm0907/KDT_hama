@@ -9,13 +9,13 @@ import java.util.Collection;
 
 public class PrincipalDetails implements UserDetails {
 
-    private User user; // ?곕━ ?꾨찓??User
+    private User user; // 우리 도메인 User
 
     public PrincipalDetails(User user) {
         this.user = user;
     }
 
-    // [?듭떖 異붽?!] ??硫붿꽌?쒓? ?덉뼱??Thymeleaf?먯꽌 'principal.user'濡??묎렐??媛?ν빀?덈떎.
+    // [핵심 추가!] 이 메서드가 있어야 Thymeleaf에서 'principal.user'로 접근이 가능합니다.
     public User getUser() {
         return user;
     }

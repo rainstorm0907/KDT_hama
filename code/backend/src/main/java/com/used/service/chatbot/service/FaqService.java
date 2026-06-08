@@ -1,7 +1,7 @@
-package com.example.ffff.chatbot.service;
+package com.used.service.chatbot.service;
 
-import com.example.ffff.chatbot.entity.ChatFaq;
-import com.example.ffff.chatbot.repository.ChatFaqRepository;
+import com.used.service.chatbot.entity.ChatFaq;
+import com.used.service.chatbot.repository.ChatFaqRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -35,86 +35,33 @@ public class FaqService {
         }
 
         String normalizedPattern = normalize(pattern);
-
-        // 1. 기본 포함 매칭
-        if (normalizedMessage.contains(normalizedPattern)
-                || normalizedPattern.contains(normalizedMessage)) {
-            return true;
-        }
-
-        // 2. FAQ 패턴별 동의어/유사 표현 매칭
-        return isSynonymMatched(normalizedMessage, normalizedPattern);
+        return normalizedMessage.contains(normalizedPattern)
+                || normalizedPattern.contains(normalizedMessage)
+                || isSynonymMatched(normalizedMessage, normalizedPattern);
     }
 
     private boolean isSynonymMatched(String message, String pattern) {
-        // 가격 알림
-        if (pattern.equals("가격알림")
-                || pattern.equals("알림")
-                || pattern.equals("목표가격")
-                || pattern.equals("희망가격")) {
-            return containsAny(message,
-                    "가격알림",
-                    "알림설정",
-                    "목표가격",
-                    "희망가격",
-                    "가격내려가면",
-                    "내려가면알림",
-                    "알려줘"
-            );
+        if (containsAny(pattern, "알림", "가격알림")) {
+            return containsAny(message, "알림", "가격알림", "등록", "설정", "종");
         }
 
-        // 찜 사용법
-        if (pattern.equals("찜")
-                || pattern.equals("찜하는방법")
-                || pattern.equals("찜방법")
-                || pattern.equals("관심상품")) {
-            return containsAny(message, "찜", "관심상품", "관심", "저장")
-                    && containsAny(message, "방법", "어떻게", "사용법", "하는법", "어케", "등록");
+        if (containsAny(pattern, "찜", "관심")) {
+            return containsAny(message, "찜", "하트", "관심", "저장")
+                    && containsAny(message, "방법", "어떻게", "확인", "목록");
         }
 
-        // 시세
-        if (pattern.equals("시세")
-                || pattern.equals("가격변동")
-                || pattern.equals("가격기록")) {
-            return containsAny(message,
-                    "시세",
-                    "가격변동",
-                    "가격기록",
-                    "가격추이",
-                    "가격흐름",
-                    "얼마정도",
-                    "가격대"
-            );
+        if (containsAny(pattern, "가격비교", "비교")) {
+            return containsAny(message, "가격", "비교", "평균", "최저가", "살래말래");
         }
 
-        // 검색
-        if (pattern.equals("검색")
-                || pattern.equals("검색방법")
-                || pattern.equals("상품검색")) {
-            return containsAny(message, "검색", "찾는법", "찾아", "조회")
-                    && containsAny(message, "방법", "어떻게", "하는법", "어케", "사용");
+        if (containsAny(pattern, "검색")) {
+            return containsAny(message, "검색", "찾기", "상품찾기")
+                    && containsAny(message, "방법", "어떻게", "사용");
         }
 
-        // 사이트 설명
-        if (pattern.equals("무슨사이트")
-                || pattern.equals("사이트설명")
-                || pattern.equals("이사이트")
-                || pattern.equals("서비스설명")
-                || pattern.equals("하마")) {
-            return containsAny(message, "사이트", "서비스", "하마")
-                    && containsAny(message, "설명", "소개", "뭐", "무엇", "어떤", "알려", "대해서");
-        }
-
-        // 가격 비교
-        if (pattern.equals("가격비교")
-                || pattern.equals("비교")) {
-            return containsAny(message, "가격비교", "비교", "더싼", "저렴한", "최저가");
-        }
-
-        // 상품 추천
-        if (pattern.equals("상품추천")
-                || pattern.equals("추천")) {
-            return containsAny(message, "추천", "골라", "괜찮은", "가성비", "저렴한", "싼");
+        if (containsAny(pattern, "서비스", "하마", "소개")) {
+            return containsAny(message, "하마", "서비스", "사이트")
+                    && containsAny(message, "뭐", "소개", "설명", "기능");
         }
 
         return false;
@@ -126,7 +73,6 @@ public class FaqService {
                 return true;
             }
         }
-
         return false;
     }
 
@@ -134,9 +80,7 @@ public class FaqService {
         if (text == null) {
             return "";
         }
-
-        return text
-                .toLowerCase()
+        return text.toLowerCase()
                 .replaceAll("\\s+", "")
                 .replace("?", "")
                 .replace(".", "")

@@ -1,6 +1,6 @@
-package com.example.ffff.chatbot.controller;
+package com.used.service.chatbot.controller;
 
-import com.example.ffff.chatbot.service.GeminiClientService;
+import com.used.service.chatbot.service.GeminiClientService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,23 +17,16 @@ public class GeminiTestController {
 
     @GetMapping("/test")
     public ResponseEntity<Map<String, String>> testGemini() {
-
-        System.out.println("🚨 [/api/gemini/test] 컨트롤러 호출됨!");
+        System.out.println("[GET /api/gemini/test] Gemini test requested");
         try {
             String result = geminiClientService.testConnection();
-
-            return ResponseEntity.ok(
-                    Map.of(
-                            "status", "success",
-                            "message", result
-                    )
-            );
+            return ResponseEntity.ok(Map.of("status", "success", "message", result));
         } catch (WebClientResponseException.TooManyRequests e) {
             return ResponseEntity.status(429)
                     .body(Map.of(
                             "status", "fail",
                             "error", "TOO_MANY_REQUESTS",
-                            "message", "Gemini API 요청 제한에 걸렸습니다. 잠시 후 다시 시도해 주세요."
+                            "message", "Gemini API request limit was reached. Try again later."
                     ));
         } catch (WebClientResponseException e) {
             return ResponseEntity.status(e.getStatusCode())
