@@ -1,4 +1,4 @@
-package com.used.service.chatbot.entity;
+package com.example.ffff.chatbot.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -85,7 +85,7 @@ public class Item {
         }
 
         if (this.saleStatus == null || this.saleStatus.isBlank()) {
-            this.saleStatus = "?먮ℓ以?;
+            this.saleStatus = "판매중";
         }
     }
 
@@ -94,8 +94,7 @@ public class Item {
         this.lastSeenAt = LocalDateTime.now();
 
         if (this.saleStatus == null || this.saleStatus.isBlank()) {
-            this.saleStatus = "?먮ℓ以?;
+            this.saleStatus = "판매중";
         }
     }
 }
-
