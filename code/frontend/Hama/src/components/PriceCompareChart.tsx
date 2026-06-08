@@ -7,6 +7,7 @@ type PriceCompareChartProps = {
   keyword: string;
   points: PricePoint[];
   products: Product[];
+  onProductSelect?: (product: Product) => void;
 };
 
 type ChartPoint = PricePoint & {
@@ -19,21 +20,14 @@ type ProductMarker = {
   product: Product;
   color: string;
   index: number;
+  rank: number;
   pointIndex: number;
+  sourcePointIndex: number;
+  sourceX: number;
+  sourceY: number;
   x: number;
   y: number;
-  labelX: number;
-  labelY: number;
   dateLabel: string;
-};
-
-type ProductMarkerBase = Omit<ProductMarker, 'labelX' | 'labelY'>;
-
-type LabelBox = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
 };
 
 const chartWidth = 1180;
@@ -51,10 +45,6 @@ const chartBottom = chartHeight - chartPadding.bottom;
 const chartInnerWidth = chartRight - chartLeft;
 const chartInnerHeight = chartBottom - chartTop;
 const markerColors = ['#3D6BE8', '#2C9A72', '#E37B35', '#7B61C7'];
-const productLabelBox = {
-  width: 188,
-  height: 66,
-};
 const maxPriceColor = '#E5564F';
 const minPriceColor = '#2F63E6';
 const averagePriceColor = '#2C9A72';
@@ -63,6 +53,7 @@ export function PriceCompareChart({
   keyword,
   points,
   products,
+  onProductSelect,
 }: PriceCompareChartProps) {
   if (points.length === 0) {
     return (
@@ -103,9 +94,11 @@ export function PriceCompareChart({
     coordinates[0]
   );
   const latestPoint = coordinates[coordinates.length - 1];
-  const productMarkerBases = products.map((product, index) => {
+  const productMarkersWithoutRanks = products.map((product, index) => {
     const pointIndex = resolveProductPointIndex(product, points, index);
     const coordinate = coordinates[pointIndex] ?? latestPoint;
+    const sourcePointIndex = clamp(pointIndex - 1, 0, coordinates.length - 1);
+    const sourceCoordinate = coordinates[sourcePointIndex] ?? coordinate;
     const color = markerColors[index % markerColors.length];
     const y = priceToY(product.price, upperBound, lowerBound);
 
@@ -113,12 +106,28 @@ export function PriceCompareChart({
       product,
       color,
       index,
+      rank: 0,
       pointIndex,
+      sourcePointIndex,
+      sourceX: sourceCoordinate.x,
+      sourceY: sourceCoordinate.y,
       x: coordinate.x,
       y,
       dateLabel: formatPointDateLabel(points[pointIndex]?.label ?? product.date),
     };
   });
+  const sortedProductMarkers = [...productMarkersWithoutRanks]
+    .sort((left, right) => right.product.price - left.product.price || left.index - right.index)
+    .map((marker, rankIndex) => ({
+      ...marker,
+      rank: rankIndex + 1,
+    }));
+  const rankedMarkerByIndex = new Map(
+    sortedProductMarkers.map((marker) => [marker.index, marker])
+  );
+  const productMarkers = productMarkersWithoutRanks.map(
+    (marker) => rankedMarkerByIndex.get(marker.index) ?? marker
+  );
   const maxLabel = {
     x: maxPoint.x,
     y: maxPoint.y - 24,
@@ -138,11 +147,6 @@ export function PriceCompareChart({
     color: averagePriceColor,
     anchor: 'start' as const,
   };
-  const productMarkers = placeProductMarkerLabels(
-    productMarkerBases,
-    getReservedLabelBoxes([maxLabel, minLabel, averageLabel])
-  );
-  const markerGroupCounts = getMarkerGroupCounts(productMarkers);
   const markerIndexes = getVisibleMarkerIndexes(
     coordinates,
     minPoint,
@@ -155,7 +159,7 @@ export function PriceCompareChart({
   const fillPath = `${marketPath} L ${latestPoint.x} ${chartBottom} L ${coordinates[0].x} ${chartBottom} Z`;
 
   return (
-    <section className={`overflow-hidden rounded-[28px] p-5 ${hairline.panelSoft}`}>
+    <section className={`overflow-visible rounded-[28px] p-5 ${hairline.panelSoft}`}>
       <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span className={`inline-flex h-10 items-center rounded-full px-5 text-sm font-black ${hairline.controlActive}`}>
@@ -172,14 +176,15 @@ export function PriceCompareChart({
         </div>
       </div>
 
-      <div className="relative min-h-[560px] overflow-hidden rounded-[26px] border border-[#C9CFDA]/92 bg-white/68 shadow-[0_12px_32px_rgba(29,29,31,0.052),inset_0_1px_0_rgba(255,255,255,0.96)]">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(248,249,251,0.28))]" />
-        <svg
-          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-          className="relative z-10 h-[560px] w-full overflow-visible"
-          role="img"
-          aria-label={`${keyword} 30일 시세와 선택 상품 등록일 비교 그래프`}
-        >
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="relative min-h-[560px] overflow-hidden rounded-[26px] border border-[#C9CFDA]/92 bg-white/68 shadow-[0_12px_32px_rgba(29,29,31,0.052),inset_0_1px_0_rgba(255,255,255,0.96)]">
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(248,249,251,0.28))]" />
+          <svg
+            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+            className="relative z-10 h-[560px] w-full"
+            role="img"
+            aria-label={`${keyword} 30일 시세와 선택 상품 등록일 비교 그래프`}
+          >
           {Array.from({ length: 4 }, (_, index) => {
             const y = chartTop + (index / 3) * chartInnerHeight;
 
@@ -296,35 +301,50 @@ export function PriceCompareChart({
           {productMarkers.map((marker) => (
             <g key={`marker-line-${marker.product.platform}-${marker.product.pid}`}>
               <line
-                x1={marker.x}
+                x1={marker.sourceX}
                 x2={marker.x}
-                y1={
-                  (markerGroupCounts.get(marker.pointIndex) ?? 0) > 1
-                    ? chartTop
-                    : marker.y
-                }
-                y2={chartBottom}
+                y1={marker.sourceY}
+                y2={marker.y}
                 stroke={marker.color}
-                strokeDasharray="4 7"
+                strokeDasharray="6 8"
                 strokeLinecap="round"
+                strokeWidth="1.9"
+                opacity="0.66"
+              />
+              <circle
+                cx={marker.sourceX}
+                cy={marker.sourceY}
+                r="3.6"
+                fill="#FFFFFF"
+                stroke={marker.color}
                 strokeWidth="1.8"
-                opacity={(markerGroupCounts.get(marker.pointIndex) ?? 0) > 1 ? 0.38 : 0.54}
+                opacity="0.78"
               />
               <circle
                 cx={marker.x}
                 cy={marker.y}
-                r="8.4"
+                r="11"
                 fill="#FFFFFF"
                 stroke={marker.color}
-                strokeWidth="4"
+                strokeWidth="2.8"
               />
               <circle
                 cx={marker.x}
-                cy={chartBottom}
-                r="4.6"
+                cy={marker.y}
+                r="7.2"
                 fill={marker.color}
-                opacity="0.82"
+                opacity="0.1"
               />
+              <text
+                x={marker.x}
+                y={marker.y + 3.2}
+                fill={marker.color}
+                fontSize="9.2"
+                fontWeight="950"
+                textAnchor="middle"
+              >
+                {marker.rank}
+              </text>
             </g>
           ))}
 
@@ -343,38 +363,29 @@ export function PriceCompareChart({
                 {point.label}
               </text>
             ))}
-        </svg>
+          </svg>
+        </div>
 
-        {productMarkers.map((marker) => (
-          <div
-            key={`marker-label-${marker.product.platform}-${marker.product.pid}`}
-            className="absolute z-20 w-[194px] rounded-[20px] border bg-white/94 p-3 shadow-[0_16px_34px_rgba(29,29,31,0.13),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur-md"
-            style={{
-              borderColor: marker.color,
-              left: `${(marker.labelX / chartWidth) * 100}%`,
-              top: `${(marker.labelY / chartHeight) * 100}%`,
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <span className={`h-10 w-10 shrink-0 overflow-hidden rounded-[14px] ${hairline.image}`}>
-                <ProductVisual
-                  imageUrl={marker.product.imageUrl}
-                  name={marker.product.name}
-                  variant="thumb"
-                />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-[12px] font-black text-gray-950">
-                  {formatWon(marker.product.price)}
-                </span>
-                <span className={`mt-0.5 block text-[12px] font-black ${hairline.quietText}`}>
-                  {marker.dateLabel} 등록
-                </span>
-              </span>
-            </div>
+        <aside
+          className="min-h-[560px] rounded-[26px] border border-[#C9CFDA]/92 bg-white/78 p-4 shadow-[0_12px_32px_rgba(29,29,31,0.052),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur-xl"
+          aria-label="선택 상품 가격순 목록"
+        >
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="text-sm font-black text-gray-950">선택 상품</p>
+            <span className={`rounded-full px-3 py-1 text-[11px] font-black ${hairline.control}`}>
+              가격 높은 순
+            </span>
           </div>
-        ))}
+          <ol className="space-y-3">
+            {sortedProductMarkers.map((marker) => (
+              <ProductRankCard
+                key={`rank-card-${marker.product.platform}-${marker.product.pid}`}
+                marker={marker}
+                onProductSelect={onProductSelect}
+              />
+            ))}
+          </ol>
+        </aside>
       </div>
     </section>
   );
@@ -388,6 +399,56 @@ function buildMarketPath(points: ChartPoint[]) {
   return points
     .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
     .join(' ');
+}
+
+function ProductRankCard({
+  marker,
+  onProductSelect,
+}: {
+  marker: ProductMarker;
+  onProductSelect?: (product: Product) => void;
+}) {
+  return (
+    <li className="relative overflow-hidden rounded-[20px] border border-[#C9CFDA]/92 bg-white/88 shadow-[0_12px_26px_rgba(29,29,31,0.066),inset_0_1px_0_rgba(255,255,255,0.96)] transition hover:bg-white hover:shadow-[0_14px_30px_rgba(29,29,31,0.09),inset_0_1px_0_rgba(255,255,255,0.96)]">
+      <span
+        className="absolute bottom-4 left-0 top-4 w-[5px] rounded-full"
+        style={{ backgroundColor: marker.color }}
+        aria-hidden="true"
+      />
+      <button
+        type="button"
+        onClick={() => onProductSelect?.(marker.product)}
+        className={`flex w-full items-center gap-3 p-3 pl-5 text-left ${hairline.focus}`}
+        aria-label={`${marker.product.name} 상세 보기`}
+      >
+        <span
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 bg-white text-[12px] font-black shadow-[0_7px_14px_rgba(29,29,31,0.08)]"
+          style={{ borderColor: marker.color, color: marker.color }}
+          aria-label={`가격순 ${marker.rank}번`}
+        >
+          {marker.rank}
+        </span>
+        <span className={`h-14 w-14 shrink-0 overflow-hidden rounded-[16px] ${hairline.image}`}>
+          <ProductVisual
+            imageUrl={marker.product.imageUrl}
+            name={marker.product.name}
+            variant="thumb"
+          />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-black text-gray-950">
+            {marker.product.name}
+          </span>
+          <span className="mt-1 block text-[15px] font-black text-gray-950">
+            {formatWon(marker.product.price)}
+          </span>
+          <span className={`mt-0.5 block text-[12px] font-black ${hairline.quietText}`}>
+            {marker.dateLabel} 등록
+          </span>
+        </span>
+      </button>
+    </li>
+  );
 }
 
 function getVisibleMarkerIndexes(
@@ -427,168 +488,6 @@ function getVisibleDateLabelIndexes(points: ChartPoint[], latestPoint: ChartPoin
   }
 
   return indexes;
-}
-
-function placeProductMarkerLabels(
-  markers: ProductMarkerBase[],
-  reservedBoxes: LabelBox[]
-): ProductMarker[] {
-  const occupiedBoxes: LabelBox[] = reservedBoxes.map((box) => expandBox(box, 12));
-
-  return markers.map((marker) => {
-    const candidates = getProductLabelCandidates(marker);
-    const bestCandidate =
-      candidates.find((candidate) =>
-        occupiedBoxes.every((box) => !boxesOverlap(candidate.box, box))
-      ) ?? getLeastOverlappingCandidate(candidates, occupiedBoxes, marker);
-
-    occupiedBoxes.push(expandBox(bestCandidate.box, 14));
-
-    return {
-      ...marker,
-      labelX: bestCandidate.x,
-      labelY: bestCandidate.y,
-    };
-  });
-}
-
-function getProductLabelCandidates(marker: ProductMarkerBase) {
-  const preferredOffsets = [
-    { x: -174, y: -108 },
-    { x: 174, y: -108 },
-    { x: -174, y: 102 },
-    { x: 174, y: 102 },
-    { x: 0, y: -156 },
-    { x: 0, y: 150 },
-    { x: -286, y: -72 },
-    { x: 286, y: -72 },
-    { x: -286, y: 78 },
-    { x: 286, y: 78 },
-    { x: -392, y: -18 },
-    { x: 392, y: -18 },
-    { x: -392, y: 118 },
-    { x: 392, y: 118 },
-  ];
-  const seen = new Set<string>();
-
-  return preferredOffsets.flatMap((offset) => {
-    const x = clamp(
-      marker.x + offset.x,
-      chartLeft + productLabelBox.width / 2 + 8,
-      chartRight - productLabelBox.width / 2 - 8
-    );
-    const y = clamp(
-      marker.y + offset.y,
-      chartTop + productLabelBox.height / 2 + 8,
-      chartBottom - productLabelBox.height / 2 - 18
-    );
-    const box = centerToBox(x, y, productLabelBox.width, productLabelBox.height);
-    const key = `${Math.round(x)}:${Math.round(y)}`;
-
-    if (seen.has(key)) {
-      return [];
-    }
-
-    seen.add(key);
-    return [{ x, y, box }];
-  });
-}
-
-function getLeastOverlappingCandidate(
-  candidates: Array<{ x: number; y: number; box: LabelBox }>,
-  occupiedBoxes: LabelBox[],
-  marker: ProductMarkerBase
-) {
-  return candidates
-    .map((candidate) => ({
-      ...candidate,
-      overlapScore: occupiedBoxes.reduce(
-        (score, box) => score + getOverlapArea(candidate.box, box),
-        0
-      ),
-      distanceScore: getDistance(candidate.x, candidate.y, marker.x, marker.y) * 0.001,
-    }))
-    .sort(
-      (left, right) =>
-        left.overlapScore - right.overlapScore ||
-        left.distanceScore - right.distanceScore
-    )[0];
-}
-
-function getReservedLabelBoxes(
-  labels: Array<{ x: number; y: number; text: string; anchor?: 'start' | 'middle' }>
-): LabelBox[] {
-  return labels.map((label) => {
-    const width = estimateTextWidth(label.text, 12) + 18;
-    const height = 24;
-    const x =
-      label.anchor === 'start' ? label.x - 4 : label.x - width / 2;
-
-    return {
-      x,
-      y: label.y - height + 6,
-      width,
-      height,
-    };
-  });
-}
-
-function getMarkerGroupCounts(markers: ProductMarker[]) {
-  const counts = new Map<number, number>();
-
-  markers.forEach((marker) => {
-    counts.set(marker.pointIndex, (counts.get(marker.pointIndex) ?? 0) + 1);
-  });
-
-  return counts;
-}
-
-function estimateTextWidth(text: string, fontSize: number) {
-  return text.length * fontSize * 0.72;
-}
-
-function getDistance(leftX: number, leftY: number, rightX: number, rightY: number) {
-  return Math.hypot(leftX - rightX, leftY - rightY);
-}
-
-function centerToBox(x: number, y: number, width: number, height: number): LabelBox {
-  return {
-    x: x - width / 2,
-    y: y - height / 2,
-    width,
-    height,
-  };
-}
-
-function expandBox(box: LabelBox, padding: number): LabelBox {
-  return {
-    x: box.x - padding,
-    y: box.y - padding,
-    width: box.width + padding * 2,
-    height: box.height + padding * 2,
-  };
-}
-
-function boxesOverlap(left: LabelBox, right: LabelBox) {
-  return !(
-    left.x + left.width <= right.x ||
-    right.x + right.width <= left.x ||
-    left.y + left.height <= right.y ||
-    right.y + right.height <= left.y
-  );
-}
-
-function getOverlapArea(left: LabelBox, right: LabelBox) {
-  const xOverlap = Math.max(
-    0,
-    Math.min(left.x + left.width, right.x + right.width) - Math.max(left.x, right.x)
-  );
-  const yOverlap = Math.max(
-    0,
-    Math.min(left.y + left.height, right.y + right.height) - Math.max(left.y, right.y)
-  );
-
-  return xOverlap * yOverlap;
 }
 
 function resolveProductPointIndex(

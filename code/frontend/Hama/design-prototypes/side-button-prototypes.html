@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hama Side Button Prototypes</title>
+    <style>
+      :root {
+        --page: #f8f9fb;
+        --surface: rgba(255, 255, 255, 0.84);
+        --surface-strong: rgba(255, 255, 255, 0.96);
+        --ink: #1d1d1f;
+        --muted: #626873;
+        --quiet: #86868b;
+        --line: #c9cfda;
+        --line-strong: #aeb6c2;
+        --green: #e8f5ee;
+        --green-ink: #15805c;
+        --yellow: #fff5cf;
+        --yellow-ink: #8a6b16;
+        --shadow-soft: 0 18px 44px rgba(29, 29, 31, 0.08);
+        --shadow-small: 0 10px 24px rgba(29, 29, 31, 0.07);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          linear-gradient(var(--page), var(--page)),
+          linear-gradient(90deg, rgba(17, 24, 39, 0.035) 1px, transparent 1px),
+          linear-gradient(rgba(17, 24, 39, 0.035) 1px, transparent 1px);
+        background-size: auto, 56px 56px, 56px 56px;
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      .page {
+        width: min(1180px, calc(100vw - 48px));
+        margin: 0 auto;
+        padding: 48px 0 72px;
+      }
+
+      .title {
+        margin-bottom: 28px;
+      }
+
+      .title p {
+        margin: 0 0 8px;
+        color: var(--quiet);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+      }
+
+      .title h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 48px);
+        letter-spacing: -0.04em;
+      }
+
+      .stage-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px;
+      }
+
+      .stage {
+        position: relative;
+        min-height: 420px;
+        overflow: hidden;
+        border: 1px solid rgba(201, 207, 218, 0.92);
+        border-radius: 30px;
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow:
+          0 18px 52px rgba(29, 29, 31, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(16px);
+      }
+
+      .stage.recommended {
+        border-color: rgba(29, 29, 31, 0.24);
+      }
+
+      .mock {
+        padding: 28px;
+      }
+
+      .mock-search {
+        width: min(78%, 520px);
+        height: 54px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: var(--shadow-small);
+      }
+
+      .mock-banner {
+        margin-top: 34px;
+        height: 164px;
+        border: 1px solid rgba(201, 207, 218, 0.86);
+        border-radius: 26px;
+        background:
+          linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.42)),
+          linear-gradient(135deg, #f6f5f1, #e8ece9);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .mock-cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .mock-card {
+        height: 92px;
+        border: 1px solid rgba(201, 207, 218, 0.84);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .label {
+        position: absolute;
+        left: 22px;
+        bottom: 20px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .label strong {
+        color: var(--ink);
+      }
+
+      .side-stack {
+        position: absolute;
+        right: 22px;
+        bottom: 22px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      button {
+        border: 0;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .side-button {
+        position: relative;
+        display: grid;
+        width: 68px;
+        height: 68px;
+        place-items: center;
+        border-radius: 999px;
+        color: var(--ink);
+        transition:
+          transform 180ms ease,
+          box-shadow 180ms ease,
+          border-color 180ms ease,
+          background 180ms ease;
+      }
+
+      .side-button svg {
+        width: 24px;
+        height: 24px;
+        stroke-width: 2.15;
+      }
+
+      .side-button:focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 4px;
+      }
+
+      .side-button:hover {
+        transform: translateY(-3px);
+      }
+
+      .side-button:active {
+        transform: translateY(0) scale(0.97);
+      }
+
+      .badge {
+        position: absolute;
+        top: 5px;
+        right: 4px;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: var(--ink);
+        color: white;
+        font-size: 11px;
+        font-weight: 950;
+        line-height: 22px;
+        box-shadow: 0 8px 18px rgba(29, 29, 31, 0.18);
+      }
+
+      /* A. Current-like glass, just more dimensional */
+      .variant-glass .side-button {
+        border: 1px solid rgba(174, 182, 194, 0.92);
+        background:
+          radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.78) 42%, rgba(241, 244, 248, 0.82)),
+          rgba(255, 255, 255, 0.82);
+        box-shadow:
+          0 18px 34px rgba(29, 29, 31, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 0.98),
+          inset 0 -10px 18px rgba(29, 29, 31, 0.035);
+        backdrop-filter: blur(18px);
+      }
+
+      .variant-glass .side-button:hover {
+        border-color: rgba(93, 101, 114, 0.46);
+        box-shadow:
+          0 22px 42px rgba(29, 29, 31, 0.13),
+          inset 0 1px 0 rgba(255, 255, 255, 1),
+          inset 0 -10px 18px rgba(29, 29, 31, 0.045);
+      }
+
+      /* B. Recommended: quiet 3D coin */
+      .variant-coin .side-button {
+        border: 1px solid rgba(174, 182, 194, 0.95);
+        background:
+          linear-gradient(145deg, #ffffff 0%, #f5f7fa 46%, #e8edf3 100%);
+        box-shadow:
+          0 14px 0 rgba(174, 182, 194, 0.18),
+          0 26px 46px rgba(29, 29, 31, 0.11),
+          inset 0 1px 0 rgba(255, 255, 255, 1);
+      }
+
+      .variant-coin .side-button:hover {
+        transform: translateY(-5px);
+        box-shadow:
+          0 17px 0 rgba(174, 182, 194, 0.16),
+          0 32px 58px rgba(29, 29, 31, 0.13),
+          inset 0 1px 0 rgba(255, 255, 255, 1);
+      }
+
+      /* C. Slightly warm, for alert/action personality */
+      .variant-warm .side-button {
+        border: 1px solid rgba(185, 193, 206, 0.9);
+        background:
+          linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(248, 249, 251, 0.84)),
+          var(--surface);
+        box-shadow:
+          0 18px 38px rgba(29, 29, 31, 0.09),
+          inset 0 1px 0 rgba(255, 255, 255, 1);
+        backdrop-filter: blur(18px);
+      }
+
+      .variant-warm .compare {
+        background: linear-gradient(145deg, #ffffff, #eef7f2);
+        color: var(--green-ink);
+      }
+
+      .variant-warm .notify {
+        background: linear-gradient(145deg, #ffffff, var(--yellow));
+        color: var(--yellow-ink);
+      }
+
+      /* D. Glass rail: one object, buttons embedded */
+      .variant-rail .side-stack {
+        gap: 9px;
+        padding: 10px;
+        border: 1px solid rgba(174, 182, 194, 0.82);
+        border-radius: 999px;
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(238, 242, 247, 0.66)),
+          rgba(255, 255, 255, 0.68);
+        box-shadow:
+          0 14px 0 rgba(174, 182, 194, 0.14),
+          0 30px 54px rgba(29, 29, 31, 0.12),
+          inset 0 1px 0 rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        transition:
+          box-shadow 220ms ease,
+          transform 220ms ease;
+      }
+
+      .variant-rail .side-button {
+        overflow: hidden;
+        width: 58px;
+        height: 58px;
+        border: 1px solid rgba(29, 29, 31, 0.14);
+        background:
+          radial-gradient(circle at 32% 22%, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.84) 48%, rgba(231, 235, 240, 0.82)),
+          rgba(255, 255, 255, 0.86);
+        box-shadow:
+          0 8px 18px rgba(29, 29, 31, 0.075),
+          inset 0 1px 0 rgba(255, 255, 255, 0.98),
+          inset 0 -7px 12px rgba(29, 29, 31, 0.035);
+      }
+
+      .variant-rail .rail-top-button {
+        max-height: 0;
+        opacity: 0;
+        transform: translateY(14px) scale(0.92);
+        pointer-events: none;
+        transition:
+          max-height 240ms ease,
+          opacity 180ms ease,
+          transform 220ms ease;
+      }
+
+      .variant-rail .side-stack.is-extended .rail-top-button {
+        max-height: 58px;
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+
+      .variant-rail .side-button:hover {
+        border-color: rgba(29, 29, 31, 0.22);
+        background:
+          radial-gradient(circle at 32% 22%, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.9) 48%, rgba(222, 227, 234, 0.9));
+        box-shadow:
+          0 12px 24px rgba(29, 29, 31, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 1),
+          inset 0 -7px 12px rgba(29, 29, 31, 0.045);
+      }
+
+      .scroll-demo-toggle {
+        position: absolute;
+        right: 22px;
+        top: 20px;
+        border: 1px solid rgba(174, 182, 194, 0.86);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow:
+          0 10px 24px rgba(29, 29, 31, 0.055),
+          inset 0 1px 0 rgba(255, 255, 255, 0.98);
+        color: var(--muted);
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 950;
+        backdrop-filter: blur(14px);
+      }
+
+      .scroll-demo-toggle:hover {
+        border-color: rgba(29, 29, 31, 0.2);
+        color: var(--ink);
+      }
+
+      /* E. Soft dark anchor, only for main/chat style */
+      .variant-ink .side-button {
+        border: 1px solid rgba(29, 29, 31, 0.2);
+        background:
+          linear-gradient(145deg, rgba(47, 49, 54, 0.98), rgba(29, 29, 31, 0.94));
+        color: #fff;
+        box-shadow:
+          0 18px 42px rgba(29, 29, 31, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      }
+
+      .variant-ink .side-button:nth-child(2),
+      .variant-ink .side-button:nth-child(4) {
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(241, 244, 248, 0.94));
+        color: var(--ink);
+      }
+
+      @media (max-width: 860px) {
+        .stage-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="title">
+        <p>HAMA SIDE BUTTON</p>
+        <h1>무심하게 떠 있는 사이드 버튼 시안</h1>
+      </header>
+
+      <section class="stage-grid">
+        <article class="stage variant-glass">
+          <div class="mock">
+            <div class="mock-search"></div>
+            <div class="mock-banner"></div>
+            <div class="mock-cards">
+              <div class="mock-card"></div>
+              <div class="mock-card"></div>
+              <div class="mock-card"></div>
+            </div>
+          </div>
+          <div class="label"><strong>A.</strong> 얇은 글래스</div>
+          <div class="side-stack" aria-label="얇은 글래스 사이드 버튼">
+            <button class="side-button" aria-label="맨 위로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 19V5" /><path d="m5 12 7-7 7 7" /></svg></button>
+            <button class="side-button compare" aria-label="가격 비교"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v18" /><path d="M5 7h14" /><path d="m7 7-4 7h8Z" /><path d="m17 7-4 7h8Z" /></svg></button>
+            <button class="side-button" aria-label="챗봇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" /></svg></button>
+            <button class="side-button notify" aria-label="알림"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10.3 21a2 2 0 0 0 3.4 0" /><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /></svg><span class="badge">2</span></button>
+          </div>
+        </article>
+
+        <article class="stage recommended variant-coin">
+          <div class="mock">
+            <div class="mock-search"></div>
+            <div class="mock-banner"></div>
+            <div class="mock-cards">
+              <div class="mock-card"></div>
+              <div class="mock-card"></div>
+              <div class="mock-card"></div>
+            </div>
+          </div>
+          <div class="label"><strong>B.</strong> 추천 - 조용한 입체감</div>
+          <div class="side-stack" aria-label="조용한 입체감 사이드 버튼">
+            <button class="side-button" aria-label="맨 위로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 19V5" /><path d="m5 12 7-7 7 7" /></svg></button>
+            <button class="side-button compare" aria-label="가격 비교"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v18" /><path d="M5 7h14" /><path d="m7 7-4 7h8Z" /><path d="m17 7-4 7h8Z" /></svg></button>
+            <button class="side-button" aria-label="챗봇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" /></svg></button>
+            <button class="side-button notify" aria-label="알림"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10.3 21a2 2 0 0 0 3.4 0" /><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /></svg><span class="badge">2</span></button>
+          </div>
+        </article>
+
+        <article class="stage variant-warm">
+          <div class="mock">
+            <div class="mock-search"></div>
+            <div class="mock-banner"></div>
+            <div class="mock-cards">
+              <div class="mock-card"></div>
+              <div class="mock-card"></div>
+              <div class="mock-card"></div>
+            </div>
+          </div>
+          <div class="label"><strong>C.</strong> 기능별 약한 색</div>
+          <div class="side-stack" aria-label="기능별 약한 색 사이드 버튼">
+            <button class="side-button" aria-label="맨 위로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 19V5" /><path d="m5 12 7-7 7 7" /></svg></button>
+            <button class="side-button compare" aria-label="가격 비교"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v18" /><path d="M5 7h14" /><path d="m7 7-4 7h8Z" /><path d="m17 7-4 7h8Z" /></svg></button>
+            <button class="side-button" aria-label="챗봇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" /></svg></button>
+            <button class="side-button notify" aria-label="알림"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10.3 21a2 2 0 0 0 3.4 0" /><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /></svg><span class="badge">2</span></button>
+          </div>
+        </article>
+
+        <article class="stage variant-rail">
+          <button class="scroll-demo-toggle" type="button" data-rail-toggle>
+            스크롤 상태 보기
+          </button>
+          <div class="mock">
+            <div class="mock-search"></div>
+            <div class="mock-banner"></div>
+            <div class="mock-cards">
+              <div class="mock-card"></div>
+              <div class="mock-card"></div>
+              <div class="mock-card"></div>
+            </div>
+          </div>
+          <div class="label"><strong>D.</strong> 글래스 레일 + 확장</div>
+          <div class="side-stack rail-stack" aria-label="글래스 레일 사이드 버튼" data-rail-stack>
+            <button class="side-button rail-top-button" aria-label="맨 위로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 19V5" /><path d="m5 12 7-7 7 7" /></svg></button>
+            <button class="side-button compare" aria-label="가격 비교"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v18" /><path d="M5 7h14" /><path d="m7 7-4 7h8Z" /><path d="m17 7-4 7h8Z" /></svg></button>
+            <button class="side-button" aria-label="챗봇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" /></svg></button>
+            <button class="side-button notify" aria-label="알림"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10.3 21a2 2 0 0 0 3.4 0" /><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /></svg><span class="badge">2</span></button>
+          </div>
+        </article>
+
+        <article class="stage variant-ink">
+          <div class="mock">
+            <div class="mock-search"></div>
+            <div class="mock-banner"></div>
+            <div class="mock-cards">
+              <div class="mock-card"></div>
+              <div class="mock-card"></div>
+              <div class="mock-card"></div>
+            </div>
+          </div>
+          <div class="label"><strong>E.</strong> 검정 포인트 섞기</div>
+          <div class="side-stack" aria-label="검정 포인트 사이드 버튼">
+            <button class="side-button" aria-label="맨 위로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 19V5" /><path d="m5 12 7-7 7 7" /></svg></button>
+            <button class="side-button compare" aria-label="가격 비교"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v18" /><path d="M5 7h14" /><path d="m7 7-4 7h8Z" /><path d="m17 7-4 7h8Z" /></svg></button>
+            <button class="side-button" aria-label="챗봇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" /></svg></button>
+            <button class="side-button notify" aria-label="알림"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10.3 21a2 2 0 0 0 3.4 0" /><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /></svg><span class="badge">2</span></button>
+          </div>
+        </article>
+      </section>
+    </main>
+    <script>
+      const railStack = document.querySelector("[data-rail-stack]");
+      const railToggle = document.querySelector("[data-rail-toggle]");
+
+      railToggle?.addEventListener("click", () => {
+        const isExtended = railStack?.classList.toggle("is-extended");
+        railToggle.textContent = isExtended ? "기본 3칸 보기" : "스크롤 상태 보기";
+      });
+    </script>
+  </body>
+</html>

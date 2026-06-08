@@ -30,16 +30,10 @@ export function PriceCompareProductCard({
         <button
           type="button"
           onClick={onAddClick}
-          className={`group relative grid min-h-[124px] grid-cols-[54px_1fr] items-center gap-3 rounded-[20px] border bg-white/76 p-3 text-left shadow-[0_8px_22px_rgba(29,29,31,0.032),inset_0_1px_0_rgba(255,255,255,0.96)] transition hover:bg-white ${hairline.focus}`}
+          className={`group relative grid min-h-[124px] items-center rounded-[20px] border bg-white/76 p-3 text-left shadow-[0_8px_22px_rgba(29,29,31,0.032),inset_0_1px_0_rgba(255,255,255,0.96)] transition hover:bg-white ${hairline.focus}`}
           style={{ borderColor: `${color}70` }}
           aria-label={`${index + 1}번 비교 상품 선택`}
         >
-          <span
-            className="flex h-8 w-8 items-center justify-center rounded-full border bg-white text-sm font-black shadow-[0_8px_18px_rgba(29,29,31,0.05)]"
-            style={{ borderColor: `${color}66`, color }}
-          >
-            {index + 1}
-          </span>
           <span className={`flex h-16 min-w-0 items-center justify-center rounded-[18px] ${hairline.image}`}>
             <span className="text-sm font-black text-[#5B6472]">
               상품을 선택하세요
@@ -57,12 +51,6 @@ export function PriceCompareProductCard({
         style={{ borderColor: `${color}88` }}
         aria-label={`${index + 1}번 비교 상품 선택`}
       >
-        <span
-          className="absolute left-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border bg-white text-sm font-black shadow-[0_8px_18px_rgba(29,29,31,0.06)]"
-          style={{ borderColor: `${color}66`, color }}
-        >
-          {index + 1}
-        </span>
         <span className={`mt-12 flex aspect-square w-full items-center justify-center rounded-[22px] ${hairline.image}`}>
           <span
             className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-dashed bg-white text-2xl shadow-[0_10px_22px_rgba(29,29,31,0.045)] transition group-hover:scale-[1.03]"
@@ -84,12 +72,6 @@ export function PriceCompareProductCard({
         className="relative grid min-h-[124px] grid-cols-[78px_1fr_auto] items-center gap-3 rounded-[20px] border bg-white/88 p-3 shadow-[0_9px_24px_rgba(29,29,31,0.045),inset_0_1px_0_rgba(255,255,255,0.96)]"
         style={{ borderColor: color }}
       >
-        <span
-          className="absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs font-black text-white shadow-[0_8px_16px_rgba(29,29,31,0.12)]"
-          style={{ backgroundColor: color }}
-        >
-          {index + 1}
-        </span>
         <div className={`h-20 overflow-hidden rounded-[17px] ${hairline.image}`}>
           <ProductVisual
             imageUrl={product.imageUrl}
@@ -127,12 +109,6 @@ export function PriceCompareProductCard({
       className="relative flex min-h-[360px] flex-col rounded-[24px] border bg-white/88 p-4 shadow-[0_12px_32px_rgba(29,29,31,0.052),inset_0_1px_0_rgba(255,255,255,0.96)]"
       style={{ borderColor: color }}
     >
-      <span
-        className="absolute left-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-sm font-black text-white shadow-[0_8px_18px_rgba(29,29,31,0.12)]"
-        style={{ backgroundColor: color }}
-      >
-        {index + 1}
-      </span>
       {onRemoveClick ? (
         <button
           type="button"

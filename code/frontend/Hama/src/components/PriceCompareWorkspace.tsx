@@ -1,6 +1,8 @@
 import { ArrowLeft, ChevronRight, Info } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { PriceCompareChart } from './PriceCompareChart';
+import { ProductDetailModal } from './ProductDetailModal';
 import { PriceCompareProductCard } from './PriceCompareProductCard';
 import { PriceCompareProductPicker } from './PriceCompareProductPicker';
 import { useRecommendedProductsQuery } from '../queries/productQueries';
@@ -37,6 +39,7 @@ export function PriceCompareWorkspace({
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [pickerAnchorKeyword, setPickerAnchorKeyword] = useState('');
   const [isResultVisible, setIsResultVisible] = useState(false);
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const recommendedProductsQuery = useRecommendedProductsQuery({ limit: 16 });
   const selectedProducts = useMemo(
     () =>
@@ -70,7 +73,9 @@ export function PriceCompareWorkspace({
   };
 
   const deselectProduct = (key: string) => {
-    setSelectedKeys((current) => current.filter((item) => item !== key));
+    const nextKeys = selectedKeys.filter((item) => item !== key);
+
+    setSelectedKeys(nextKeys);
     setSelectedProductByKey((current) => {
       const next = { ...current };
 
@@ -78,7 +83,7 @@ export function PriceCompareWorkspace({
 
       return next;
     });
-    setIsResultVisible(false);
+    setIsResultVisible((wasVisible) => wasVisible && nextKeys.length >= minCompareCount);
   };
 
   useEffect(() => {
@@ -123,12 +128,44 @@ export function PriceCompareWorkspace({
         ? current
         : [...current, key]
     );
-    setIsResultVisible(false);
   };
 
   const removeSelectedProduct = (product: Product) => {
     deselectProduct(productStorageKey(product));
   };
+
+  const pickerOverlay = isPickerOpen ? (
+    <div
+      className={
+        mode === 'page'
+          ? 'absolute inset-x-0 top-0 z-30 flex min-h-full items-start justify-center rounded-[28px] bg-[#F8F9FB]/34 p-0 backdrop-blur-[0.75px]'
+          : 'fixed inset-0 z-[220] flex items-center justify-center bg-[#F8F9FB]/20 px-4 py-16 backdrop-blur-[0.5px] md:px-24 md:py-16'
+      }
+      role="presentation"
+      onMouseDown={() => setIsPickerOpen(false)}
+    >
+      <div
+        className={
+          mode === 'page'
+            ? 'w-full'
+            : 'h-[min(896px,calc(100vh-8rem))] w-full max-w-[1560px]'
+        }
+      >
+        <PriceCompareProductPicker
+          products={candidateProducts}
+          recommendationKeyword={pickerRecommendationKeyword}
+          recommendedProducts={recommendedProducts}
+          selectedProducts={selectedProducts}
+          selectedKeys={selectedKeys}
+          isRecommendationLoading={recommendedProductsQuery.isPending}
+          maxSelectedCount={maxCompareCount}
+          viewMode={mode}
+          onClose={() => setIsPickerOpen(false)}
+          onToggleProduct={toggleProduct}
+        />
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className={`relative ${mode === 'modal' ? 'space-y-5' : 'space-y-6'}`}>
@@ -177,6 +214,7 @@ export function PriceCompareWorkspace({
           keyword={keyword}
           points={marketPoints}
           products={selectedProducts}
+          onProductSelect={setDetailProduct}
         />
       ) : null}
 
@@ -195,7 +233,7 @@ export function PriceCompareWorkspace({
               type="button"
               onClick={() => {
                 setIsResultVisible(false);
-                openPicker();
+                setIsPickerOpen(false);
               }}
               className={`inline-flex h-11 items-center justify-center gap-2 rounded-[16px] px-4 text-sm font-black transition ${hairline.secondaryButton} ${hairline.focus}`}
             >
@@ -203,49 +241,34 @@ export function PriceCompareWorkspace({
               상품 다시 고르기
             </button>
           ) : null}
-          <button
-            type="button"
-            disabled={!canShowResult}
-            onClick={() => {
-              setIsPickerOpen(false);
-              setIsResultVisible(true);
-            }}
-            className={`inline-flex h-11 items-center justify-center gap-2 rounded-[16px] px-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${hairline.primaryButton} ${hairline.focus}`}
-          >
-            {selectedProducts.length > 0
-              ? `${selectedProducts.length}개 상품 비교하기`
-              : '상품 비교하기'}
-            <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          </button>
+          {!isResultVisible ? (
+            <button
+              type="button"
+              disabled={!canShowResult}
+              onClick={() => {
+                setIsPickerOpen(false);
+                setIsResultVisible(true);
+              }}
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-[16px] px-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${hairline.primaryButton} ${hairline.focus}`}
+            >
+              {selectedProducts.length > 0
+                ? `${selectedProducts.length}개 상품 비교하기`
+                : '상품 비교하기'}
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
       </div>
 
-      {isPickerOpen ? (
-        <div
-          className={
-            mode === 'page'
-              ? 'absolute inset-x-0 top-0 z-30 flex min-h-full items-start justify-center rounded-[28px] bg-[#F8F9FB]/34 p-0 backdrop-blur-[0.75px]'
-              : 'absolute inset-0 z-30 flex items-center justify-center rounded-[24px] bg-[#F8F9FB]/18 px-2 py-3 backdrop-blur-[0.5px] md:px-3'
-          }
-          role="presentation"
-          onMouseDown={() => setIsPickerOpen(false)}
-        >
-          <div className={mode === 'page' ? 'w-full' : 'w-[98%] max-w-[1680px]'}>
-            <PriceCompareProductPicker
-              products={candidateProducts}
-              recommendationKeyword={pickerRecommendationKeyword}
-              recommendedProducts={recommendedProducts}
-              selectedProducts={selectedProducts}
-              selectedKeys={selectedKeys}
-              isRecommendationLoading={recommendedProductsQuery.isPending}
-              maxSelectedCount={maxCompareCount}
-              viewMode={mode}
-              onClose={() => setIsPickerOpen(false)}
-              onToggleProduct={toggleProduct}
-            />
-          </div>
-        </div>
-      ) : null}
+      {mode === 'modal' && pickerOverlay
+        ? createPortal(pickerOverlay, document.body)
+        : pickerOverlay}
+
+      <ProductDetailModal
+        key={detailProduct ? `${detailProduct.platform}:${detailProduct.pid}` : 'empty-price-compare-detail'}
+        product={detailProduct}
+        onClose={() => setDetailProduct(null)}
+      />
     </div>
   );
 }

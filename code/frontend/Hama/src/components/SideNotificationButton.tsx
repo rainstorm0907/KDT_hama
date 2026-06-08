@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlatformPill } from './PlatformPill';
 import { ProductVisual } from './ProductVisual';
+import { sideButtonClass, sidePanelPositionClass } from './sideButtonStyles';
 import { hairline } from '../styles/hairline';
 import type { Product } from '../types/product';
 import { formatWon } from '../utils/format';
@@ -79,7 +80,7 @@ export function SideNotificationButton({
   return (
     <div className="relative">
       <div
-        className={`fixed bottom-5 right-[calc(1.25rem+4rem+0.75rem)] z-[160] transition-all duration-200 ease-out md:bottom-6 md:right-[calc(1.5rem+72px+1rem)] ${
+        className={`${sidePanelPositionClass} ${
           isOpen
             ? 'pointer-events-auto translate-x-0 scale-100 opacity-100'
             : 'pointer-events-none translate-x-3 scale-95 opacity-0'
@@ -87,10 +88,11 @@ export function SideNotificationButton({
         aria-hidden={!isOpen}
       >
         <section
-          className={`min-h-[300px] w-[min(414px,calc(100vw-7rem))] overflow-hidden rounded-[26px] ${hairline.panel}`}
+          className={`flex w-[min(540px,calc(100vw-7rem))] flex-col overflow-hidden rounded-[26px] ${hairline.panel}`}
           aria-label="최근 알림"
+          style={{ height: 'min(620px, calc(100dvh - 7rem))' }}
         >
-          <div className="flex items-center justify-between border-b border-[#AEB6C2] px-5 py-4">
+          <div className="flex shrink-0 items-center justify-between border-b border-[#AEB6C2] px-5 py-4">
             <div>
               <h2 className="text-base font-black text-gray-950">알림</h2>
               <p className={`mt-0.5 text-sm font-bold ${hairline.quietText}`}>
@@ -108,7 +110,7 @@ export function SideNotificationButton({
           </div>
 
           {unreadNotifications.length > 0 ? (
-            <ul className="max-h-[390px] min-h-[212px] overflow-y-auto px-3 py-2">
+            <ul className="transient-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-2">
               {unreadNotifications.slice(0, 5).map((notification) => (
                 <li
                   key={notification.id}
@@ -158,7 +160,7 @@ export function SideNotificationButton({
               ))}
             </ul>
           ) : (
-            <div className="flex min-h-[212px] flex-col items-center justify-center px-6 py-7 text-center">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 py-7 text-center">
               <p className="text-base font-black text-gray-950">
                 최근 알림이 없습니다.
               </p>
@@ -180,13 +182,13 @@ export function SideNotificationButton({
       <button
         type="button"
         onClick={onToggle}
-        className={`relative flex h-16 w-16 items-center justify-center rounded-full text-gray-950 ring-1 ring-[#1D1D1F]/75 transition-all duration-200 active:scale-95 md:h-[72px] md:w-[72px] ${hairline.panel} ${hairline.focus}`}
+        className={sideButtonClass}
         aria-label="최근 알림 보기"
         aria-expanded={isOpen}
       >
         <Bell className="h-6 w-6" aria-hidden="true" />
         {unreadNotifications.length > 0 ? (
-          <span className="absolute right-1 top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-[#1D1D1F] px-1 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(29,29,31,0.18)]">
+          <span className="absolute right-0.5 top-1 flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[#1D1D1F] px-1 text-[11px] font-black leading-[22px] text-white shadow-[0_8px_18px_rgba(29,29,31,0.18)]">
             {Math.min(unreadNotifications.length, 9)}
           </span>
         ) : null}
