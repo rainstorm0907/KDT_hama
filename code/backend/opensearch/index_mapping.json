@@ -1,0 +1,67 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "analysis": {
+      "analyzer": {
+        "hama_text": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase", "asciifolding"]
+        }
+      },
+      "normalizer": {
+        "hama_keyword": {
+          "type": "custom",
+          "filter": ["lowercase", "asciifolding"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "document_id": { "type": "keyword" },
+      "item_id": { "type": "long" },
+      "item_key": { "type": "keyword" },
+      "platform": { "type": "keyword", "normalizer": "hama_keyword" },
+      "pid": { "type": "keyword" },
+      "title": {
+        "type": "text",
+        "analyzer": "hama_text",
+        "fields": {
+          "raw": { "type": "keyword", "ignore_above": 512 }
+        }
+      },
+      "normalized_title": { "type": "text", "analyzer": "hama_text" },
+      "canonical_name": {
+        "type": "text",
+        "analyzer": "hama_text",
+        "fields": {
+          "raw": { "type": "keyword", "ignore_above": 256 }
+        }
+      },
+      "category_name": { "type": "keyword", "ignore_above": 256 },
+      "matched_keywords": {
+        "type": "text",
+        "analyzer": "hama_text",
+        "fields": {
+          "raw": { "type": "keyword", "ignore_above": 256 }
+        }
+      },
+      "search_text": { "type": "text", "analyzer": "hama_text" },
+      "current_price": { "type": "integer" },
+      "status": { "type": "keyword", "ignore_above": 64 },
+      "image_url": { "type": "keyword", "index": false },
+      "item_url": { "type": "keyword", "index": false },
+      "crawled_at": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm||yyyy.MM.dd HH:mm||yyyy-MM-dd||strict_date_optional_time"
+      },
+      "is_accessory_candidate": { "type": "boolean" },
+      "quality_flags": { "type": "keyword", "ignore_above": 128 }
+    }
+  }
+}

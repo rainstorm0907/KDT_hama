@@ -8,3 +8,4 @@ pyahocorasick
 python-dotenv
 psycopg[binary]
 supabase
+opensearch-py

@@ -1,0 +1,17 @@
+[Unit]
+Description=Hama FastAPI backend
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ubuntu/main/code/backend/src/main/python
+EnvironmentFile=/home/ubuntu/main/code/backend/src/main/python/.env
+Environment=HAMA_OPENSEARCH_ENABLED=true
+Environment=PYTHONPATH=/home/ubuntu/main/code/backend:/home/ubuntu/main/code/backend/src/main/python
+ExecStart=/home/ubuntu/main/code/backend/src/main/python/.venv/bin/uvicorn api_server:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
