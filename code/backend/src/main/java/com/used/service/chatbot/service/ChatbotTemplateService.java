@@ -12,104 +12,77 @@ public class ChatbotTemplateService {
             return Optional.empty();
         }
 
-        String normalized = normalize(userMessage);
+        String text = normalize(userMessage);
 
-        if (isServiceIntroQuestion(normalized)) {
+        if (isServiceIntroQuestion(text)) {
             return Optional.of(new TemplateAnswer(
                     "SERVICE_INTRO",
                     "TEMPLATE",
-                    """
-                            ?섎쭏???щ윭 以묎퀬嫄곕옒 ?ъ씠?몄쓽 ?곹뭹 ?뺣낫瑜??쒓납?먯꽌 鍮꾧탳?????덇쾶 ?꾩?二쇰뒗 ?쒕퉬?ㅼ엯?덈떎.
-                            ?곹뭹 寃?? 媛寃?鍮꾧탳, ?쒖꽭 ?뺤씤, 留욎땄 異붿쿇, 李? ?뚮┝ 湲곕뒫??以묒떖?쇰줈 ?댁슜?????덉뒿?덈떎.
-                            """
+                    "하마는 여러 중고거래 사이트의 상품 정보를 모아서 가격 비교, 상품 검색, 추천을 도와주는 서비스입니다. 검색한 상품의 현재가와 최저가, 유사 상품의 평균 가격을 함께 확인할 수 있어 더 합리적으로 구매 판단을 할 수 있습니다."
             ));
         }
 
-        if (isSearchHelpQuestion(normalized)) {
+        if (isSearchHelpQuestion(text)) {
             return Optional.of(new TemplateAnswer(
                     "SEARCH_HELP",
                     "TEMPLATE",
-                    """
-                            寃?됱갹???곹뭹紐낆쓣 ?낅젰?섎㈃ ?щ윭 以묎퀬嫄곕옒 ?뚮옯?쇱쓽 ?곹뭹???쒓납?먯꽌 鍮꾧탳?????덉뒿?덈떎.
-                            ?덈? ?ㅼ뼱 '?꾩씠??14', '媛ㅻ윮??S23', '寃뚯씠諛??명듃遺?泥섎읆 ?곹뭹紐낆쓣 以묒떖?쇰줈 寃?됲븯硫?醫뗭뒿?덈떎.
-                            """
+                    "검색창에 상품명이나 모델명을 입력하면 관련 중고 상품을 찾을 수 있습니다. 예를 들어 '아이폰 14', '갤럭시 S23', 'RTX 4060 본체'처럼 구체적으로 입력하면 더 정확한 결과를 확인할 수 있습니다."
             ));
         }
 
-        if (isPriceCompareGuideQuestion(normalized)) {
+        if (isPriceCompareGuideQuestion(text)) {
             return Optional.of(new TemplateAnswer(
                     "PRICE_COMPARE_GUIDE",
                     "TEMPLATE",
-                    """
-                            ?섎쭏???섏쭛??以묎퀬 留ㅻЪ???꾩옱媛, ?좎궗 ?곹뭹 ?됯퇏媛, 嫄곕옒?꾨즺 ?됯퇏媛瑜?湲곗??쇰줈 媛寃⑹쓣 鍮꾧탳?⑸땲??
-                            ?뱀젙 ?곹뭹???곸꽭 ?붾㈃?먯꽌 ?대옒留먮옒 AI瑜??꾨Ⅴ硫??꾩옱 媛寃⑹씠 愿쒖갖?吏 ???쎄쾶 ?뺤씤?????덉뒿?덈떎.
-                            """
+                    "가격 비교는 현재 판매가, 최저가, 비슷한 상품의 평균 매물가와 거래완료 평균가를 기준으로 판단합니다. 상품 상세에서 살래말래 AI를 누르면 해당 상품 기준으로 가격이 괜찮은지 확인할 수 있습니다."
             ));
         }
 
-        if (isWishlistGuideQuestion(normalized)) {
+        if (isWishlistGuideQuestion(text)) {
             return Optional.of(new TemplateAnswer(
                     "WISHLIST_GUIDE",
                     "TEMPLATE",
-                    """
-                            ?곹뭹 ?곸꽭 ?붾㈃???섑듃 踰꾪듉???꾨Ⅴ硫?李?紐⑸줉????λ맗?덈떎.
-                            ??ν븳 ?곹뭹? 留덉씠?섏씠吏??李?紐⑸줉?먯꽌 ?ㅼ떆 ?뺤씤?????덇퀬, 梨쀫큸??李쒗븳 ?곹뭹??鍮꾧탳???뚮룄 ?쒖슜?????덉뒿?덈떎.
-                            """
+                    "상품 상세 화면의 하트 버튼을 누르면 찜 목록에 저장됩니다. 저장한 상품은 마이페이지의 찜 목록에서 다시 확인할 수 있고, 챗봇에서 찜 목록 상품 비교에도 활용할 수 있습니다."
             ));
         }
 
-        if (isRecentItemGuideQuestion(normalized)) {
+        if (isRecentItemGuideQuestion(text)) {
             return Optional.of(new TemplateAnswer(
                     "RECENT_ITEM_GUIDE",
                     "TEMPLATE",
-                    """
-                            ?곹뭹 ?곸꽭 ?붾㈃???댁뼱蹂??곹뭹? 理쒓렐 蹂??곹뭹????λ맗?덈떎.
-                            留덉씠?섏씠吏?먯꽌 ?ㅼ떆 ?뺤씤?????덇퀬, 梨쀫큸?먭쾶 理쒓렐 蹂??곹뭹?쇰━ 鍮꾧탳?대떖?쇨퀬 ?붿껌?????덉뒿?덈떎.
-                            """
+                    "상품 상세를 열어본 내역은 최근 본 상품에 저장됩니다. 마이페이지에서 최근 본 상품을 확인할 수 있고, 챗봇에게 최근 본 상품끼리 비교해 달라고 요청할 수 있습니다."
             ));
         }
 
-        if (isAlertGuideQuestion(normalized)) {
+        if (isAlertGuideQuestion(text)) {
             return Optional.of(new TemplateAnswer(
                     "PRICE_ALERT_GUIDE",
                     "TEMPLATE",
-                    """
-                            ?곹뭹 ?곸꽭 ?붾㈃???뚮┝ 踰꾪듉???꾨Ⅴ硫??대떦 ?곹뭹??媛寃??뚮┝ ??곸쑝濡???λ맗?덈떎.
-                            留덉씠?섏씠吏 ?뚮┝ 紐⑸줉?먯꽌 ?뚮┝ ????곹뭹???뺤씤?????덉뒿?덈떎.
-                            """
+                    "상품 상세 화면의 알림 버튼을 누르면 관심 상품 알림 목록에 저장됩니다. 이후 마이페이지 알림 탭에서 알림 대상 상품을 확인할 수 있습니다."
             ));
         }
 
-        if (isChatbotHelpQuestion(normalized)) {
+        if (isChatbotHelpQuestion(text)) {
             return Optional.of(new TemplateAnswer(
                     "CHATBOT_HELP",
                     "TEMPLATE",
-                    """
-                            ?섎쭏 梨쀫큸? 以묎퀬 ?곹뭹 異붿쿇, 媛寃?鍮꾧탳, ?대옒留먮옒 ?먮떒, ?ъ씠???댁슜 諛⑸쾿 ?덈궡瑜??꾩??쒕┰?덈떎.
-                            濡쒓렇?명븳 ?ъ슜?먯쓽 李?紐⑸줉怨?理쒓렐 蹂??곹뭹??鍮꾧탳???쒖슜?????덉뒿?덈떎.
-                            """
+                    "챗봇은 상품 추천, 가격 비교, 찜 목록과 최근 본 상품 비교, 사이트 사용 방법 안내를 도와줍니다. 상품과 무관한 질문은 처리하지 않고, 필요한 경우 상품명이나 조건을 다시 물어봅니다."
             ));
         }
 
-        if (isAuthGuideQuestion(normalized)) {
+        if (isAuthGuideQuestion(text)) {
             return Optional.of(new TemplateAnswer(
                     "AUTH_GUIDE",
                     "TEMPLATE",
-                    """
-                            ?뚯썝媛????濡쒓렇?명븯硫?留덉씠?섏씠吏, 李?紐⑸줉, 理쒓렐 蹂??곹뭹, ?뚮┝, 梨쀫큸 湲곕뒫???ъ슜?????덉뒿?덈떎.
-                            濡쒓렇?몄씠 ?섏? ?딆쑝硫??대찓?쇨낵 鍮꾨?踰덊샇媛 ?뺥솗?쒖? 癒쇱? ?뺤씤??二쇱꽭??
-                            """
+                    "로그인하면 찜 목록, 최근 본 상품, 알림, 챗봇 상담 내역 같은 개인 기능을 사용할 수 있습니다. 회원가입 후 로그인하면 마이페이지에서 개인 상품 내역을 확인할 수 있습니다."
             ));
         }
 
-        if (isOutOfScopeQuestion(normalized)) {
+        if (isOutOfScopeQuestion(text)) {
             return Optional.of(new TemplateAnswer(
                     "OUT_OF_SCOPE",
                     "OUT_OF_SCOPE",
-                    """
-                            二꾩넚?섏?留??섎쭏 梨쀫큸? 以묎퀬 ?곹뭹 寃?? 媛寃?鍮꾧탳, ?곹뭹 異붿쿇, 李? ?뚮┝, ?ъ씠???댁슜 諛⑸쾿??愿??吏덈Ц留??꾩??쒕┫ ???덉뒿?덈떎.
-                            ?곹뭹紐낆씠???ъ씠??湲곕뒫怨?愿?⑦빐???ㅼ떆 吏덈Ц??二쇱꽭??
-                            """
+                    "하마 챗봇은 중고 상품 검색, 가격 비교, 상품 추천, 사이트 사용 방법에 관한 질문만 도와드릴 수 있습니다. 상품명이나 가격 비교 조건을 포함해서 다시 질문해 주세요."
             ));
         }
 
@@ -117,58 +90,51 @@ public class ChatbotTemplateService {
     }
 
     private boolean isServiceIntroQuestion(String text) {
-        return containsAny(text, "?섎쭏", "?ъ씠??, "?쒕퉬??)
-                && containsAny(text, "萸?, "臾댁뾿", "?뚭컻", "?ㅻ챸", "湲곕뒫", "?대뼡");
+        return containsAny(text, "하마", "서비스", "사이트", "뭐하는", "설명")
+                && containsAny(text, "뭐", "소개", "기능", "사용", "알려");
     }
 
     private boolean isSearchHelpQuestion(String text) {
-        return containsAny(text, "寃??, "李얜뒗踰?, "李얜뒗諛⑸쾿", "?곹뭹李얘린")
-                && containsAny(text, "諛⑸쾿", "?대뼸寃?, "?ъ슜踰?, "?섎뒗踰?, "??, "??);
+        return containsAny(text, "검색", "찾는법", "찾기", "상품찾")
+                && containsAny(text, "방법", "어떻게", "사용", "하는법");
     }
 
     private boolean isPriceCompareGuideQuestion(String text) {
-        return (containsAny(text, "?쒖꽭", "媛寃⑸퉬援?, "?됯퇏媛", "嫄곕옒?꾨즺?됯퇏")
-                && containsAny(text, "諛⑸쾿", "?대뼸寃?, "??, "萸?, "湲곗?", "蹂대뒗踰?))
-                || containsAny(text, "?대옒留먮옒?ъ슜踰?, "?대옒留먮옒湲곕뒫");
+        return containsAny(text, "가격비교", "비교", "최저가", "평균가", "살래말래")
+                && containsAny(text, "방법", "기준", "어떻게", "판단", "설명");
     }
 
     private boolean isWishlistGuideQuestion(String text) {
-        return containsAny(text, "李?, "愿?ъ긽??)
-                && containsAny(text, "諛⑸쾿", "?대뼸寃?, "?ъ슜踰?, "?섎뒗踰?, "異붽?", "??젣", "紐⑸줉");
+        return containsAny(text, "찜", "하트", "관심")
+                && containsAny(text, "방법", "어떻게", "목록", "저장", "확인");
     }
 
     private boolean isRecentItemGuideQuestion(String text) {
-        return containsAny(text, "理쒓렐蹂몄긽??, "理쒓렐蹂?, "理쒓렐?곹뭹", "?대엺?곹뭹")
-                && containsAny(text, "諛⑸쾿", "?대뼸寃?, "?ъ슜踰?, "?대뵒", "紐⑸줉", "?뺤씤");
+        return containsAny(text, "최근본", "최근열람", "본상품")
+                && containsAny(text, "방법", "어떻게", "확인", "목록", "비교");
     }
 
     private boolean isAlertGuideQuestion(String text) {
-        return containsAny(text, "?뚮┝", "媛寃⑹븣由?, "理쒖?媛?뚮┝")
-                && containsAny(text, "諛⑸쾿", "?대뼸寃?, "?ъ슜踰?, "?ㅼ젙", "耳?, "??, "紐⑸줉");
+        return containsAny(text, "알림", "가격알림", "종")
+                && containsAny(text, "방법", "어떻게", "설정", "등록", "확인");
     }
 
     private boolean isChatbotHelpQuestion(String text) {
-        return containsAny(text, "梨쀫큸", "ai", "?대옒留먮옒")
-                && containsAny(text, "萸?, "臾댁뾿", "湲곕뒫", "?ъ슜踰?, "?좎닔", "?꾩?");
+        return containsAny(text, "챗봇", "ai", "상담")
+                && containsAny(text, "기능", "뭐", "도움", "질문", "사용");
     }
 
     private boolean isAuthGuideQuestion(String text) {
-        return containsAny(text, "濡쒓렇??, "?뚯썝媛??, "媛??, "怨꾩젙")
-                && containsAny(text, "諛⑸쾿", "?대뼸寃?, "?덈뤌", "?덈릺", "?ㅻ쪟", "?꾩슂");
+        return containsAny(text, "로그인", "회원가입", "계정", "마이페이지")
+                && containsAny(text, "방법", "필요", "어떻게", "사용", "안돼");
     }
 
     private boolean isOutOfScopeQuestion(String text) {
-        if (containsAny(text,
-                "?곹뭹", "以묎퀬", "媛寃?, "?쒖꽭", "李?, "?뚮┝", "寃??, "?섎쭏", "嫄곕옒", "留ㅻЪ",
-                "?먮ℓ", "援щℓ", "異붿쿇", "鍮꾧탳", "?대옒留먮옒", "留덉씠?섏씠吏", "?꾩씠??, "媛ㅻ윮??,
-                "而댄벂??, "?명듃遺?, "?곗뒪?ы깙", "蹂몄껜", "?쒕툝由?, "?먯뼱??, "?뚯뒪", "?뚰뀗??)) {
+        if (containsAny(text, "상품", "가격", "중고", "검색", "추천", "찜", "알림", "하마", "챗봇", "마이페이지", "아이폰", "갤럭시", "노트북", "컴퓨터", "자전거", "의류", "신발", "가구", "카메라", "게임")) {
             return false;
         }
 
-        return containsAny(text,
-                "?좎뵪", "二쇱떇", "肄붿씤", "濡쒕삉", "?댁뒪", "?뺤튂", "?곗삁", "留쏆쭛", "?ы뻾",
-                "?붾━", "?덉떆??, "?숈젣", "怨쇱젣", "?섑븰", "踰덉뿭", "肄붾뵫", "?뚯씠??, "?먮컮",
-                "?섑븰", "蹂묒썝", "踰뺣쪧", "蹂?몄궗", "?댁꽭", "?ъ＜", "?몃옒", "?곹솕異붿쿇", "寃뚯엫怨듬왂");
+        return containsAny(text, "날씨", "음식", "맛집", "여행", "연예", "주식", "코인", "정치", "뉴스", "숙제", "번역", "소설", "영화", "운세");
     }
 
     private boolean containsAny(String text, String... keywords) {
@@ -177,7 +143,6 @@ public class ChatbotTemplateService {
                 return true;
             }
         }
-
         return false;
     }
 
@@ -185,9 +150,7 @@ public class ChatbotTemplateService {
         if (text == null) {
             return "";
         }
-
-        return text
-                .toLowerCase()
+        return text.toLowerCase()
                 .replaceAll("\\s+", "")
                 .replace("?", "")
                 .replace(".", "")
@@ -198,7 +161,6 @@ public class ChatbotTemplateService {
     }
 
     public static class TemplateAnswer {
-
         private final String intent;
         private final String responseType;
         private final String answer;
@@ -222,4 +184,3 @@ public class ChatbotTemplateService {
         }
     }
 }
-

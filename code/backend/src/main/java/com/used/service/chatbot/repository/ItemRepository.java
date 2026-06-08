@@ -14,20 +14,11 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 
     List<Item> findTop20BySaleStatusOrderByItemIdDesc(String saleStatus);
 
-    List<Item> findByCategoryNameAndSaleStatusOrderByItemIdDesc(
-            String categoryName,
-            String saleStatus
-    );
+    List<Item> findByCategoryNameAndSaleStatusOrderByItemIdDesc(String categoryName, String saleStatus);
 
-    List<Item> findByTitleContainingAndSaleStatusOrderByItemIdDesc(
-            String keyword,
-            String saleStatus
-    );
+    List<Item> findByTitleContainingAndSaleStatusOrderByItemIdDesc(String keyword, String saleStatus);
 
-    Optional<Item> findByPlatform_PlatformNameAndOriginalId(
-            String platformName,
-            String originalId
-    );
+    Optional<Item> findByPlatform_PlatformNameAndOriginalId(String platformName, String originalId);
 
     long countBySaleStatus(String saleStatus);
 
@@ -39,10 +30,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
               AND i.currentPrice > 0
             ORDER BY i.itemId DESC
             """)
-    List<Item> findAvailableItems(
-            @Param("saleStatus") String saleStatus,
-            Pageable pageable
-    );
+    List<Item> findAvailableItems(@Param("saleStatus") String saleStatus, Pageable pageable);
 
     @Query("""
             SELECT i
@@ -71,32 +59,10 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     @Query(value = """
             SELECT
                 target.current_price AS "currentPrice",
-                AVG(
-                    CASE
-                        WHEN similar.status IN ('?먮ℓ以?, 'ON_SALE', 'SALE')
-                        THEN similar.current_price
-                    END
-                ) AS "averageListingPrice",
-                AVG(
-                    CASE
-                        WHEN similar.status IN ('?먮ℓ?꾨즺', '嫄곕옒?꾨즺', 'SOLD_OUT', 'SOLD')
-                        THEN similar.current_price
-                    END
-                ) AS "averageSoldPrice",
-                SUM(
-                    CASE
-                        WHEN similar.status IN ('?먮ℓ以?, 'ON_SALE', 'SALE')
-                        THEN 1
-                        ELSE 0
-                    END
-                ) AS "listingCount",
-                SUM(
-                    CASE
-                        WHEN similar.status IN ('?먮ℓ?꾨즺', '嫄곕옒?꾨즺', 'SOLD_OUT', 'SOLD')
-                        THEN 1
-                        ELSE 0
-                    END
-                ) AS "soldCount"
+                AVG(CASE WHEN similar.status IN ('판매중', 'ON_SALE', 'SALE') THEN similar.current_price END) AS "averageListingPrice",
+                AVG(CASE WHEN similar.status IN ('거래완료', '판매완료', 'SOLD_OUT', 'SOLD') THEN similar.current_price END) AS "averageSoldPrice",
+                SUM(CASE WHEN similar.status IN ('판매중', 'ON_SALE', 'SALE') THEN 1 ELSE 0 END) AS "listingCount",
+                SUM(CASE WHEN similar.status IN ('거래완료', '판매완료', 'SOLD_OUT', 'SOLD') THEN 1 ELSE 0 END) AS "soldCount"
             FROM items target
             JOIN items similar
               ON similar.current_price IS NOT NULL
@@ -120,4 +86,3 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             """, nativeQuery = true)
     PriceStatsProjection findPriceStatsByItemId(@Param("itemId") Long itemId);
 }
-

@@ -15,17 +15,16 @@ public class LoginUserService {
 
     public Long getLoginUserId(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new AccessDeniedException("濡쒓렇?몄씠 ?꾩슂?⑸땲??");
+            throw new AccessDeniedException("\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.");
         }
 
         String email = authentication.getName();
-
         if (email == null || email.isBlank() || "anonymousUser".equals(email)) {
-            throw new AccessDeniedException("濡쒓렇?몄씠 ?꾩슂?⑸땲??");
+            throw new AccessDeniedException("\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.");
         }
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AccessDeniedException("濡쒓렇???ъ슜?먮? 李얠쓣 ???놁뒿?덈떎."));
+                .orElseThrow(() -> new AccessDeniedException("\uB85C\uADF8\uC778 \uC0AC\uC6A9\uC790\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
 
         return user.getUserId();
     }

@@ -17,23 +17,16 @@ public class GeminiTestController {
 
     @GetMapping("/test")
     public ResponseEntity<Map<String, String>> testGemini() {
-
-        System.out.println("?슚 [/api/gemini/test] 而⑦듃濡ㅻ윭 ?몄텧??");
+        System.out.println("[GET /api/gemini/test] Gemini test requested");
         try {
             String result = geminiClientService.testConnection();
-
-            return ResponseEntity.ok(
-                    Map.of(
-                            "status", "success",
-                            "message", result
-                    )
-            );
+            return ResponseEntity.ok(Map.of("status", "success", "message", result));
         } catch (WebClientResponseException.TooManyRequests e) {
             return ResponseEntity.status(429)
                     .body(Map.of(
                             "status", "fail",
                             "error", "TOO_MANY_REQUESTS",
-                            "message", "Gemini API ?붿껌 ?쒗븳??嫄몃졇?듬땲?? ?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??"
+                            "message", "Gemini API request limit was reached. Try again later."
                     ));
         } catch (WebClientResponseException e) {
             return ResponseEntity.status(e.getStatusCode())

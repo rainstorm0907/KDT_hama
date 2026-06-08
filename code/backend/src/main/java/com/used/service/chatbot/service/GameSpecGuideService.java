@@ -10,79 +10,38 @@ public class GameSpecGuideService {
             return "";
         }
 
-        String normalizedGameName = gameName
-                .replaceAll("\\s+", "")
-                .toLowerCase();
-
-        if (normalizedGameName.contains("諛곌렇")
-                || normalizedGameName.contains("諛고?洹몃씪?대뱶")
-                || normalizedGameName.contains("pubg")) {
-            return makePubgGuide(performanceLevel);
+        String game = normalize(gameName);
+        if (containsAny(game, "롤", "리그오브레전드", "lol")) {
+            return "롤은 비교적 가벼운 게임이라 고사양 컴퓨터까지는 필요하지 않습니다. CPU는 i3 8세대 이상 또는 라이젠 3 이상, RAM 8GB 이상, SSD 256GB 이상이면 충분한 편입니다. 중고 기준으로는 20만~50만 원대 본체도 후보가 될 수 있습니다.";
         }
 
-        if (normalizedGameName.contains("?ъ뒪??)
-                || normalizedGameName.contains("rust")) {
-            return makeRustGuide(performanceLevel);
+        if (containsAny(game, "배그", "배틀그라운드", "pubg")) {
+            return "배그는 그래픽카드와 메모리 영향이 큰 편입니다. FHD 기준으로 CPU i5 9세대 이상 또는 라이젠 5 3600 이상, GTX 1660 Super나 RTX 2060 이상, RAM 16GB 이상을 권장합니다.";
         }
 
-        if (normalizedGameName.contains("濡?)
-                || normalizedGameName.contains("由ш렇?ㅻ툕?덉쟾??)
-                || normalizedGameName.contains("lol")) {
-            return makeLolGuide(performanceLevel);
+        if (containsAny(game, "사이버펑크", "cyberpunk")) {
+            return "사이버펑크는 고사양 게임이라 옵션 타협 여부가 중요합니다. FHD 기준으로도 RTX 3060 이상, RAM 16GB 이상을 권장하고, QHD나 높은 옵션은 RTX 4070급 이상을 보는 편이 좋습니다.";
+        }
+
+        if (containsAny(game, "러스트", "rust")) {
+            return "러스트는 메모리와 그래픽카드가 모두 중요한 게임입니다. CPU i5 10세대 이상 또는 라이젠 5 3600 이상, GTX 1660 Super 또는 RTX 2060 이상, RAM 16GB 이상을 권장합니다.";
+        }
+
+        if ("HIGH".equalsIgnoreCase(performanceLevel) || "EXTREME".equalsIgnoreCase(performanceLevel)) {
+            return gameName + " 플레이용이라면 그래픽카드와 RAM 구성을 꼭 확인하는 것이 좋습니다. RTX 3060 이상, RAM 16GB 이상을 우선 후보로 보세요.";
         }
 
         return "";
     }
 
-    private String makePubgGuide(String performanceLevel) {
-        if ("HIGH".equalsIgnoreCase(performanceLevel)) {
-            return """
-                    諛고?洹몃씪?대뱶瑜??먰솢?섍쾶 ?섎젮硫??믪? ?듭뀡 湲곗??쇰줈 ?꾨옒 ?뺣룄瑜?異붿쿇?⑸땲??
+    private String normalize(String value) {
+        return value == null ? "" : value.toLowerCase().replaceAll("\\s+", "");
+    }
 
-                    CPU: ?명뀛 i5 12?몃? ?댁긽 ?먮뒗 ?쇱씠??5 5600 ?댁긽
-                    GPU: RTX 3060 / RTX 4060 ?댁긽
-                    RAM: 16GB ?댁긽, 媛?ν븯硫?32GB
-                    ??μ옣移? SSD 512GB ?댁긽
-
-                    以묎퀬 援щℓ 湲곗??쇰줈??70留?110留??먮? 寃뚯씠諛?蹂몄껜瑜??곗꽑 ?뺤씤?섎뒗 寃?醫뗭뒿?덈떎.
-                    """;
+    private boolean containsAny(String text, String... keywords) {
+        for (String keyword : keywords) {
+            if (text.contains(normalize(keyword))) return true;
         }
-
-        return """
-                諛고?洹몃씪?대뱶瑜?以묎컙 ?듭뀡 湲곗??쇰줈 利먭린?ㅻ㈃ ?꾨옒 ?뺣룄瑜?異붿쿇?⑸땲??
-
-                CPU: ?명뀛 i5 9?몃? ?댁긽 ?먮뒗 ?쇱씠??5 3600 ?댁긽
-                GPU: GTX 1660 Super / RTX 2060 / RTX 3060湲?
-                RAM: 16GB ?댁긽
-                ??μ옣移? SSD 512GB ?댁긽
-
-                以묎퀬 援щℓ 湲곗??쇰줈??50留?90留??먮? 寃뚯씠諛?蹂몄껜瑜?癒쇱? ?뺤씤?섎뒗 寃?醫뗭뒿?덈떎.
-                """;
-    }
-
-    private String makeRustGuide(String performanceLevel) {
-        return """
-                ?ъ뒪?몃? ?먰솢?섍쾶 ?뚮젅?댄븯?ㅻ㈃ 硫붾え由ъ? 洹몃옒?쎌뭅?쒓? 以묒슂?⑸땲??
-
-                CPU: ?명뀛 i5 10?몃? ?댁긽 ?먮뒗 ?쇱씠??5 3600 ?댁긽
-                GPU: GTX 1660 Super / RTX 2060 ?댁긽
-                RAM: 16GB ?댁긽, 媛?ν븯硫?32GB
-                ??μ옣移? SSD 512GB ?댁긽
-
-                以묎퀬 援щℓ 湲곗??쇰줈??60留?100留??먮? 寃뚯씠諛?蹂몄껜瑜?異붿쿇?⑸땲??
-                """;
-    }
-
-    private String makeLolGuide(String performanceLevel) {
-        return """
-                由ш렇 ?ㅻ툕 ?덉쟾?쒕뒗 鍮꾧탳??媛踰쇱슫 寃뚯엫?대씪 怨좎궗??而댄벂?곌퉴吏???꾩슂?섏? ?딆뒿?덈떎.
-
-                CPU: ?명뀛 i3 8?몃? ?댁긽 ?먮뒗 ?쇱씠??3 ?댁긽
-                GPU: GTX 1050 / ?댁옣 洹몃옒???쇰? 紐⑤뜽??媛??
-                RAM: 8GB ?댁긽, ?ъ쑀 ?덇쾶??16GB
-                ??μ옣移? SSD 256GB ?댁긽
-
-                以묎퀬 援щℓ 湲곗??쇰줈??20留?50留??먮? 蹂몄껜??異⑸텇???꾨낫媛 ?????덉뒿?덈떎.
-                """;
+        return false;
     }
 }

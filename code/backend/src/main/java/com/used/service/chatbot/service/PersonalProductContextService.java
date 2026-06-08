@@ -26,45 +26,23 @@ public class PersonalProductContextService {
 
     public boolean supports(String message) {
         String normalized = normalize(message);
-
-        boolean asksPersonalContext =
-                normalized.contains("李?)
-                        || normalized.contains("愿?ъ긽??)
-                        || normalized.contains("愿??)
-                        || normalized.contains("理쒓렐蹂?)
-                        || normalized.contains("理쒓렐?곹뭹")
-                        || normalized.contains("理쒓렐");
-
-        boolean asksCompare =
-                normalized.contains("鍮꾧탳")
-                        || normalized.contains("怨⑤씪")
-                        || normalized.contains("異붿쿇")
-                        || normalized.contains("萸먭??섏븘")
-                        || normalized.contains("萸먭?醫뗭븘")
-                        || normalized.contains("?붿떥")
-                        || normalized.contains("???)
-                        || normalized.contains("理쒖?媛")
-                        || normalized.contains("紐⑸줉")
-                        || normalized.contains("蹂댁뿬");
-
+        boolean asksPersonalContext = containsAny(normalized, "찜", "관심", "최근본", "최근본상품", "본상품");
+        boolean asksCompare = containsAny(normalized, "비교", "추천", "가격", "뭐가", "어떤", "괜찮", "살까");
         return asksPersonalContext && asksCompare;
     }
 
     @Transactional(readOnly = true)
     public ChatMessageResponse handle(Long userId, String message) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("?ъ슜?먮? 李얠쓣 ???놁뒿?덈떎."));
+                .orElseThrow(() -> new IllegalArgumentException("로그인한 사용자를 찾을 수 없습니다."));
 
         String sourceName = resolveSourceName(message);
-        List<Item> items = "RECENT".equals(sourceName)
-                ? loadRecentItems(user)
-                : loadWishlistItems(user);
+        List<Item> items = "RECENT".equals(sourceName) ? loadRecentItems(user) : loadWishlistItems(user);
 
         if (items.isEmpty()) {
             String answer = "RECENT".equals(sourceName)
-                    ? "理쒓렐 蹂??곹뭹???꾩쭅 ?놁뒿?덈떎. ?곹뭹 ?곸꽭瑜?紐?媛??뺤씤?????ㅼ떆 鍮꾧탳???щ씪怨??댁＜?몄슂."
-                    : "李?紐⑸줉???꾩쭅 鍮꾩뼱 ?덉뒿?덈떎. 鍮꾧탳?섍퀬 ?띠? ?곹뭹??癒쇱? 李쒗븳 ???ㅼ떆 臾쇱뼱遊?二쇱꽭??";
-
+                    ? "최근 본 상품이 아직 없습니다. 상품 상세 페이지를 열어본 뒤 다시 비교를 요청해 주세요."
+                    : "찜 목록에 상품이 아직 없습니다. 관심 있는 상품의 하트 버튼을 누른 뒤 다시 비교를 요청해 주세요.";
             return ChatMessageResponse.builder()
                     .answer(answer)
                     .intent("PERSONAL_CONTEXT_COMPARE")
@@ -80,10 +58,8 @@ public class PersonalProductContextService {
                 .map(this::toRecommendedItemDto)
                 .toList();
 
-        String answer = makeCompareAnswer(sourceName, comparedItems);
-
         return ChatMessageResponse.builder()
-                .answer(answer)
+                .answer(makeCompareAnswer(sourceName, comparedItems))
                 .intent("PERSONAL_CONTEXT_COMPARE")
                 .responseType("USER_CONTEXT")
                 .keyword("")
@@ -92,60 +68,36 @@ public class PersonalProductContextService {
     }
 
     private List<Item> loadWishlistItems(User user) {
-        return wishlistRepository.findByUserOrderByAddedAtDesc(user)
-                .stream()
-                .map(Wishlist::getItem)
-                .toList();
+        return wishlistRepository.findByUserOrderByAddedAtDesc(user).stream().map(Wishlist::getItem).toList();
     }
 
     private List<Item> loadRecentItems(User user) {
-        return itemViewRepository.findTop20ByUserOrderByViewedAtDesc(user)
-                .stream()
-                .map(ItemView::getItem)
-                .toList();
+        return itemViewRepository.findTop20ByUserOrderByViewedAtDesc(user).stream().map(ItemView::getItem).toList();
     }
 
     private String makeCompareAnswer(String sourceName, List<RecommendedItemDto> items) {
-        String contextLabel = "RECENT".equals(sourceName) ? "理쒓렐 蹂??곹뭹" : "李?紐⑸줉";
-
+        String contextLabel = "RECENT".equals(sourceName) ? "최근 본 상품" : "찜 목록";
         if (items.size() == 1) {
             RecommendedItemDto item = items.get(0);
-            return contextLabel + "??鍮꾧탳???곹뭹??1媛쒕쭔 ?덉뒿?덈떎.\n"
-                    + "?꾩옱 ?뺤씤 媛?ν븳 ?곹뭹? '" + item.getTitle() + "'?닿퀬 媛寃⑹? "
-                    + formatWon(item.getCurrentPrice()) + "?낅땲?? 2媛??댁긽 ?닿린硫?媛寃⑷낵 ?곹깭瑜?媛숈씠 鍮꾧탳?대뱶由닿쾶??";
+            return contextLabel + "에 비교할 상품이 1개만 있습니다. 현재 후보는 '" + item.getTitle() + "'이고 가격은 " + formatWon(item.getCurrentPrice()) + "입니다. 두 개 이상 저장하면 더 정확히 비교해드릴 수 있습니다.";
         }
 
         RecommendedItemDto cheapest = items.get(0);
         RecommendedItemDto expensive = items.get(items.size() - 1);
-
         StringBuilder answer = new StringBuilder();
-        answer.append(contextLabel)
-                .append("?먯꽌 媛寃?湲곗??쇰줈 鍮꾧탳?대뇬?듬땲??\n\n")
-                .append("媛????댄븳 ?곹뭹? '")
-                .append(cheapest.getTitle())
-                .append("'?닿퀬 ?꾩옱媛??")
-                .append(formatWon(cheapest.getCurrentPrice()))
-                .append("?낅땲??");
+        answer.append(contextLabel).append("을 가격 기준으로 비교했습니다.\n\n")
+                .append("가장 저렴한 상품은 '").append(cheapest.getTitle()).append("'이고 현재가는 ").append(formatWon(cheapest.getCurrentPrice())).append("입니다.");
 
         if (cheapest.getLowestPrice() != null && cheapest.getCurrentPrice() != null) {
             long gap = cheapest.getCurrentPrice() - cheapest.getLowestPrice();
-            if (gap <= 0) {
-                answer.append(" ?깅줉??理쒖?媛 湲곗??쇰줈??醫뗭? 媛寃⑹엯?덈떎.");
-            } else {
-                answer.append(" ?깅줉??理쒖?媛蹂대떎 ")
-                        .append(formatWon(gap))
-                        .append(" ?믪뒿?덈떎.");
-            }
+            if (gap <= 0) answer.append(" 기록된 최저가 수준이라 가격 메리트가 있습니다.");
+            else answer.append(" 최저가보다 ").append(formatWon(gap)).append(" 높은 상태입니다.");
         }
 
         if (expensive.getCurrentPrice() != null && cheapest.getCurrentPrice() != null) {
-            long gap = expensive.getCurrentPrice() - cheapest.getCurrentPrice();
-            answer.append("\n媛??鍮꾩떬 ?곹뭹怨쇰뒗 ")
-                    .append(formatWon(gap))
-                    .append(" 李⑥씠媛 ?⑸땲??");
+            answer.append("\n가장 비싼 후보와는 ").append(formatWon(expensive.getCurrentPrice() - cheapest.getCurrentPrice())).append(" 차이가 납니다.");
         }
-
-        answer.append("\n\n?꾨옒 ?곹뭹 移대뱶?먯꽌 ?곸꽭 ?뺣낫? ?먮Ц 留곹겕瑜??뺤씤?대낫?몄슂.");
+        answer.append("\n\n상태, 구성품, 거래 위치까지 함께 확인하면 더 안전하게 고를 수 있습니다.");
         return answer.toString();
     }
 
@@ -164,22 +116,21 @@ public class PersonalProductContextService {
     }
 
     private String makeReason(Item item) {
-        if (item.getLowestPrice() != null
-                && item.getCurrentPrice() != null
-                && item.getCurrentPrice() <= item.getLowestPrice()) {
-            return "?꾩옱媛媛 湲곕줉??理쒖?媛 ?섏??낅땲??";
+        if (item.getLowestPrice() != null && item.getCurrentPrice() != null && item.getCurrentPrice() <= item.getLowestPrice()) {
+            return "기록된 최저가 수준의 상품입니다.";
         }
-
-        return "?ъ슜??湲곕줉?먯꽌 遺덈윭??鍮꾧탳 ????곹뭹?낅땲??";
+        return "사용자 상품 목록에서 비교 대상으로 선택된 상품입니다.";
     }
 
     private String resolveSourceName(String message) {
-        String normalized = normalize(message);
-        if (normalized.contains("理쒓렐")) {
-            return "RECENT";
-        }
+        return normalize(message).contains("최근") ? "RECENT" : "WISHLIST";
+    }
 
-        return "WISHLIST";
+    private boolean containsAny(String text, String... keywords) {
+        for (String keyword : keywords) {
+            if (text.contains(normalize(keyword))) return true;
+        }
+        return false;
     }
 
     private String normalize(String message) {
@@ -187,11 +138,6 @@ public class PersonalProductContextService {
     }
 
     private String formatWon(Long price) {
-        if (price == null) {
-            return "媛寃??뺣낫 ?놁쓬";
-        }
-
-        return String.format("%,d??, price);
+        return price == null ? "가격 정보 없음" : String.format("%,d원", price);
     }
 }
-

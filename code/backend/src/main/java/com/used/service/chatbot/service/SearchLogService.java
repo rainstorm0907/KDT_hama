@@ -22,7 +22,6 @@ public class SearchLogService {
         log.setUserId(userId);
         log.setKeyword(keyword.trim());
         log.setClickedItemId(null);
-
         searchLogRepository.save(log);
     }
 
@@ -34,9 +33,8 @@ public class SearchLogService {
 
         SearchLog log = new SearchLog();
         log.setUserId(userId);
-        log.setKeyword(keyword == null || keyword.isBlank() ? "?곹뭹 ?대┃" : keyword.trim());
+        log.setKeyword(keyword == null || keyword.isBlank() ? "상품 클릭" : keyword.trim());
         log.setClickedItemId(itemId);
-
         searchLogRepository.save(log);
     }
 }

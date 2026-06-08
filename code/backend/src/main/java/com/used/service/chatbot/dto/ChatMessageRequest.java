@@ -8,7 +8,7 @@ import lombok.Setter;
 @Setter
 public class ChatMessageRequest {
 
-    @NotBlank(message = "message???꾩닔?낅땲??")
+    @NotBlank(message = "message는 필수입니다.")
     private String message;
 
     private Long itemId;
