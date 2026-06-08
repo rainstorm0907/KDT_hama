@@ -26,12 +26,10 @@ public class ChatHistory {
     @Column(name = "USER_ID")
     private Long userId;
 
-    @Lob
-    @Column(name = "USER_MESSAGE")
+    @Column(name = "USER_MESSAGE", columnDefinition = "TEXT")
     private String userMessage;
 
-    @Lob
-    @Column(name = "BOT_RESPONSE")
+    @Column(name = "BOT_RESPONSE", columnDefinition = "TEXT")
     private String botResponse;
 
     @Column(name = "INTENT", length = 50)

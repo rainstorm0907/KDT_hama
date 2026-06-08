@@ -3,10 +3,10 @@ spring:
     name: insu
 
   datasource:
-    url: jdbc:oracle:thin:@localhost:15210/XEPDB1
-    username: ${DB_USERNAME:insurance}
-    password: ${DB_PASSWORD:1234}
-    driver-class-name: oracle.jdbc.OracleDriver
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -15,13 +15,13 @@ spring:
     properties:
       hibernate:
         format_sql: false
-        dialect: org.hibernate.dialect.OracleDialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   thymeleaf:
     cache: false
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:8000}
 
 gemini:
   api-key: ${GEMINI_API_KEY}

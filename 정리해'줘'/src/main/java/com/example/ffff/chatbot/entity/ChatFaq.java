@@ -24,7 +24,6 @@ public class ChatFaq {
     @Column(name = "QUESTION_PATTERN", length = 200)
     private String questionPattern;
 
-    @Lob
-    @Column(name = "ANSWER_TEXT")
+    @Column(name = "ANSWER_TEXT", columnDefinition = "TEXT")
     private String answerText;
 }
