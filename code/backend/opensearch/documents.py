@@ -71,9 +71,6 @@ def build_search_document_from_item_row(row: dict[str, Any]) -> dict[str, Any] |
 
 
 def platform_name(row: dict[str, Any]) -> str:
-    platform = row.get("platforms")
-    if isinstance(platform, dict):
-        return clean_value(platform.get("platform_name"))
     return clean_value(row.get("platform_name"))
 
 

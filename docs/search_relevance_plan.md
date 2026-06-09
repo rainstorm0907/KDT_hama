@@ -17,7 +17,7 @@
 - 중복 상품 중 대표 행은 `keyword` 길이가 더 긴 쪽을 남기고, `matched_keywords` 중 더 구체적인 긴 키워드를 `canonical_name`으로 선택합니다.
 - `+`, `plus`, `플러스`, `pro`, `max`, `ultra` 같은 표기 차이를 정규화합니다.
 - `crawling_20260429_no_filter.py`를 만들어 필터 미적용 결과와 비교할 수 있게 했습니다.
-- `analysis/cluster_bracket_contents.py`를 추가해 no-filter 결과의 상품명 대괄호(`[]`) 내부 텍스트만 추출하고 클러스터링할 수 있게 했습니다.
+- `analysis/scripts/cluster_bracket_contents.py`를 추가해 no-filter 결과의 상품명 대괄호(`[]`) 내부 텍스트만 추출하고 클러스터링할 수 있게 했습니다.
 - 대괄호 분석 결과는 `code/backend/src/main/python/analysis/results/bracket_contents`와 `code/backend/src/main/python/analysis/results/bracket_clusters`에 저장합니다.
 - `code/backend/src/main/python/crawling/blacklist_keywords.csv`와 `blacklist_tokens.csv`로 액세서리/노이즈 후보를 별도 관리합니다.
 - 2026-06-05 기준 no-filter 통합 결과(`통합조회_전체_no_filter_20260605_1142.csv`)를 추가로 검토하고 있습니다. 이 파일은 로컬 크롤링 결과 위치인 `crawling/results`에 둘 수 있으며 Git 추적 대상에서 제외될 수 있습니다.

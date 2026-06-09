@@ -1,6 +1,6 @@
 # Hama 파이프라인 설정 CSV 작성 가이드
 
-이 폴더의 CSV 파일들은 `hama_data_pipeline.py`가 실행될 때 자동으로 로드됩니다.  
+이 폴더의 CSV 파일들은 `lib/hama_data_pipeline.py`가 실행될 때 자동으로 로드됩니다.  
 상품명 매칭, 카테고리 배정, 제외 토큰 관리를 코드 수정 없이 CSV 수정만으로 조정하기 위한 설정 파일입니다.
 
 크롤링 단계의 검색어/노이즈 관리는 이 폴더가 아니라 `code/backend/src/main/python/crawling`의 `keyword_list.csv`, `blacklist_keywords.csv`, `blacklist_tokens.csv`에서 관리합니다.
@@ -92,14 +92,14 @@ token,reason,enabled
 
 ## 수정 후 확인 방법
 
-CSV를 수정한 뒤에는 서버 또는 파이프라인 프로세스를 재시작해야 변경된 사전이 다시 로드됩니다.
+CSV를 수정한 뒤에는 로컬에서 실행 중인 `uvicorn api_server:app` 프로세스를 재시작해야 변경된 사전이 다시 로드됩니다.
 
-크롤링 blacklist CSV를 수정한 경우에는 해당 CSV를 읽는 크롤링/분석 스크립트의 적용 범위를 먼저 확인합니다. `config` 폴더의 세 CSV는 `hama_data_pipeline.py` 실행 시 자동 로드되지만, `crawling` 폴더의 blacklist 파일은 크롤링·분석 단계별로 별도 적용될 수 있습니다.
+크롤링 blacklist CSV를 수정한 경우에는 해당 CSV를 읽는 크롤링/분석 스크립트의 적용 범위를 먼저 확인합니다. `config` 폴더의 세 CSV는 `lib/hama_data_pipeline.py` 실행 시 자동 로드되지만, `crawling` 폴더의 blacklist 파일은 크롤링·분석 단계별로 별도 적용될 수 있습니다.
 
 간단한 문법 확인:
 
 ```powershell
-python -m py_compile "code/backend/src/main/python/hama_data_pipeline.py"
+python -m py_compile "code/backend/src/main/python/lib/hama_data_pipeline.py"
 ```
 
 ## 실행 방법
@@ -115,13 +115,13 @@ python -m pip install -r "code/backend/src/main/python/requirements.txt"
 파이프라인 모듈 문법 확인:
 
 ```powershell
-python -m py_compile "code/backend/src/main/python/hama_data_pipeline.py"
+python -m py_compile "code/backend/src/main/python/lib/hama_data_pipeline.py"
 ```
 
 수동 기입 전 참고 CSV 생성:
 
 ```powershell
-python "code/backend/src/main/python/generate_config_reference_csv.py"
+python "code/backend/src/main/python/tools/generate_config_reference_csv.py"
 ```
 
 생성 위치:
@@ -133,7 +133,7 @@ code/backend/src/main/python/config/reference/
 상품명 매칭과 카테고리 배정이 CSV 설정을 읽는지 간단히 확인:
 
 ```powershell
-python -c "import sys; sys.path.insert(0, r'code/backend/src/main/python'); from hama_data_pipeline import HamaDataPipeline; p=HamaDataPipeline(); item=p.run_pipeline({'platform':'번개장터','pid':'test-1','name':'아이폰 16 pro 256gb 자급제','price':1000000,'status':'판매중','source_keyword':'아이폰 16'}); print(item.category); print(item.matched_keywords)"
+python -c "import sys; sys.path.insert(0, r'code/backend/src/main/python'); from lib.hama_data_pipeline import HamaDataPipeline; p=HamaDataPipeline(); item=p.run_pipeline({'platform':'번개장터','pid':'test-1','name':'아이폰 16 pro 256gb 자급제','price':1000000,'status':'판매중','source_keyword':'아이폰 16'}); print(item.category); print(item.matched_keywords)"
 ```
 
 FastAPI 서버 실행:
@@ -142,4 +142,4 @@ FastAPI 서버 실행:
 python -m uvicorn api_server:app --reload --app-dir "code/backend/src/main/python"
 ```
 
-CSV를 수정한 뒤에는 실행 중인 서버를 재시작해야 변경 내용이 반영됩니다.
+CSV를 수정한 뒤에는 로컬 API 서버(`127.0.0.1:8000`)를 재시작해야 변경 내용이 반영됩니다.

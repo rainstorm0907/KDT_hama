@@ -13,7 +13,7 @@ if str(PYTHON_DIR) not in sys.path:
 
 from opensearch.documents import build_search_document_from_item_row
 from opensearch.repository import bulk_index_documents, ensure_index
-from supabase_repository import load_item_rows_for_opensearch
+from lib.supabase_repository import load_item_rows_for_opensearch
 
 
 def main() -> None:

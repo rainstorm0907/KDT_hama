@@ -9,7 +9,9 @@ from typing import Literal
 
 
 ProductStatus = Literal["판매중", "예약중", "판매완료"]
-ENV_PATH = Path(__file__).with_name(".env")
+from lib._paths import PYTHON_DIR
+
+ENV_PATH = PYTHON_DIR / ".env"
 
 try:
     from dotenv import load_dotenv
@@ -23,8 +25,8 @@ class SupabaseRepositoryError(RuntimeError):
     pass
 
 
-PRODUCT_SELECT = "*, platforms(platform_name), price_history(price, recorded_at)"
-OPENSEARCH_ITEM_SELECT = "*, platforms(platform_name)"
+PRODUCT_SELECT = "*, price_history(price, recorded_at)"
+OPENSEARCH_ITEM_SELECT = "*"
 SUPABASE_PAGE_SIZE = 1000
 
 
@@ -84,23 +86,11 @@ def load_products_from_supabase() -> list[dict[str, object]]:
 
 
 def find_product_from_supabase(platform: str, pid: str) -> dict[str, object] | None:
-    platform_response = (
-        client()
-        .table("platforms")
-        .select("platform_id")
-        .eq("platform_name", platform)
-        .maybe_single()
-        .execute()
-    )
-    platform_row = platform_response.data
-    if not platform_row:
-        return None
-
     response = (
         client()
         .table("items")
         .select(PRODUCT_SELECT)
-        .eq("platform_id", platform_row["platform_id"])
+        .eq("platform_name", platform)
         .eq("original_id", pid)
         .maybe_single()
         .execute()
@@ -194,10 +184,7 @@ def to_product(row: dict[str, object]) -> dict[str, object]:
 
 
 def platform_name(row: dict[str, object]) -> str:
-    platform = row.get("platforms")
-    if isinstance(platform, dict):
-        return clean_value(platform.get("platform_name"))
-    return ""
+    return clean_value(row.get("platform_name"))
 
 
 def price_history(value: object, fallback_price: int) -> list[dict[str, int | str]]:

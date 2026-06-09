@@ -34,22 +34,25 @@ code/backend/src/main/java/com/used/service
 code/backend/src/main/python
 ```
 
-- [x] `api_server.py`: 현재 MVP FastAPI 서버
-- [x] `apply_supabase_schema.py`
-- [x] `generate_config_reference_csv.py`
-- [x] `hama_data_pipeline.py`
+- [x] `api_server.py`: 로컬 MVP FastAPI 서버
 - [x] `import_csv_to_supabase.py`
-- [x] `product_matching.py`
 - [x] `requirements.txt`
-- [x] `supabase_repository.py`
 - [x] `.env.example`
+- [x] `lib/hama_data_pipeline.py`
+- [x] `lib/keyword_preprocessing.py`
+- [x] `lib/product_matching.py`
+- [x] `lib/item_rating.py`
+- [x] `lib/supabase_repository.py`
+- [x] `tools/apply_supabase_schema.py`
+- [x] `tools/generate_config_reference_csv.py`
+- [x] `tools/generate_supabase_erd.py`
 - [x] `crawling/keyword_list.csv`
 - [x] `crawling/blacklist_keywords.csv`
 - [x] `crawling/blacklist_tokens.csv`
 - [x] `crawling/update_keyword_list.py`
-- [x] `analysis/check_title_keyword_accuracy.py`
-- [x] `analysis/cluster_bracket_contents.py`
-- [x] `analysis/compare_platform_data.py`
+- [x] `analysis/scripts/check_title_keyword_accuracy.py`
+- [x] `analysis/scripts/cluster_bracket_contents.py`
+- [x] `analysis/scripts/compare_platform_data.py`
 - [x] 키워드 중복 조회 상품 제거 로직 작성
 - [ ] 크롤링 결과 저장 방식 최종 정책 정리
 - [ ] DB 저장 연동 운영 절차 정리
@@ -61,15 +64,16 @@ code/backend/src/main/python
 
 ### `analysis`
 
-- [x] `cluster_bracket_contents.py`: no-filter 크롤링 결과의 상품명 대괄호(`[]`) 내부 텍스트 추출/클러스터링
+- [x] `analysis/scripts/cluster_bracket_contents.py`: no-filter 크롤링 결과의 상품명 대괄호(`[]`) 내부 텍스트 추출/클러스터링
 - [x] `results/bracket_contents`: 대괄호 내부 텍스트 추출 결과 CSV 보관
 - [x] `results/bracket_clusters`: 대괄호 내부 텍스트 클러스터링 결과 CSV 보관
 - [x] `results/platform_comparison`: 플랫폼별/키워드별 비교 결과 보관
 - [x] `results/title_keyword_accuracy`: 키워드-상품명 정합성 검증 결과 보관
 - [x] `results/price_outliers`: 키워드별 가격 통계와 이상치 후보 결과 보관
-- [x] `keyword_price_outliers.ipynb`: 가격 이상치 분석 노트북
-- [x] `keyword_price_outliers_first_filter.ipynb`: 1차 필터 기준 가격 이상치 분석 노트북
-- [x] `cluster_splits.ipynb`: 클러스터 분리 검토 노트북
+- [x] `analysis/notebooks/keyword_final.ipynb`: 최종 DB handoff 파이프라인
+- [x] `analysis/notebooks/keyword_price_outliers.ipynb`: 가격 이상치 분석 노트북
+- [x] `analysis/notebooks/keyword_price_outliers_first_filter.ipynb`: 1차 필터 기준 가격 이상치 분석 노트북
+- [x] `analysis/notebooks/cluster_splits.ipynb`: 클러스터 분리 검토 노트북
 
 ### `config` 및 파이프라인
 
@@ -78,24 +82,21 @@ code/backend/src/main/python
 - [x] `config/category_rules.csv`: 카테고리 배정 규칙
 - [x] `config/token_exclude_list.csv`: 제외 토큰 목록
 - [x] `config/reference/*.csv`: 설정 수동 검토용 참고 CSV
-- [x] `generate_config_reference_csv.py`: 설정 참고 CSV 생성 스크립트
-- [x] `product_matching.py`: 상품명 정규화/토큰화/매칭 보조 모듈
-- [x] `hama_data_pipeline.py`: 설정 CSV 기반 상품 매칭 파이프라인
-- [x] `api_server.py`: 상품 검색/추천/상세 FastAPI 서버
-- [x] `supabase_repository.py`: Supabase 상품 조회 및 CSV fallback 저장소 모듈
-- [x] `apply_supabase_schema.py`: Supabase/PostgreSQL 스키마 적용 스크립트
+- [x] `tools/generate_config_reference_csv.py`: 설정 참고 CSV 생성 스크립트
+- [x] `lib/product_matching.py`: 상품명 정규화/토큰화/매칭 보조 모듈
+- [x] `lib/hama_data_pipeline.py`: 설정 CSV 기반 상품 매칭 파이프라인
+- [x] `lib/keyword_preprocessing.py`: keyword_final 전처리·클러스터 규칙
+- [x] `api_server.py`: 상품 검색/추천/상세 FastAPI 서버 (로컬)
+- [x] `lib/supabase_repository.py`: Supabase 상품 조회 및 CSV fallback 저장소 모듈
+- [x] `tools/apply_supabase_schema.py`: Supabase/PostgreSQL 스키마 적용 스크립트
 - [x] `import_csv_to_supabase.py`: 크롤링 CSV의 Supabase 적재 스크립트
-- [x] `.env.example`: Supabase 로컬 환경 변수 예시 파일
+- [x] `.env.example`: Supabase·OpenSearch 로컬 환경 변수 예시 파일
 
-### `preprocessing`
+### `lib` 전처리·클러스터
 
-- [ ] 중복 상품 제거 스크립트 작성
-- [ ] 가격, 날짜, 상태값 정규화 스크립트 작성
-- [ ] DB 저장 전 데이터 검증 스크립트 작성
-
-현재 상태:
-
-- [ ] `preprocessing` 폴더에는 아직 `.gitkeep`만 있음
+- [x] `lib/keyword_preprocessing.py`: 블랙리스트, 가격 이상치, `cluster_product_name` 규칙
+- [x] `analysis/notebooks/keyword_final.ipynb`: 최종 handoff CSV 생성 노트북
+- [ ] `HamaCollectionPipeline` 크롤러 fetch 연동 (현재 TODO)
 
 ## Frontend
 

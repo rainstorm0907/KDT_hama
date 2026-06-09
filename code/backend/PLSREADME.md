@@ -129,16 +129,13 @@ Supabase는 서비스 데이터의 기준입니다.
 
 ```text
 items
-  상품의 현재 상태, 제목, 가격, 이미지, 링크, 매칭명 저장
-
-platforms
-  번개장터, 중고나라 같은 플랫폼 구분 저장
+  상품의 현재 상태, 제목, 가격, 이미지, 링크, platform_name, cluster_product_name, rating 저장
 
 price_history
   가격 비교와 상세 화면용 가격 이력 저장
 
 search_logs, search_events
-  검색 로그와 사용자 기반 추천용 행동 기록 저장
+  OpenSearch 검색 품질 분석용 행동 로그 (검색 키워드, 클릭, 노출 이벤트)
 ```
 
 정리하면 Supabase는 `정답 DB`입니다.

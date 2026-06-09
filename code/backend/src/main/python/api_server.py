@@ -20,14 +20,14 @@ BACKEND_DIR = Path(__file__).resolve().parents[3]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.append(str(BACKEND_DIR))
 
-from hama_data_pipeline import HamaDataPipeline
+from lib.hama_data_pipeline import HamaDataPipeline
 from opensearch.repository import (
     OpenSearchRepositoryError,
     is_opensearch_enabled,
     search_item_ids,
 )
-from product_matching import ProductMatchIndex
-from supabase_repository import (
+from lib.product_matching import ProductMatchIndex
+from lib.supabase_repository import (
     SupabaseRepositoryError,
     find_product_from_supabase,
     find_products_by_item_ids_from_supabase,
@@ -302,8 +302,11 @@ def to_product(row: dict[str, str], pipeline: HamaDataPipeline) -> dict[str, obj
             "representative_name": clean_value(row.get("representative_name")),
             "derived_product_name": clean_value(row.get("derived_product_name")),
             "tree_path_ids": clean_value(row.get("tree_path_ids")),
-        }
+        },
+        drop_on_filter=True,
     )
+    if normalized_product is None:
+        return None
     product = model_to_dict(normalized_product)
 
     product["id"] = product_id

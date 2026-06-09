@@ -12,12 +12,24 @@ from typing import Any, Literal
 import ahocorasick  # type: ignore[import-not-found]
 from pydantic import BaseModel, Field
 
-from product_matching import (
+from lib._paths import PYTHON_DIR
+from lib.keyword_preprocessing import (
+    DEFAULT_BLACKLIST_KEYWORDS_PATH,
+    DropDecision,
+    apply_token_stage_clustering,
+    build_drop_name_keyword_matchers,
+    build_single_cluster_fields,
+    compact_search_text,
+    compute_keyword_price_bounds,
+    evaluate_item_filters,
+    load_drop_name_keywords,
+    normalize_search_text,
+)
+from lib.product_matching import (
     CategoryCorrelationResult,
     ProductMatchCandidate,
     ProductMatchIndex,
     TitleTokenProfile,
-    normalize_title,
     split_keyword_values,
 )
 
@@ -25,7 +37,7 @@ from product_matching import (
 logger = logging.getLogger(__name__)
 
 ProductStatus = Literal["판매중", "예약중", "판매완료"]
-DEFAULT_CONFIG_DIR = Path(__file__).resolve().parent / "config"
+DEFAULT_CONFIG_DIR = PYTHON_DIR / "config"
 DEFAULT_PRODUCT_TOKEN_DICTIONARY_PATH = DEFAULT_CONFIG_DIR / "product_token_dictionary.csv"
 DEFAULT_CATEGORY_RULES_PATH = DEFAULT_CONFIG_DIR / "category_rules.csv"
 DEFAULT_TOKEN_EXCLUDE_LIST_PATH = DEFAULT_CONFIG_DIR / "token_exclude_list.csv"
@@ -71,6 +83,10 @@ class ProcessedItem(BaseModel):
     matched_keywords: dict[str, str] = Field(default_factory=dict)
     classification_method: str = "unclassified"
     graphKeywords: list[str] = Field(default_factory=list)
+    cluster_name_text: str = ""
+    tokenized_cluster_name_text: str = ""
+    cluster_product_name: str = ""
+    cluster_route: str = ""
 
 
 HamaProduct = ProcessedItem
@@ -90,6 +106,8 @@ class HamaDataPipeline:
         model_classifier: CategoryModelClassifier | None = None,
         product_token_dictionary_path: str | Path | None = None,
         category_rules_path: str | Path | None = None,
+        blacklist_keywords_path: str | Path | None = None,
+        keyword_price_bounds: Mapping[str, float] | None = None,
     ) -> None:
         self.match_index = match_index or self._build_keyword_index(keyword_catalog or [])
         self.model_classifier = model_classifier
@@ -98,8 +116,38 @@ class HamaDataPipeline:
         )
         self.category_rules = self._load_category_rules(Path(category_rules_path or DEFAULT_CATEGORY_RULES_PATH))
         self.product_name_automaton = self._build_product_name_automaton(self.product_token_dictionary_path)
+        self.drop_name_matchers = build_drop_name_keyword_matchers(
+            load_drop_name_keywords(Path(blacklist_keywords_path or DEFAULT_BLACKLIST_KEYWORDS_PATH))
+        )
+        self.keyword_price_bounds = dict(keyword_price_bounds or {})
 
-    def run_pipeline(self, raw_item: Mapping[str, Any]) -> HamaProduct:
+    def evaluate_preprocessing_filters(self, raw_item: Mapping[str, Any]) -> DropDecision:
+        name = self._clean_text(raw_item.get("name") or raw_item.get("raw_title"))
+        price = raw_item.get("price")
+        return evaluate_item_filters(
+            name=name,
+            price=price,
+            drop_matchers=self.drop_name_matchers,
+            keyword_price_bounds=self.keyword_price_bounds or None,
+        )
+
+    def run_pipeline(
+        self,
+        raw_item: Mapping[str, Any],
+        *,
+        drop_on_filter: bool = False,
+    ) -> HamaProduct | None:
+        if drop_on_filter:
+            drop_decision = self.evaluate_preprocessing_filters(raw_item)
+            if drop_decision.should_drop:
+                logger.info(
+                    "[HamaDataPipeline] drop pid=%s stage=%s reason=%s detail=%s",
+                    raw_item.get("pid"),
+                    drop_decision.stage,
+                    drop_decision.reason,
+                    drop_decision.detail,
+                )
+                return None
         raw_title = self._clean_text(raw_item.get("raw_title") or raw_item.get("name"))
         source_keyword = self._clean_text(raw_item.get("source_keyword") or raw_item.get("keyword"))
         platform = self._clean_text(raw_item.get("platform"))
@@ -137,6 +185,8 @@ class HamaDataPipeline:
             source_keyword=source_keyword,
             normalized_title=normalized_title,
         )
+        item_name = self._clean_text(raw_item.get("name"))
+        cluster_fields = build_single_cluster_fields(source_keyword or item_name, item_name)
 
         logger.info(
             "[HamaDataPipeline] done pid=%s category=%s confidence=%.2f method=%s matched=%s",
@@ -167,10 +217,14 @@ class HamaDataPipeline:
             matched_keywords=product_name_match,
             classification_method=method,
             graphKeywords=graph_keywords,
+            cluster_name_text=cluster_fields.cluster_name_text,
+            tokenized_cluster_name_text=cluster_fields.tokenized_cluster_name_text,
+            cluster_product_name=cluster_fields.cluster_product_name,
+            cluster_route=cluster_fields.cluster_route,
         )
 
     def _normalize_title(self, raw_title: str) -> str:
-        return normalize_title(raw_title)
+        return normalize_search_text(raw_title)
 
     def _match_keywords_trie(
         self,
@@ -238,8 +292,7 @@ class HamaDataPipeline:
 
     @staticmethod
     def _compact_match_text(value: Any) -> str:
-        normalized = normalize_title(value)
-        return re.sub(r"\s+", "", normalized)
+        return compact_search_text(value)
 
     def _assign_category_from_product_name(
         self,
@@ -397,12 +450,17 @@ class HamaCollectionPipeline:
         product_token_dictionary_path: str | Path | None = None,
         category_rules_path: str | Path | None = None,
         token_exclude_list_path: str | Path | None = None,
+        blacklist_keywords_path: str | Path | None = None,
     ) -> None:
         self.keyword_list = HamaDataPipeline._unique_values(keyword_list or [])
         self.min_verify_confidence = min_verify_confidence
         self.model_classifier = model_classifier
         self.product_token_dictionary_path = product_token_dictionary_path
         self.category_rules_path = category_rules_path
+        self.blacklist_keywords_path = Path(blacklist_keywords_path or DEFAULT_BLACKLIST_KEYWORDS_PATH)
+        self.drop_name_matchers = build_drop_name_keyword_matchers(
+            load_drop_name_keywords(self.blacklist_keywords_path)
+        )
         self.token_exclude_tokens = HamaDataPipeline._load_token_exclusions(
             Path(token_exclude_list_path or DEFAULT_TOKEN_EXCLUDE_LIST_PATH)
         )
@@ -417,18 +475,28 @@ class HamaCollectionPipeline:
         joongna_list = self._fetch_joongna_data(source_keyword)
         bunjang_list = self._fetch_bunjang_data(source_keyword)
         verified_items = self._verify_and_clean_data(joongna_list, bunjang_list)
+        filtered_items = self._apply_keyword_final_filters(
+            [*joongna_list, *verified_items],
+            source_keyword=source_keyword,
+        )
+
+        keyword_prices = [float(item.price) for item in filtered_items if item.price and item.price > 0]
+        keyword_price_bounds = compute_keyword_price_bounds(keyword_prices)
 
         match_index = ProductMatchIndex.from_rows(
-            [self._raw_item_to_match_row(item) for item in [*joongna_list, *verified_items]]
+            [self._raw_item_to_match_row(item) for item in filtered_items]
         )
         item_pipeline = HamaDataPipeline(
             match_index=match_index,
             model_classifier=self.model_classifier,
             product_token_dictionary_path=self.product_token_dictionary_path,
             category_rules_path=self.category_rules_path,
+            blacklist_keywords_path=self.blacklist_keywords_path,
+            keyword_price_bounds=keyword_price_bounds,
         )
 
-        processed_items = self._to_processed_items([*joongna_list, *verified_items], item_pipeline)
+        processed_items = self._to_processed_items(filtered_items, item_pipeline)
+        processed_items = self._enrich_with_batch_clusters(processed_items, source_keyword)
         logger.info(
             "[HamaCollectionPipeline] done keyword=%s joongna=%d bunjang_verified=%d processed=%d",
             source_keyword,
@@ -449,10 +517,107 @@ class HamaCollectionPipeline:
         raw_items: Sequence[RawItem],
         item_pipeline: HamaDataPipeline,
     ) -> list[ProcessedItem]:
-        return [
-            item_pipeline.run_pipeline(self._raw_item_to_pipeline_input(item))
-            for item in raw_items
+        processed_items: list[ProcessedItem] = []
+        for item in raw_items:
+            processed = item_pipeline.run_pipeline(self._raw_item_to_pipeline_input(item))
+            if processed is not None:
+                processed_items.append(processed)
+        return processed_items
+
+    def _apply_keyword_final_filters(
+        self,
+        raw_items: Sequence[RawItem],
+        *,
+        source_keyword: str,
+    ) -> list[RawItem]:
+        kept_items: list[RawItem] = []
+        for item in raw_items:
+            drop_decision = evaluate_item_filters(
+                name=item.title,
+                price=item.price,
+                drop_matchers=self.drop_name_matchers,
+            )
+            if drop_decision.should_drop:
+                logger.info(
+                    "[HamaCollectionPipeline] drop keyword=%s pid=%s stage=%s reason=%s",
+                    source_keyword,
+                    item.pid,
+                    drop_decision.stage,
+                    drop_decision.reason,
+                )
+                continue
+            kept_items.append(item)
+
+        keyword_prices = [float(item.price) for item in kept_items if item.price and item.price > 0]
+        keyword_price_bounds = compute_keyword_price_bounds(keyword_prices)
+
+        filtered_items: list[RawItem] = []
+        for item in kept_items:
+            drop_decision = evaluate_item_filters(
+                name=item.title,
+                price=item.price,
+                drop_matchers=self.drop_name_matchers,
+                keyword_price_bounds=keyword_price_bounds,
+            )
+            if drop_decision.should_drop and drop_decision.stage == "price_outlier":
+                logger.info(
+                    "[HamaCollectionPipeline] drop price-outlier keyword=%s pid=%s detail=%s",
+                    source_keyword,
+                    item.pid,
+                    drop_decision.detail,
+                )
+                continue
+            filtered_items.append(item)
+        return filtered_items
+
+    def _enrich_with_batch_clusters(
+        self,
+        processed_items: Sequence[ProcessedItem],
+        source_keyword: str,
+    ) -> list[ProcessedItem]:
+        if not processed_items:
+            return []
+
+        records = [
+            {
+                "keyword": source_keyword,
+                "platform": item.platform,
+                "pid": item.pid,
+                "name": item.name,
+                "price_numeric": item.price,
+                "status": item.status,
+                "link": item.link,
+                "date": item.date,
+            }
+            for item in processed_items
         ]
+        clustered_records = apply_token_stage_clustering(records)
+        cluster_by_key = {
+            (record["platform"], record["pid"], int(record.get("price_numeric") or 0)): record
+            for record in clustered_records
+        }
+
+        enriched_items: list[ProcessedItem] = []
+        for item in processed_items:
+            cluster_record = cluster_by_key.get((item.platform, item.pid, item.price))
+            if not cluster_record:
+                enriched_items.append(item)
+                continue
+            enriched_items.append(
+                item.model_copy(
+                    update={
+                        "cluster_name_text": str(cluster_record.get("cluster_name_text") or item.cluster_name_text),
+                        "tokenized_cluster_name_text": str(
+                            cluster_record.get("tokenized_cluster_name_text") or item.tokenized_cluster_name_text
+                        ),
+                        "cluster_product_name": str(
+                            cluster_record.get("cluster_product_name") or item.cluster_product_name
+                        ),
+                        "cluster_route": str(cluster_record.get("cluster_route") or item.cluster_route),
+                    }
+                )
+            )
+        return enriched_items
 
     def _fetch_joongna_data(self, keyword: str) -> list[RawItem]:
         logger.info("[HamaCollectionPipeline] fetch joongna baseline keyword=%s", keyword)
