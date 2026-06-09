@@ -1,5 +1,6 @@
 requests
 pandas
+scikit-learn
 beautifulsoup4
 fastapi
 pydantic

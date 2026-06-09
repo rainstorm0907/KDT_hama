@@ -9,13 +9,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import TypeVar
 
-from item_rating import compute_item_rating, rating_breakdown_to_payload
-from supabase_repository import SupabaseRepositoryError, client
+from lib.item_rating import compute_item_rating, rating_breakdown_to_payload
+from lib.supabase_repository import SupabaseRepositoryError, client
 
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_RESULTS_DIR = BASE_DIR / "crawling" / "results" / "by_keyword"
-DEFAULT_PREVIEW_CSV = BASE_DIR / "analysis" / "exports" / "keyword_db_input_df.csv"
+DEFAULT_PREVIEW_CSV = BASE_DIR / "analysis" / "handoff" / "keyword_db_input_df.csv"
 BATCH_SIZE = 500
 T = TypeVar("T")
 
@@ -50,19 +50,17 @@ def main() -> None:
     max_view_count = max((product.view_count for product in products), default=0)
 
     database = client()
-    platform_ids = upsert_platforms(database, sorted({product.platform for product in products}))
     item_payloads = build_item_payloads(
         products,
-        platform_ids,
         group_min_prices=group_min_prices,
         max_view_count=max_view_count,
     )
 
     for chunk in chunked(list(item_payloads.values()), BATCH_SIZE):
-        database.table("items").upsert(chunk, on_conflict="platform_id,original_id").execute()
+        database.table("items").upsert(chunk, on_conflict="platform_name,original_id").execute()
 
     item_ids = fetch_item_ids(database, item_payloads.values())
-    history_payloads = build_price_history_payloads(products, platform_ids, item_ids)
+    history_payloads = build_price_history_payloads(products, item_ids)
     for chunk in chunked(list(history_payloads.values()), BATCH_SIZE):
         database.table("price_history").upsert(chunk, on_conflict="item_id,recorded_at").execute()
 
@@ -235,32 +233,16 @@ def build_group_min_prices(products: list[CsvProduct]) -> dict[str, int]:
     return group_min_prices
 
 
-def upsert_platforms(database, platform_names: list[str]) -> dict[str, int]:
-    payloads = [{"platform_name": platform_name} for platform_name in platform_names]
-    for chunk in chunked(payloads, BATCH_SIZE):
-        database.table("platforms").upsert(chunk, on_conflict="platform_name").execute()
-
-    response = (
-        database.table("platforms")
-        .select("platform_id, platform_name")
-        .in_("platform_name", platform_names)
-        .execute()
-    )
-    return {row["platform_name"]: int(row["platform_id"]) for row in response.data or []}
-
-
 def build_item_payloads(
     products: list[CsvProduct],
-    platform_ids: dict[str, int],
     *,
     group_min_prices: dict[str, int],
     max_view_count: int,
-) -> dict[tuple[int, str], dict[str, object]]:
-    payloads: dict[tuple[int, str], dict[str, object]] = {}
+) -> dict[tuple[str, str], dict[str, object]]:
+    payloads: dict[tuple[str, str], dict[str, object]] = {}
     now = datetime.now().isoformat()
 
     for product in products:
-        platform_id = platform_ids[product.platform]
         cluster_product_name = product.cluster_product_name or product.canonical_name
         group_min_price = group_min_prices.get(cluster_product_name)
 
@@ -277,8 +259,8 @@ def build_item_payloads(
             cluster_product_name,
         )
 
-        payloads[(platform_id, product.original_id)] = {
-            "platform_id": platform_id,
+        payloads[(product.platform, product.original_id)] = {
+            "platform_name": product.platform,
             "original_id": product.original_id,
             "canonical_name": cluster_product_name,
             "title": product.title,
@@ -302,37 +284,35 @@ def build_item_payloads(
 def fetch_item_ids(
     database,
     item_payloads,
-) -> dict[tuple[int, str], int]:
-    originals_by_platform: dict[int, list[str]] = defaultdict(list)
+) -> dict[tuple[str, str], int]:
+    originals_by_platform: dict[str, list[str]] = defaultdict(list)
     for payload in item_payloads:
-        originals_by_platform[int(payload["platform_id"])].append(str(payload["original_id"]))
+        originals_by_platform[str(payload["platform_name"])].append(str(payload["original_id"]))
 
-    item_ids: dict[tuple[int, str], int] = {}
-    for platform_id, original_ids in originals_by_platform.items():
+    item_ids: dict[tuple[str, str], int] = {}
+    for platform_name, original_ids in originals_by_platform.items():
         for chunk in chunked(sorted(set(original_ids)), BATCH_SIZE):
             response = (
                 database.table("items")
-                .select("item_id, platform_id, original_id")
-                .eq("platform_id", platform_id)
+                .select("item_id, platform_name, original_id")
+                .eq("platform_name", platform_name)
                 .in_("original_id", chunk)
                 .execute()
             )
             for row in response.data or []:
-                item_ids[(int(row["platform_id"]), str(row["original_id"]))] = int(row["item_id"])
+                item_ids[(str(row["platform_name"]), str(row["original_id"]))] = int(row["item_id"])
 
     return item_ids
 
 
 def build_price_history_payloads(
     products: list[CsvProduct],
-    platform_ids: dict[str, int],
-    item_ids: dict[tuple[int, str], int],
+    item_ids: dict[tuple[str, str], int],
 ) -> dict[tuple[int, str], dict[str, object]]:
     payloads: dict[tuple[int, str], dict[str, object]] = {}
 
     for product in products:
-        platform_id = platform_ids[product.platform]
-        item_id = item_ids.get((platform_id, product.original_id))
+        item_id = item_ids.get((product.platform, product.original_id))
         if not item_id:
             continue
 

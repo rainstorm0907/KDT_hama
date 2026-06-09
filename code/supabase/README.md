@@ -7,7 +7,7 @@
 ## 현재 마이그레이션
 
 - `migrations/20260519000000_hama_schema.sql`
-  - 상품, 플랫폼, 가격 이력, 사용자 프로필, 찜, 검색 로그, 배너, 챗봇, 추천, 알림 기본 테이블입니다.
+  - 상품, 가격 이력, 사용자 프로필, 찜, 검색 로그, 배너, 챗봇, 추천, 알림 기본 테이블입니다.
   - Supabase Auth의 `auth.users`를 로그인 원본으로 두고, `public.users`는 앱 프로필 테이블로 씁니다.
 
 - `migrations/20260608000000_service_search_schema.sql`
@@ -17,12 +17,23 @@
   - `price_stats_daily`: 표준 상품명 기준 일별 가격 통계 캐시입니다.
   - `content_pages`: 공지, 약관, 개인정보처리방침, 안내 글 같은 운영 콘텐츠입니다.
 
+- `migrations/20260608120000_add_items_rating.sql`
+  - `items`에 `cluster_product_name`, `rating` 및 파생 점수 컬럼을 추가합니다.
+
+- `migrations/20260609120000_merge_platforms_into_items.sql`
+  - `platforms` 테이블을 제거하고 `items.platform_name` 컬럼으로 흡수합니다.
+  - 중복 방지 기준은 `(platform_name, original_id)` 입니다.
+
 ## 왜 `search_logs`와 `search_events`를 나눴나요?
 
-`search_logs`는 사용자가 최종적으로 검색한 키워드 중심의 단순 기록입니다.
+둘 다 OpenSearch 검색 품질 분석을 위한 로그입니다.
 
-`search_events`는 검색 결과 노출, 클릭, OpenSearch/fallback 출처 같은 이벤트까지 남기는 로그입니다.
+`search_logs`는 검색 키워드와 클릭 상품 중심의 단순 기록입니다.
+
+`search_events`는 검색 결과 노출, 클릭, OpenSearch/fallback 출처, relevance_score까지 남기는 상세 이벤트입니다.
 입력 중인 글자가 전부 쌓이는 문제를 피하려면 프론트에서는 검색창 변경마다 저장하지 않고, 검색 실행/결과 노출/클릭처럼 의미 있는 순간만 `search_events`에 남기는 흐름이 좋습니다.
+
+인기 검색어 UI는 `search_rankings`, 첫 화면 추천은 `recommended_items` + `items.rating` 조합을 사용합니다.
 
 ## OpenSearch와의 관계
 
@@ -39,8 +50,10 @@ code/backend/opensearch/
 
 ```text
 크롤링 CSV
--> import_csv_to_supabase.py
--> Supabase items / price_history
+-> keyword_final.ipynb (전처리/클러스터링/rating)
+-> analysis/handoff/keyword_db_input_df.csv
+-> import_csv_to_supabase.py --use-cluster-preview
+-> Supabase items(platform_name, rating 등) / price_history
 -> code/backend/opensearch/sync_from_supabase.py
 -> OpenSearch hama_items 인덱스
 -> FastAPI /api/products/search
@@ -52,10 +65,10 @@ code/backend/opensearch/
 
 ```bash
 cd code/backend/src/main/python
-python3 apply_supabase_schema.py
+python tools/apply_supabase_schema.py
 ```
 
-`apply_supabase_schema.py`는 `code/supabase/migrations/*.sql`을 정렬된 순서대로 실행합니다.
+`tools/apply_supabase_schema.py`는 `code/supabase/migrations/*.sql`을 정렬된 순서대로 실행합니다. 로컬 `.env`의 `SUPABASE_DATABASE_URL`이 필요합니다.
 
 ## 주의할 점
 
