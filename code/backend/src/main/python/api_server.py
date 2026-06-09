@@ -3,23 +3,34 @@ from __future__ import annotations
 import csv
 import random
 import re
+import sys
 import zlib
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 import requests
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+BACKEND_DIR = Path(__file__).resolve().parents[3]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.append(str(BACKEND_DIR))
+
 from hama_data_pipeline import HamaDataPipeline
+from opensearch.repository import (
+    OpenSearchRepositoryError,
+    is_opensearch_enabled,
+    search_item_ids,
+)
 from product_matching import ProductMatchIndex
 from supabase_repository import (
     SupabaseRepositoryError,
     find_product_from_supabase,
+    find_products_by_item_ids_from_supabase,
     is_supabase_configured,
     load_products_from_supabase,
 )
@@ -63,19 +74,30 @@ def health_check() -> dict[str, str]:
     return {
         "status": "ok",
         "dataSource": "supabase" if is_supabase_configured() else "csv",
+        "searchSource": "opensearch" if is_opensearch_enabled() else "python",
     }
 
 
 @app.get("/api/products/search")
 def search_products(
-    q: str = Query(default=""),
-    platforms: str = Query(default=""),
-    sort: str = Query(default="recent"),
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=5000, ge=1, le=5000),
+    q: Annotated[str, Query()] = "",
+    platforms: Annotated[str, Query()] = "",
+    sort: Annotated[str, Query()] = "recent",
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1, le=5000)] = 5000,
 ) -> dict[str, object]:
     query = normalize_text(q)
     platform_filter = parse_platform_filter(platforms)
+    opensearch_result = try_search_products_from_opensearch(
+        q=q,
+        platforms=platform_filter,
+        sort=sort,
+        page=page,
+        limit=limit,
+    )
+    if opensearch_result is not None:
+        return opensearch_result
+
     products = [
         product
         for product in load_products()
@@ -93,6 +115,7 @@ def search_products(
         "page": page,
         "limit": limit,
         "summary": search_summary(products),
+        "searchSource": "python",
     }
 
 
@@ -151,6 +174,34 @@ def find_product(platform: str, pid: str) -> dict[str, object] | None:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return find_product_from_csv(platform, pid)
+
+
+def try_search_products_from_opensearch(
+    *,
+    q: str,
+    platforms: set[str],
+    sort: str,
+    page: int,
+    limit: int,
+) -> dict[str, object] | None:
+    if not q.strip() or not is_supabase_configured():
+        return None
+
+    try:
+        hits, total, summary = search_item_ids(q=q, platforms=platforms, sort=sort, page=page, limit=limit)
+        products = find_products_by_item_ids_from_supabase([hit.item_id for hit in hits])
+    except (OpenSearchRepositoryError, SupabaseRepositoryError):
+        return None
+
+    items = [{key: value for key, value in product.items() if key != "_searchText"} for product in products]
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "summary": summary,
+        "searchSource": "opensearch",
+    }
 
 
 @lru_cache(maxsize=1)

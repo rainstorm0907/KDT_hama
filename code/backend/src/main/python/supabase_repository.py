@@ -23,6 +23,11 @@ class SupabaseRepositoryError(RuntimeError):
     pass
 
 
+PRODUCT_SELECT = "*, platforms(platform_name), price_history(price, recorded_at)"
+OPENSEARCH_ITEM_SELECT = "*, platforms(platform_name)"
+SUPABASE_PAGE_SIZE = 1000
+
+
 def is_supabase_configured() -> bool:
     return bool(valid_env_value("SUPABASE_URL") and valid_supabase_key())
 
@@ -69,7 +74,7 @@ def load_products_from_supabase() -> list[dict[str, object]]:
     response = (
         client()
         .table("items")
-        .select("*, platforms(platform_name), price_history(price, recorded_at)")
+        .select(PRODUCT_SELECT)
         .order("crawled_at", desc=True)
         .limit(5000)
         .execute()
@@ -94,7 +99,7 @@ def find_product_from_supabase(platform: str, pid: str) -> dict[str, object] | N
     response = (
         client()
         .table("items")
-        .select("*, platforms(platform_name), price_history(price, recorded_at)")
+        .select(PRODUCT_SELECT)
         .eq("platform_id", platform_row["platform_id"])
         .eq("original_id", pid)
         .maybe_single()
@@ -105,6 +110,49 @@ def find_product_from_supabase(platform: str, pid: str) -> dict[str, object] | N
         return None
 
     return to_product(row)
+
+
+def find_products_by_item_ids_from_supabase(item_ids: list[int]) -> list[dict[str, object]]:
+    if not item_ids:
+        return []
+
+    response = (
+        client()
+        .table("items")
+        .select(PRODUCT_SELECT)
+        .in_("item_id", item_ids)
+        .execute()
+    )
+    rows = response.data or []
+    products_by_id = {
+        int(row.get("item_id") or 0): to_product(row)
+        for row in rows
+        if isinstance(row, dict) and row.get("item_id") is not None
+    }
+    return [products_by_id[item_id] for item_id in item_ids if item_id in products_by_id]
+
+
+def load_item_rows_for_opensearch(limit: int | None = None) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    start = 0
+    while limit is None or len(rows) < limit:
+        end = start + SUPABASE_PAGE_SIZE - 1
+        if limit is not None:
+            end = min(end, limit - 1)
+        response = (
+            client()
+            .table("items")
+            .select(OPENSEARCH_ITEM_SELECT)
+            .order("crawled_at", desc=True)
+            .range(start, end)
+            .execute()
+        )
+        page_rows = [row for row in response.data or [] if isinstance(row, dict)]
+        rows.extend(page_rows)
+        if len(page_rows) < end - start + 1:
+            break
+        start = end + 1
+    return rows if limit is None else rows[:limit]
 
 
 def to_product(row: dict[str, object]) -> dict[str, object]:
