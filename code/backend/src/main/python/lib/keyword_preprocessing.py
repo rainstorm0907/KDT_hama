@@ -1133,6 +1133,28 @@ def _format_price_outlier_detail(
     )
 
 
+_OUTLIER_HELPER_COLUMNS = (
+    "is_outlier",
+    "outlier_type",
+    "q1",
+    "median_price",
+    "q3",
+    "iqr",
+    "iqr_lower_bound",
+    "median_ratio_lower_bound",
+    "lower_bound",
+    "upper_bound",
+    "price_to_median_ratio",
+)
+
+
+def _drop_outlier_helper_columns(df: pd.DataFrame) -> pd.DataFrame:
+    existing = [column for column in _OUTLIER_HELPER_COLUMNS if column in df.columns]
+    if not existing:
+        return df
+    return df.drop(columns=existing)
+
+
 def filter_dataframe_price_outliers(
     df: pd.DataFrame,
     *,
@@ -1145,7 +1167,7 @@ def filter_dataframe_price_outliers(
     if df.empty:
         return df.copy()
 
-    working_df = df.copy()
+    working_df = _drop_outlier_helper_columns(df.copy())
     working_df[price_column] = pd.to_numeric(working_df[price_column], errors="coerce")
     stats_df = build_group_price_stats(
         working_df,
@@ -1223,8 +1245,15 @@ def filter_dataframe_price_outliers(
         on=["platform", "pid", price_column],
         how="left",
     )
+    if "is_outlier" not in clean_df.columns:
+        if "is_outlier_y" in clean_df.columns:
+            clean_df["is_outlier"] = clean_df["is_outlier_y"]
+            clean_df = clean_df.drop(columns=["is_outlier_x", "is_outlier_y"], errors="ignore")
+        else:
+            return _drop_outlier_helper_columns(working_df)
+
     clean_df["is_outlier"] = clean_df["is_outlier"].fillna(False).astype(bool)
-    return clean_df.loc[~clean_df["is_outlier"]].copy()
+    return _drop_outlier_helper_columns(clean_df.loc[~clean_df["is_outlier"]].copy())
 
 
 def evaluate_item_filters(
