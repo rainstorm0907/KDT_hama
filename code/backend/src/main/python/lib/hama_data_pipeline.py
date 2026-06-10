@@ -10,11 +10,13 @@ from statistics import median
 from typing import Any, Literal
 
 import ahocorasick  # type: ignore[import-not-found]
+import pandas as pd
 from pydantic import BaseModel, Field
 
 from lib._paths import PYTHON_DIR
 from lib.keyword_preprocessing import (
     DEFAULT_BLACKLIST_KEYWORDS_PATH,
+    DROP_STAGE_PRODUCT_NAME_PRICE_OUTLIER,
     DropDecision,
     apply_token_stage_clustering,
     build_drop_name_keyword_matchers,
@@ -22,6 +24,7 @@ from lib.keyword_preprocessing import (
     compact_search_text,
     compute_keyword_price_bounds,
     evaluate_item_filters,
+    filter_dataframe_price_outliers,
     load_drop_name_keywords,
     normalize_search_text,
 )
@@ -497,6 +500,7 @@ class HamaCollectionPipeline:
 
         processed_items = self._to_processed_items(filtered_items, item_pipeline)
         processed_items = self._enrich_with_batch_clusters(processed_items, source_keyword)
+        processed_items = self._filter_product_name_price_outliers(processed_items, source_keyword)
         logger.info(
             "[HamaCollectionPipeline] done keyword=%s joongna=%d bunjang_verified=%d processed=%d",
             source_keyword,
@@ -618,6 +622,61 @@ class HamaCollectionPipeline:
                 )
             )
         return enriched_items
+
+    def _filter_product_name_price_outliers(
+        self,
+        processed_items: Sequence[ProcessedItem],
+        source_keyword: str,
+    ) -> list[ProcessedItem]:
+        if not processed_items:
+            return []
+
+        records = [
+            {
+                "keyword": source_keyword,
+                "platform": item.platform,
+                "pid": item.pid,
+                "name": item.name,
+                "price_numeric": item.price,
+                "status": item.status,
+                "link": item.link,
+                "date": item.date,
+                "cluster_product_name": item.cluster_product_name,
+            }
+            for item in processed_items
+            if item.cluster_product_name
+        ]
+        if not records:
+            return list(processed_items)
+
+        clean_df = filter_dataframe_price_outliers(
+            pd.DataFrame(records),
+            group_column="cluster_product_name",
+            drop_stage=DROP_STAGE_PRODUCT_NAME_PRICE_OUTLIER,
+        )
+        kept_keys = {
+            (str(row["platform"]), str(row["pid"]), int(row["price_numeric"]))
+            for _, row in clean_df.iterrows()
+        }
+
+        filtered_items: list[ProcessedItem] = []
+        for item in processed_items:
+            item_key = (item.platform, item.pid, item.price)
+            if not item.cluster_product_name:
+                filtered_items.append(item)
+                continue
+            if item_key in kept_keys:
+                filtered_items.append(item)
+                continue
+            logger.info(
+                "[HamaCollectionPipeline] drop product-name price-outlier keyword=%s "
+                "product_name=%s pid=%s price=%s",
+                source_keyword,
+                item.cluster_product_name,
+                item.pid,
+                item.price,
+            )
+        return filtered_items
 
     def _fetch_joongna_data(self, keyword: str) -> list[RawItem]:
         logger.info("[HamaCollectionPipeline] fetch joongna baseline keyword=%s", keyword)

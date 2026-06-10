@@ -29,10 +29,16 @@ DEFAULT_BLACKLIST_KEYWORDS_PATH = PYTHON_DIR / "crawling" / "blacklist_keywords.
 
 LOW_PRICE_MEDIAN_RATIO = 0.2
 
+DROP_REASON_MISSING_REQUIRED = "필수값 누락"
 DROP_REASON_INVALID_PRICE = "유효하지 않은 가격"
 DROP_REASON_NAME_BLACKLIST = "상품명 블랙리스트"
 DROP_REASON_PRICE_OUTLIER_LOW = "가격 이상치(저가)"
 DROP_REASON_PRICE_OUTLIER_HIGH = "가격 이상치(고가)"
+
+DROP_STAGE_KEYWORD_PRICE_OUTLIER = "price_outlier"
+DROP_STAGE_PRODUCT_NAME_PRICE_OUTLIER = "product_name_price_outlier"
+
+PIPELINE_DROPPED_PARTS: list[pd.DataFrame] = []
 
 ClusterRoute = Literal["canonical", "accessory", "token"]
 
@@ -128,6 +134,10 @@ def matched_drop_keywords(name, matchers: Sequence[Mapping[str, str]] | None = N
     return matched_keywords
 
 
+
+
+def reset_pipeline_drops() -> None:
+    PIPELINE_DROPPED_PARTS.clear()
 
 
 def annotate_dropped_rows(rows_df, drop_reason, drop_stage, drop_detail=""):
@@ -1061,6 +1071,160 @@ def classify_price_outlier(price: float, bounds: Mapping[str, float] | None) -> 
     if price > bounds["upper_bound"]:
         return "high"
     return ""
+
+
+def build_group_price_stats(
+    df: pd.DataFrame,
+    *,
+    group_column: str,
+    price_column: str = "price_numeric",
+    low_median_ratio: float = LOW_PRICE_MEDIAN_RATIO,
+) -> pd.DataFrame:
+    if df.empty or group_column not in df.columns or price_column not in df.columns:
+        return pd.DataFrame()
+
+    working_df = df.copy()
+    working_df[group_column] = working_df[group_column].fillna("").astype(str).str.strip()
+    working_df = working_df[working_df[group_column] != ""]
+    if working_df.empty:
+        return pd.DataFrame()
+
+    stats_df = (
+        working_df.groupby(group_column)[price_column]
+        .agg(
+            item_count="count",
+            min_price="min",
+            q1=lambda values: values.quantile(0.25),
+            median_price="median",
+            q3=lambda values: values.quantile(0.75),
+            max_price="max",
+            average_price="mean",
+        )
+        .reset_index()
+    )
+    stats_df["iqr"] = stats_df["q3"] - stats_df["q1"]
+    stats_df["iqr_lower_bound"] = (stats_df["q1"] - 1.5 * stats_df["iqr"]).clip(lower=0)
+    stats_df["median_ratio_lower_bound"] = stats_df["median_price"] * low_median_ratio
+    stats_df["lower_bound"] = stats_df[["iqr_lower_bound", "median_ratio_lower_bound"]].max(axis=1)
+    stats_df["upper_bound"] = stats_df["q3"] + 1.5 * stats_df["iqr"]
+    return stats_df
+
+
+def _format_price_outlier_detail(
+    row: pd.Series,
+    *,
+    group_column: str,
+    outlier_type: str,
+) -> str:
+    group_label = "keyword" if group_column == "keyword" else "product_name"
+    group_value = str(row.get(group_column) or "").strip()
+    price = int(row["price_numeric"])
+    median = float(row.get("median_price") or 0)
+    if outlier_type == "low":
+        bound = float(row.get("lower_bound") or 0)
+        return (
+            f"{group_label}={group_value}, price={price:,}, "
+            f"lower_bound={bound:,.0f}, median={median:,.0f}"
+        )
+    bound = float(row.get("upper_bound") or 0)
+    return (
+        f"{group_label}={group_value}, price={price:,}, "
+        f"upper_bound={bound:,.0f}, median={median:,.0f}"
+    )
+
+
+def filter_dataframe_price_outliers(
+    df: pd.DataFrame,
+    *,
+    group_column: str,
+    drop_stage: str,
+    price_column: str = "price_numeric",
+    low_median_ratio: float = LOW_PRICE_MEDIAN_RATIO,
+) -> pd.DataFrame:
+    """그룹(키워드 또는 매칭 상품명)별 IQR 가격 이상치를 제거합니다."""
+    if df.empty:
+        return df.copy()
+
+    working_df = df.copy()
+    working_df[price_column] = pd.to_numeric(working_df[price_column], errors="coerce")
+    stats_df = build_group_price_stats(
+        working_df,
+        group_column=group_column,
+        price_column=price_column,
+        low_median_ratio=low_median_ratio,
+    )
+    if stats_df.empty:
+        return working_df
+
+    outlier_df = working_df.merge(
+        stats_df[
+            [
+                group_column,
+                "q1",
+                "median_price",
+                "q3",
+                "iqr",
+                "iqr_lower_bound",
+                "median_ratio_lower_bound",
+                "lower_bound",
+                "upper_bound",
+            ]
+        ],
+        on=group_column,
+        how="left",
+    )
+    outlier_df["outlier_type"] = ""
+    outlier_df.loc[outlier_df[price_column] < outlier_df["lower_bound"], "outlier_type"] = "low"
+    outlier_df.loc[outlier_df[price_column] > outlier_df["upper_bound"], "outlier_type"] = "high"
+    outlier_df = outlier_df[outlier_df["outlier_type"] != ""].copy()
+
+    low_outlier_df = outlier_df[outlier_df["outlier_type"] == "low"].copy()
+    high_outlier_df = outlier_df[outlier_df["outlier_type"] == "high"].copy()
+
+    if not low_outlier_df.empty:
+        low_outlier_detail = low_outlier_df.apply(
+            lambda row: _format_price_outlier_detail(
+                row,
+                group_column=group_column,
+                outlier_type="low",
+            ),
+            axis=1,
+        )
+        append_pipeline_drops(
+            low_outlier_df,
+            DROP_REASON_PRICE_OUTLIER_LOW,
+            drop_stage,
+            low_outlier_detail,
+        )
+
+    if not high_outlier_df.empty:
+        high_outlier_detail = high_outlier_df.apply(
+            lambda row: _format_price_outlier_detail(
+                row,
+                group_column=group_column,
+                outlier_type="high",
+            ),
+            axis=1,
+        )
+        append_pipeline_drops(
+            high_outlier_df,
+            DROP_REASON_PRICE_OUTLIER_HIGH,
+            drop_stage,
+            high_outlier_detail,
+        )
+
+    if outlier_df.empty:
+        return working_df
+
+    outlier_keys = outlier_df[["platform", "pid", price_column]].copy()
+    outlier_keys["is_outlier"] = True
+    clean_df = working_df.merge(
+        outlier_keys[["platform", "pid", price_column, "is_outlier"]],
+        on=["platform", "pid", price_column],
+        how="left",
+    )
+    clean_df["is_outlier"] = clean_df["is_outlier"].fillna(False).astype(bool)
+    return clean_df.loc[~clean_df["is_outlier"]].copy()
 
 
 def evaluate_item_filters(
