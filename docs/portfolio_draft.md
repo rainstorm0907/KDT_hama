@@ -191,16 +191,17 @@ flowchart LR
 | 영역 | 테이블 | 설계 의도 |
 |------|--------|-----------|
 | 사용자 | `users` | Supabase Auth(`auth.users`)와 연동, UUID PK. Spring 초기 설계는 `NUMBER` PK |
-| 상품 | `items`, `platforms` | `platform_id + original_id` 유니크로 중복 방지. `canonical_name`으로 가격 집계 |
+| 상품 | `items` | `platform_name + original_id` 유니크로 중복 방지. `cluster_product_name`, `rating` 등 전처리·점수 컬럼 포함 |
 | 시세 | `price_history` | 일별 가격 이력, `item_id + recorded_at` 유니크 |
-| 사용자 행동 | `wishlists`, `item_views`, `search_logs` | 찜·최근 본 상품·검색 로그 |
+| 사용자 행동 | `wishlists`, `item_views` | 찜·최근 본 상품 |
+| OpenSearch 검색 | `search_logs`, `search_events` | 검색 키워드·클릭·노출 이벤트 (검색 품질 분석용) |
 | 알림 | `notifications`, `keyword_alerts`, `notification_settings` | 가격·판매상태·키워드 알림 |
-| 검색 분석 | `search_events`, `item_search_matches` | 검색 정합성·매칭 근거 추적 (Oracle 설계안) |
+| 검색 분석 | `item_search_matches`, `search_rankings` | 키워드-상품 매칭 근거, 인기 검색어 집계 |
 | 챗봇 | `chat_history`, `chat_faq`, `recommended_items` | Gemini 대화 이력·FAQ·추천 상품 |
 
 **핵심 관계**
 
-- `items` ↔ `platforms` (N:1)
+- `items.platform_name` + `items.original_id`로 플랫폼별 상품 식별
 - `price_history` → `items` (N:1, CASCADE DELETE)
 - `wishlists` → `users` + `items` (N:1, 유저·상품 유니크)
 - `users.user_id` → `auth.users.id` (Supabase Auth 연동)
@@ -257,13 +258,13 @@ GET  /api/chatbot/history/recent
 
 **2) Aho-Corasick 기반 상품명 토큰 매칭 파이프라인**
 
-- 파일: `code/backend/src/main/python/hama_data_pipeline.py`
+- 파일: `code/backend/src/main/python/lib/hama_data_pipeline.py`
 - `pyahocorasick`으로 상품 토큰 사전 고속 매칭
 - `canonical_name`, `matched_keywords`, 카테고리 규칙 배정
 
 **3) 규칙 기반 검색 정합성 필터**
 
-- 파일: `code/backend/src/main/python/analysis/check_title_keyword_accuracy.py`
+- 파일: `code/backend/src/main/python/analysis/scripts/check_title_keyword_accuracy.py`
 - `+`/`plus`/`pro`/`max`/`ultra` 표기 정규화
 - 모델명 토큰(`s25`, `17e`) 경계 매칭으로 부분 일치 오탐 방지
 
@@ -320,7 +321,7 @@ GET  /api/chatbot/history/recent
 |------|------|
 | **Situation** | 팀원마다 Supabase 계정·환경변수 설정 상태가 달라 API 서버 실행 실패 |
 | **Cause** | 초기 설계가 Supabase 단일 데이터 소스 전제 |
-| **Solution** | `supabase_repository.py`에 `is_supabase_configured()` 체크 추가. 미설정 시 `crawling/results` 최신 CSV 자동 로드. `/api/health`에 `dataSource` 필드 노출 |
+| **Solution** | `lib/supabase_repository.py`에 `is_supabase_configured()` 체크 추가. 미설정 시 `crawling/results` 최신 CSV 자동 로드. `/api/health`에 `dataSource` 필드 노출 |
 | **Result** | `.env` 없이도 로컬 시연 가능. Health Check로 현재 데이터 소스 즉시 확인 |
 
 #### Case 3: `아이폰 17e` 모델명 토큰 분리 오매칭
@@ -338,7 +339,7 @@ GET  /api/chatbot/history/recent
 |------|------|
 | **Situation** | `골드바` 키워드 이상치 비율 40.7%, `스텔라이브` 30.6% 등 고가·저가 노이즈 다수 |
 | **Cause** | 액세서리·호환 상품 혼입, 판매자 관리번호(`[01272]`) 등 대괄호 노이즈, 플랫폼별 가격 분포 차이 |
-| **Solution** | IQR 기반 이상치 분석 노트북(`keyword_price_outliers.ipynb`, `keyword_price_outliers_first_filter.ipynb`). `blacklist_keywords.csv`, `blacklist_tokens.csv` 관리. 대괄호 클러스터링(`cluster_bracket_contents.py`) |
+| **Solution** | IQR 기반 이상치 분석 노트북(`analysis/notebooks/keyword_price_outliers*.ipynb`, `keyword_final.ipynb`). `blacklist_keywords.csv`, `blacklist_tokens.csv` 관리. 대괄호 클러스터링(`analysis/scripts/cluster_bracket_contents.py`) |
 | **Result** | `analysis/results/price_outliers/keyword_price_outlier_overview.csv`에 키워드별 이상치율·경계값 산출. 1차 필터 적용 후 운영 반영 예정 |
 
 #### Case 5: Spring Boot 빌드·스키마 불일치
@@ -359,8 +360,8 @@ GET  /api/chatbot/history/recent
 | **프론트엔드** | `npm run lint`, `npx tsc --noEmit`, `npm run build` | TypeScript 타입·ESLint·빌드 통과 |
 | **FastAPI** | `curl http://127.0.0.1:8000/api/health` | `status: ok`, `dataSource` 확인 |
 | **상품 API** | 검색·추천·상세 프론트 연동 시연 | `/`, `/search` 화면에서 실데이터 표시 |
-| **데이터 정합성** | `check_title_keyword_accuracy.py` | 키워드별 pass/fail CSV·요약 생성 |
-| **플랫폼 비교** | `compare_platform_data.py` | 번개장터 vs 중고나라 정합성 차이 정량화 |
+| **데이터 정합성** | `analysis/scripts/check_title_keyword_accuracy.py` | 키워드별 pass/fail CSV·요약 생성 |
+| **플랫폼 비교** | `analysis/scripts/compare_platform_data.py` | 번개장터 vs 중고나라 정합성 차이 정량화 |
 | **가격 이상치** | Jupyter 노트북 + `price_outliers/` 결과 | 키워드별 IQR 경계·이상치율 산출 |
 | **Spring Boot** | `UsedServiceApplicationTests.contextLoads()` | 기본 컨텍스트 로드 테스트 존재, 빌드 환경 복구 필요 |
 | **챗봇** | `docs/chatbot_expected_answers.csv` | 기대 응답 데이터셋 준비, API 실연동 검증 예정 |

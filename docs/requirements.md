@@ -44,12 +44,14 @@ code/backend/src/main/python
 - `crawling`: 키워드 목록, 블랙리스트 설정, 키워드 갱신 스크립트
 - `analysis`: 크롤링 결과 검증, 가격 이상치, 토큰 분석
 - `config`: 상품명 매칭 사전, 카테고리 규칙, 제외 토큰 CSV
-- `preprocessing`: DB 저장 전 전처리 스크립트 위치
-- `api_server.py`: 현재 MVP 상품 검색/추천/상세 FastAPI 서버
-- `hama_data_pipeline.py`: 상품명 매칭/카테고리 배정 파이프라인
-- `product_matching.py`: 상품명 정규화와 토큰 매칭 보조 로직
-- `supabase_repository.py`: Supabase 상품 조회와 CSV fallback을 분리하는 저장소 모듈
-- `apply_supabase_schema.py`: Supabase/PostgreSQL 스키마 적용 스크립트
+- `lib`: 상품명 매칭·전처리·rating·Supabase 조회 핵심 모듈
+- `tools`: 스키마 적용, ERD·설정 참고 CSV 생성 유틸
+- `api_server.py`: 로컬 MVP 상품 검색/추천/상세 FastAPI 서버 (`127.0.0.1:8000`)
+- `lib/hama_data_pipeline.py`: 상품명 매칭/카테고리 배정 파이프라인
+- `lib/keyword_preprocessing.py`: keyword_final 전처리·클러스터 규칙
+- `lib/product_matching.py`: 상품명 정규화와 토큰 매칭 보조 로직
+- `lib/supabase_repository.py`: Supabase 상품 조회와 CSV fallback을 분리하는 저장소 모듈
+- `tools/apply_supabase_schema.py`: Supabase/PostgreSQL 스키마 적용 스크립트
 - `import_csv_to_supabase.py`: 크롤링 CSV를 Supabase 테이블로 적재하는 스크립트
 
 ### `code/supabase/migrations`
@@ -60,15 +62,15 @@ Supabase/PostgreSQL 테이블 생성 migration을 관리합니다.
 
 - `20260519000000_hama_schema.sql`: Hama MVP Supabase 스키마
 
-### `backend/src/main/python/preprocessing`
+### `backend/src/main/python/lib`
 
-Python 기반 데이터 전처리 스크립트를 관리합니다.
+Python 기반 데이터 전처리·매칭·rating 로직을 관리합니다.
 
-들어갈 수 있는 파일 예시:
+주요 모듈:
 
-- 중복 상품 제거 스크립트
-- 가격, 날짜, 상태값 정규화 스크립트
-- DB 저장 전 데이터 검증 스크립트
+- `lib/keyword_preprocessing.py`: 블랙리스트, 가격 이상치, 클러스터 전처리 (`keyword_final.ipynb` 규칙)
+- `lib/item_rating.py`: `items.rating` 및 파생 점수 계산
+- `item_rating.py`: `items.rating` 계산 공식
 
 작성 기준:
 
