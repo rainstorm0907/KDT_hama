@@ -15,10 +15,11 @@ import requests
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 BACKEND_DIR = Path(__file__).resolve().parents[3]
 if str(BACKEND_DIR) not in sys.path:
-    sys.path.append(str(BACKEND_DIR))
+    sys.path.insert(0, str(BACKEND_DIR))
 
 from lib.hama_data_pipeline import HamaDataPipeline
 from opensearch.repository import (
@@ -29,11 +30,15 @@ from opensearch.repository import (
 from lib.product_matching import ProductMatchIndex
 from lib.supabase_repository import (
     SupabaseRepositoryError,
+    count_anomaly_items,
+    find_anomaly_items,
     find_product_from_supabase,
     find_products_by_item_ids_from_supabase,
+    find_related_clusters,
     is_supabase_configured,
     load_products_from_supabase,
 )
+from lib.gemini_chatbot import answer_message
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -76,6 +81,16 @@ def health_check() -> dict[str, str]:
         "dataSource": "supabase" if is_supabase_configured() else "csv",
         "searchSource": "opensearch" if is_opensearch_enabled() else "python",
     }
+
+
+class ChatbotMessageRequest(BaseModel):
+    message: str = ""
+
+
+@app.post("/api/chatbot/message")
+def chatbot_message(request: ChatbotMessageRequest) -> dict[str, object]:
+    # 프론트 계약: {answer, items, intent}. Gemini 호출은 gemini_chatbot가 담당.
+    return answer_message(request.message)
 
 
 @app.get("/api/products/search")
@@ -135,6 +150,36 @@ def recommended_products(
     }
 
 
+@app.get("/api/products/anomalies")
+def product_anomalies(
+    mode: Literal["low_confidence", "accessory"] = "low_confidence",
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> dict[str, object]:
+    """관리자 이상데이터: 클러스터 신뢰도 하위 / 악세서리 의심 매물."""
+    if not is_supabase_configured():
+        raise HTTPException(status_code=503, detail="Supabase가 설정되지 않았습니다.")
+
+    try:
+        rows = find_anomaly_items(mode, limit=limit, offset=offset)
+    except SupabaseRepositoryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return {"mode": mode, "limit": limit, "offset": offset, "rows": rows}
+
+
+@app.get("/api/products/anomalies/summary")
+def product_anomalies_summary() -> dict[str, int]:
+    """관리자 지표 카드용 이상데이터 카운트."""
+    if not is_supabase_configured():
+        raise HTTPException(status_code=503, detail="Supabase가 설정되지 않았습니다.")
+
+    try:
+        return count_anomaly_items()
+    except SupabaseRepositoryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
 @app.get("/api/products/{platform}/{pid}")
 def product_detail(platform: str, pid: str) -> dict[str, object]:
     product = find_product(platform, pid)
@@ -154,6 +199,25 @@ def product_detail(platform: str, pid: str) -> dict[str, object]:
     detail_product.pop("_searchText", None)
 
     return detail_product
+
+
+@app.get("/api/products/{platform}/{pid}/insights")
+def product_insights(platform: str, pid: str) -> dict[str, object]:
+    """상품의 클러스터 기준 관련 클러스터 + 가격 트렌드(온더플라이 집계)."""
+    product = find_product(platform, pid)
+    if product is None:
+        raise HTTPException(status_code=404, detail="상품을 찾을 수 없습니다.")
+
+    cluster_name = clean_value(str(product.get("category", "")))
+    if not is_supabase_configured() or not cluster_name:
+        return {"clusterName": cluster_name, "relatedClusters": []}
+
+    try:
+        related = find_related_clusters(cluster_name)
+    except SupabaseRepositoryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return {"clusterName": cluster_name, "relatedClusters": related}
 
 
 def load_products() -> list[dict[str, object]]:

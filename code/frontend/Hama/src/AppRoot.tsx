@@ -167,7 +167,9 @@ export function AppRoot() {
           />
           <Route
             path="/admin"
-            element={isAdmin ? <AdminPage /> : <Navigate to="/" replace />}
+            element={
+              !isAuthChecked ? null : isAdmin ? <AdminPage /> : <Navigate to="/" replace />
+            }
           />
           <Route path="/terms" element={<LegalPage type="terms" />} />
           <Route path="/privacy" element={<LegalPage type="privacy" />} />
