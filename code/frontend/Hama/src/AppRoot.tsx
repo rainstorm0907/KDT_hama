@@ -161,13 +161,17 @@ export function AppRoot() {
                 : <MyPage
                     onProductSelect={handleProductSelect}
                     isAdmin={isAdmin}
+                    isLoggedIn={isLoggedIn}
+                    onLoginRequired={() => setAuthMode('login')}
                     onWithdrawn={handleLoggedOut}
                   />
             }
           />
           <Route
             path="/admin"
-            element={isAdmin ? <AdminPage /> : <Navigate to="/" replace />}
+            element={
+              !isAuthChecked ? null : isAdmin ? <AdminPage /> : <Navigate to="/" replace />
+            }
           />
           <Route path="/terms" element={<LegalPage type="terms" />} />
           <Route path="/privacy" element={<LegalPage type="privacy" />} />
@@ -234,6 +238,8 @@ export function AppRoot() {
         isOpen={isPriceCompareOpen}
         initialProduct={priceCompareProduct}
         onClose={() => setIsPriceCompareOpen(false)}
+        isLoggedIn={isLoggedIn}
+        onLoginRequired={() => setAuthMode('login')}
       />
     </div>
   );

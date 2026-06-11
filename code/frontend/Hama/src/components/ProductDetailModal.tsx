@@ -17,7 +17,10 @@ import {
   updateWishlistAlert,
 } from '../api/mypageApi';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
-import { useProductDetailQuery } from '../queries/productQueries';
+import {
+  useProductDetailQuery,
+  useProductInsightsQuery,
+} from '../queries/productQueries';
 import type { Product } from '../types/product';
 import { hairline } from '../styles/hairline';
 import { formatWon } from '../utils/format';
@@ -58,6 +61,10 @@ export function ProductDetailModal({
   const navigate = useNavigate();
   const productKey = getProductKey(product);
   const productDetailQuery = useProductDetailQuery({
+    platform: product?.platform ?? '',
+    pid: product?.pid ?? '',
+  });
+  const productInsightsQuery = useProductInsightsQuery({
     platform: product?.platform ?? '',
     pid: product?.pid ?? '',
   });
@@ -159,7 +166,7 @@ export function ProductDetailModal({
     canExpandDescription && !isDescriptionExpanded
       ? `${descriptionText.slice(0, descriptionPreviewLimit).trim()}…`
       : descriptionText;
-  const insightKeywords = buildInsightKeywords(visibleProduct);
+  const relatedClusters = productInsightsQuery.data?.relatedClusters ?? [];
 
   const moveImage = (direction: 'prev' | 'next') => {
     setImageSelection((currentSelection) => {
@@ -430,7 +437,8 @@ export function ProductDetailModal({
             <div className="mt-9">
               <PriceInsightChart
                 points={visibleProduct.priceHistory}
-                keywordOptions={insightKeywords}
+                clusters={relatedClusters}
+                isClustersLoading={productInsightsQuery.isLoading}
               />
             </div>
 
@@ -568,18 +576,6 @@ function ActionToast({
       </div>
     </div>
   );
-}
-
-function buildInsightKeywords(product: Product) {
-  const keywords = [
-    product.category,
-    ...product.name
-      .split(/[^0-9A-Za-z가-힣]+/)
-      .map((token) => token.trim())
-      .filter((token) => token.length >= 2),
-  ];
-
-  return Array.from(new Set(keywords.filter(Boolean))).slice(0, 4);
 }
 
 function getProductKey(product: Product | null): string {

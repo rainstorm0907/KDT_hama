@@ -1,4 +1,4 @@
-import type { Product } from '../types/product';
+import type { PricePoint, Product } from '../types/product';
 
 export type SearchProductsParams = {
   query: string;
@@ -107,4 +107,36 @@ export async function fetchProductDetail({
   }
 
   return response.json() as Promise<Product>;
+}
+
+export type ClusterInsight = {
+  clusterName: string;
+  avgPrice: number;
+  count: number;
+  points: PricePoint[];
+};
+
+export type ProductInsightsResponse = {
+  clusterName: string;
+  relatedClusters: ClusterInsight[];
+};
+
+export async function fetchProductInsights({
+  platform,
+  pid,
+  signal,
+}: ProductDetailParams): Promise<ProductInsightsResponse> {
+  const encodedPlatform = encodeURIComponent(platform);
+  const encodedPid = encodeURIComponent(pid);
+
+  const response = await fetch(
+    `/api/products/${encodedPlatform}/${encodedPid}/insights`,
+    { signal }
+  );
+
+  if (!response.ok) {
+    throw new Error('가격 인사이트를 불러오지 못했습니다.');
+  }
+
+  return response.json() as Promise<ProductInsightsResponse>;
 }

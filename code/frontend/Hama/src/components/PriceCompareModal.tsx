@@ -9,12 +9,16 @@ type PriceCompareModalProps = {
   isOpen: boolean;
   initialProduct: Product | null;
   onClose: () => void;
+  isLoggedIn?: boolean;
+  onLoginRequired?: () => void;
 };
 
 export function PriceCompareModal({
   isOpen,
   initialProduct,
   onClose,
+  isLoggedIn = false,
+  onLoginRequired,
 }: PriceCompareModalProps) {
   useModalScrollLock(isOpen);
 
@@ -66,6 +70,8 @@ export function PriceCompareModal({
           <PriceCompareWorkspace
             key={initialProduct ? `${initialProduct.platform}:${initialProduct.pid}` : 'empty'}
             initialProduct={initialProduct}
+            isLoggedIn={isLoggedIn}
+            onLoginRequired={onLoginRequired}
           />
         </div>
         </section>

@@ -5,18 +5,24 @@ import { PriceCompareChart } from './PriceCompareChart';
 import { ProductDetailModal } from './ProductDetailModal';
 import { PriceCompareProductCard } from './PriceCompareProductCard';
 import { PriceCompareProductPicker } from './PriceCompareProductPicker';
-import { useRecommendedProductsQuery } from '../queries/productQueries';
+import {
+  useProductInsightsQuery,
+  useRecommendedProductsQuery,
+} from '../queries/productQueries';
 import { hairline } from '../styles/hairline';
 import type { PricePoint, Product } from '../types/product';
 import {
   addPriceCompareProduct,
   getStoredPriceCompareProducts,
   productStorageKey,
+  removePriceCompareProduct,
 } from '../utils/userProductLists';
 
 type PriceCompareWorkspaceProps = {
   initialProduct?: Product | null;
   mode?: 'modal' | 'page';
+  isLoggedIn?: boolean;
+  onLoginRequired?: () => void;
 };
 
 const maxCompareCount = 4;
@@ -25,6 +31,8 @@ const minCompareCount = 2;
 export function PriceCompareWorkspace({
   initialProduct = null,
   mode = 'modal',
+  isLoggedIn = false,
+  onLoginRequired,
 }: PriceCompareWorkspaceProps) {
   const initialProductKey = initialProduct ? productStorageKey(initialProduct) : '';
   const [candidateProducts, setCandidateProducts] = useState<Product[]>(() =>
@@ -62,8 +70,25 @@ export function PriceCompareWorkspace({
     () => recommendedProductsQuery.data?.items ?? [],
     [recommendedProductsQuery.data?.items]
   );
-  const marketPoints = selectMarketPoints(selectedProducts, candidateProducts);
-  const keyword = buildComparisonKeyword(selectedProducts[0] ?? candidateProducts[0]);
+  // 시장가 라인은 단일 상품의 빈약한 가격 이력(보통 1포인트) 대신,
+  // 기준 상품이 속한 클러스터의 일자별 평균 트렌드를 사용한다.
+  const primaryComparisonProduct =
+    selectedProducts[0] ?? candidateProducts[0] ?? initialProduct ?? null;
+  const comparisonInsightsQuery = useProductInsightsQuery({
+    platform: primaryComparisonProduct?.platform ?? '',
+    pid: primaryComparisonProduct?.pid ?? '',
+  });
+  const clusterMarketPoints =
+    comparisonInsightsQuery.data?.relatedClusters?.[0]?.points ?? [];
+  const marketPoints =
+    clusterMarketPoints.length > 0
+      ? clusterMarketPoints
+      : selectMarketPoints(selectedProducts, candidateProducts);
+  // 그래프 헤더 키워드는 상품 이름 토큰이 아니라 클러스터(cluster_product_name)를 따른다.
+  // BE insights가 주는 clusterName을 우선 쓰고, 없으면 category로 폴백한다.
+  const keyword =
+    comparisonInsightsQuery.data?.clusterName?.trim() ||
+    buildComparisonKeyword(selectedProducts[0] ?? candidateProducts[0]);
   const canShowResult = selectedProducts.length >= minCompareCount;
   const isCompactSlots = isResultVisible && canShowResult;
 
@@ -134,6 +159,17 @@ export function PriceCompareWorkspace({
     deselectProduct(productStorageKey(product));
   };
 
+  // 가격 비교 리스트(localStorage)에서 상품을 완전히 제외하고, 선택 상태도 해제한다.
+  const removeFromCompareList = (product: Product) => {
+    const key = productStorageKey(product);
+
+    setCandidateProducts((current) =>
+      current.filter((item) => productStorageKey(item) !== key)
+    );
+    removePriceCompareProduct(product);
+    deselectProduct(key);
+  };
+
   const pickerOverlay = isPickerOpen ? (
     <div
       className={
@@ -162,6 +198,7 @@ export function PriceCompareWorkspace({
           viewMode={mode}
           onClose={() => setIsPickerOpen(false)}
           onToggleProduct={toggleProduct}
+          onRemoveFromList={removeFromCompareList}
         />
       </div>
     </div>
@@ -267,7 +304,9 @@ export function PriceCompareWorkspace({
       <ProductDetailModal
         key={detailProduct ? `${detailProduct.platform}:${detailProduct.pid}` : 'empty-price-compare-detail'}
         product={detailProduct}
+        isLoggedIn={isLoggedIn}
         onClose={() => setDetailProduct(null)}
+        onLoginRequired={onLoginRequired}
       />
     </div>
   );
@@ -294,10 +333,14 @@ function buildComparisonKeyword(product: Product | undefined) {
     return '키워드 시세';
   }
 
-  const tokens = getProductSearchTokens(product);
-  const primaryTokens = tokens.slice(0, 2).join(' ');
+  // 클러스터 식별자(category = cluster_product_name) 우선.
+  const category = product.category.trim();
+  if (category) {
+    return category;
+  }
 
-  return primaryTokens || product.category || '키워드 시세';
+  const tokens = getProductSearchTokens(product);
+  return tokens.slice(0, 2).join(' ') || '키워드 시세';
 }
 
 function getPrimaryComparisonKeyword(product: Product | undefined | null) {
@@ -305,7 +348,7 @@ function getPrimaryComparisonKeyword(product: Product | undefined | null) {
     return '';
   }
 
-  return getProductSearchTokens(product)[0] ?? product.category ?? '';
+  return product.category.trim() || getProductSearchTokens(product)[0] || '';
 }
 
 function getProductSearchTokens(product: Product) {

@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import type { ClusterInsight } from '../api/products';
 import type { PricePoint } from '../types/product';
 import { hairline } from '../styles/hairline';
 import { formatWon } from '../utils/format';
 
 type PriceInsightChartProps = {
+  // 클러스터 트렌드가 없을 때의 fallback(단일 상품 가격 이력)
   points: PricePoint[];
-  keywordOptions: string[];
+  // 같은 모델 관련 클러스터별 가격 트렌드. 있으면 드롭다운/그래프의 기준이 된다.
+  clusters?: ClusterInsight[];
+  // 클러스터 조회가 끝나기 전에 '현재 상품'으로 단정하지 않기 위한 로딩 플래그
+  isClustersLoading?: boolean;
 };
 
 type ChartPoint = PricePoint & {
@@ -52,16 +57,26 @@ const chartInnerHeight = chartBottom - chartTop;
 
 export function PriceInsightChart({
   points,
-  keywordOptions,
+  clusters,
+  isClustersLoading = false,
 }: PriceInsightChartProps) {
-  const keywords = keywordOptions.length > 0 ? keywordOptions.slice(0, 6) : ['현재 상품'];
+  const clusterList = clusters ?? [];
+  const hasClusters = clusterList.length > 0;
+  const keywords = hasClusters
+    ? clusterList.map((cluster) => cluster.clusterName)
+    : [isClustersLoading ? '시세 분류 확인 중…' : '현재 상품'];
   const [activeKeywordIndex, setActiveKeywordIndex] = useState(0);
   const [activeRange, setActiveRange] = useState<PriceRangeId>('3m');
   const [isKeywordMenuOpen, setIsKeywordMenuOpen] = useState(false);
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
-  const activeKeyword = keywords[activeKeywordIndex] ?? keywords[0];
-  const activePoints = createRangePoints(points, activeRange);
+  // 클러스터 목록이 바뀌어도 인덱스가 범위를 벗어나지 않도록 보정
+  const safeKeywordIndex = Math.min(activeKeywordIndex, keywords.length - 1);
+  const activeKeyword = keywords[safeKeywordIndex] ?? keywords[0];
+  const activeSeries = hasClusters
+    ? clusterList[safeKeywordIndex]?.points ?? []
+    : points;
+  const activePoints = createRangePoints(activeSeries, activeRange);
 
   if (activePoints.length === 0) {
     return (
@@ -107,7 +122,8 @@ export function PriceInsightChart({
     activePointIndex === null ? null : coordinates[activePointIndex] ?? null;
   const maxLabelText = `최고 ${formatWon(maxPrice)}`;
   const minLabelText = `최저 ${formatWon(minPrice)}`;
-  const averageLabelText = `평균가 ${formatCompactWon(averagePrice)}`;
+  // 비교 차트와 동일하게 그래프 안에 ' 평균 859,100원' 형태로 표기한다.
+  const averageLabelText = `평균 ${formatWon(averagePrice)}`;
   const visibleMarkerIndexes = getVisibleMarkerIndexes(coordinates, minPoint, maxPoint);
   const maxLabelPosition = getPointLabelPlacement({
     point: maxPoint,
@@ -163,7 +179,7 @@ export function PriceInsightChart({
               className="absolute left-0 top-12 z-50 grid min-w-[210px] gap-1.5 rounded-[22px] border border-[#AEB7C5] bg-white p-2 shadow-[0_22px_60px_rgba(15,23,42,0.24),0_8px_18px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,1)]"
             >
               {keywords.map((keyword, index) => {
-                const isActive = index === activeKeywordIndex;
+                const isActive = index === safeKeywordIndex;
 
                 return (
                   <button
@@ -184,10 +200,6 @@ export function PriceInsightChart({
             </div>
           ) : null}
           </div>
-
-          <span className="inline-flex h-10 items-center px-1 text-[12px] font-black text-[#626873]">
-            {averageLabelText}
-          </span>
         </div>
 
         <div
@@ -248,12 +260,26 @@ export function PriceInsightChart({
               x2={chartRight}
               y1={averageY}
               y2={averageY}
-              stroke="#7D8796"
+              stroke="#2C9A72"
               strokeDasharray="8 10"
               strokeLinecap="round"
               strokeWidth="1.4"
               opacity="0.44"
             />
+            <text
+              x={chartLeft + 6}
+              y={averageY - 9}
+              fill="#2C9A72"
+              fontSize="11.5"
+              fontWeight="950"
+              textAnchor="start"
+              paintOrder="stroke"
+              stroke="#FFFFFF"
+              strokeWidth="4"
+              strokeLinejoin="round"
+            >
+              {averageLabelText}
+            </text>
 
             <path
               d={path}
@@ -612,14 +638,6 @@ function getBoundsPenalty(box: LabelBox) {
   const bottomPenalty = Math.max(0, box.y + box.height - chartBottom);
 
   return (leftPenalty + rightPenalty + topPenalty + bottomPenalty) * 20;
-}
-
-function formatCompactWon(value: number) {
-  if (value >= 10000) {
-    return `${Math.round(value / 10000).toLocaleString('ko-KR')}만원`;
-  }
-
-  return formatWon(value);
 }
 
 function clamp(value: number, min: number, max: number) {
