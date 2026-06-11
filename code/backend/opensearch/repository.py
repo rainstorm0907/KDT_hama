@@ -7,6 +7,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from opensearch.documents import MIN_PLAUSIBLE_PRICE, SUMMARY_PRICE_FLOOR_RATIO
+
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_OPENSEARCH_URL = "http://localhost:9200"
@@ -58,19 +60,58 @@ def search_item_ids(
         raise OpenSearchRepositoryError("OpenSearch search requires a non-empty query.")
 
     try:
-        response = client().search(
-            index=index_name(),
-            body=build_search_body(q=q, platforms=platforms, sort=sort, page=page, limit=limit),
-        )
+        body = build_search_body(q=q, platforms=platforms, sort=sort, page=page, limit=limit)
+        response = client().search(index=index_name(), body=body)
     except Exception as exc:
         raise OpenSearchRepositoryError(str(exc)) from exc
 
     hits = response.get("hits", {})
+    aggregations = response.get("aggregations", {})
+    summary = parse_search_summary(aggregations)
+    summary = refine_summary_below_floor(summary, aggregations, body)
     return (
         parse_hits(hits.get("hits", [])),
         total_hits(hits.get("total")),
-        parse_search_summary(response.get("aggregations", {})),
+        summary,
     )
+
+
+def refine_summary_below_floor(
+    summary: dict[str, object],
+    aggregations: object,
+    body: dict[str, Any],
+) -> dict[str, object]:
+    """플레이스홀더 가격(낚시·잡글)이 최저가를 오염시키면 분포 기준 하한으로 재집계한다.
+
+    하한 = max(MIN_PLAUSIBLE_PRICE, 중앙값 * SUMMARY_PRICE_FLOOR_RATIO).
+    최저가가 하한 이상이면 추가 요청 없이 원본 요약을 그대로 쓴다.
+    """
+    median = parse_aggregation_median(aggregations)
+    if median is None:
+        return summary
+
+    floor = max(MIN_PLAUSIBLE_PRICE, round(median * SUMMARY_PRICE_FLOOR_RATIO))
+    lowest = summary.get("lowestPrice")
+    if not isinstance(lowest, int) or lowest <= 0 or lowest >= floor:
+        return summary
+
+    floor_body = {
+        "size": 0,
+        "query": {
+            "bool": {
+                "must": [body["query"]],
+                "filter": [{"range": {"current_price": {"gte": floor}}}],
+            }
+        },
+        "aggs": body["aggs"],
+    }
+    try:
+        response = client().search(index=index_name(), body=floor_body)
+    except Exception:
+        return summary
+
+    refined = parse_search_summary(response.get("aggregations", {}))
+    return refined if refined.get("lowestPrice") else summary
 
 
 def ensure_index(*, recreate: bool = False) -> None:
@@ -172,6 +213,7 @@ def build_search_body(
         "aggs": {
             "lowest_price": {"min": {"field": "current_price"}},
             "average_price": {"avg": {"field": "current_price"}},
+            "price_median": {"percentiles": {"field": "current_price", "percents": [50]}},
             "latest_crawled_at": {
                 "max": {
                     "field": "crawled_at",
@@ -273,6 +315,19 @@ def parse_aggregation_date(value: object) -> str:
         return ""
     text = str(value.get("value_as_string") or "").strip()
     return text
+
+
+def parse_aggregation_median(aggregations: object) -> float | None:
+    if not isinstance(aggregations, dict):
+        return None
+    percentiles = aggregations.get("price_median")
+    if not isinstance(percentiles, dict):
+        return None
+    values = percentiles.get("values")
+    if not isinstance(values, dict):
+        return None
+    median = values.get("50.0")
+    return float(median) if isinstance(median, int | float) else None
 
 
 def has_accessory_intent(query: str) -> bool:

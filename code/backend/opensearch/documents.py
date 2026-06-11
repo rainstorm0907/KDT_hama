@@ -34,6 +34,8 @@ NOISE_TOKENS = {
     "구해요",
     "구함",
     "사요",
+    "사기꾼",
+    "조심",
 }
 
 # 교환/광고/구매 글이 1원·500원 같은 플레이스홀더 가격을 달고 올라온다.
@@ -44,6 +46,11 @@ MIN_PLAUSIBLE_PRICE = 1000
 # 단, 이 금액 이상이면 판매 겸 교환 글로 보고 검색에 유지한다.
 EXCHANGE_TOKEN = "교환"
 MAX_EXCHANGE_PLACEHOLDER_PRICE = 100_000
+
+# 시세 요약(최저가/평균가)에서 결과 중앙값 대비 이 비율 미만 가격은
+# 토큰으로 못 잡은 낚시·잡글의 플레이스홀더로 보고 집계에서 제외한다.
+# (검색 결과 노출에는 영향 없음)
+SUMMARY_PRICE_FLOOR_RATIO = 0.03
 
 
 def build_search_document_from_item_row(row: dict[str, Any]) -> dict[str, Any] | None:
