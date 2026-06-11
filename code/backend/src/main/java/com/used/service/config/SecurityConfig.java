@@ -28,16 +28,13 @@ public class SecurityConfig {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider =
-                new DaoAuthenticationProvider(customUserDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(customUserDetailsService);
         provider.setPasswordEncoder(encodePassword());
         return provider;
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authenticationConfiguration
-    ) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
@@ -64,7 +61,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\":\"로그인이 필요합니다.\"}");
+                            response.getWriter().write("{\"message\":\"\\uB85C\\uADF8\\uC778\\uC774 \\uD544\\uC694\\uD569\\uB2C8\\uB2E4.\"}");
                         })
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -74,7 +71,7 @@ public class SecurityConfig {
                         .logoutSuccessHandler((request, response, authentication) -> {
                             response.setStatus(HttpStatus.OK.value());
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\":\"로그아웃 성공\"}");
+                            response.getWriter().write("{\"message\":\"\\uB85C\\uADF8\\uC544\\uC6C3 \\uC131\\uACF5\"}");
                         })
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")

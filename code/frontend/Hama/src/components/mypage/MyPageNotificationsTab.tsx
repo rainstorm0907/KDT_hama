@@ -1,11 +1,15 @@
 import { Plus, Search, X } from 'lucide-react';
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
+import {
+  fetchNotificationSetting,
+  fetchWishlists,
+  updateNotificationSetting,
+} from '../../api/mypageApi';
 import { PlatformPill } from '../PlatformPill';
 import { ProductVisual } from '../ProductVisual';
 import { hairline } from '../../styles/hairline';
 import type { Product } from '../../types/product';
 import { formatUpdatedAt, formatWon } from '../../utils/format';
-import { getStoredWishlistProducts } from '../../utils/userProductLists';
 import {
   MyPageAlertToast,
   RefreshButton,
@@ -35,9 +39,7 @@ const defaultNotificationPreferences: Record<NotificationSection, boolean> = {
 };
 
 export function MyPageNotificationsTab() {
-  const [wishlist, setWishlist] = useState<Product[]>(() =>
-    getStoredWishlistProducts()
-  );
+  const [wishlist, setWishlist] = useState<Product[]>([]);
   const [lastLoaded, setLastLoaded] = useState(() => new Date().toISOString());
   const [showAllStatusItems, setShowAllStatusItems] = useState(false);
   const [enabledAlertKeys, setEnabledAlertKeys] = useState<string[]>([]);
@@ -81,18 +83,43 @@ export function MyPageNotificationsTab() {
     );
   }, [sectionPreferences]);
 
-  const refreshNotifications = () => {
-    setWishlist(getStoredWishlistProducts());
+  const refreshNotifications = async () => {
+    const [wishlistRows, settings] = await Promise.all([
+      fetchWishlists(),
+      fetchNotificationSetting(),
+    ]);
+    setWishlist(wishlistRows.map((row) => row.product));
+    setSectionPreferences({
+      lowPrice: settings.lowestPriceEnabled,
+      status: settings.soldStatusEnabled,
+      keyword: settings.newItemEnabled,
+    });
     setDismissedStatusKeys([]);
     setRemovedStatusProduct(null);
     setLastLoaded(new Date().toISOString());
   };
 
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      void refreshNotifications().catch(() => undefined);
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, []);
+
   const toggleSection = (section: NotificationSection) => {
-    setSectionPreferences((current) => ({
+    setSectionPreferences((current) => {
+      const next = {
       ...current,
       [section]: !current[section],
-    }));
+      };
+      void updateNotificationSetting({
+        lowestPriceEnabled: next.lowPrice,
+        soldStatusEnabled: next.status,
+        newItemEnabled: next.keyword,
+      }).catch(() => setSectionPreferences(current));
+      return next;
+    });
   };
 
   const toggleAlertKey = (key: string) => {
@@ -166,7 +193,7 @@ export function MyPageNotificationsTab() {
         action={
           <RefreshButton
             label="새로고침"
-            onClick={refreshNotifications}
+            onClick={() => void refreshNotifications()}
             updatedAt={formatUpdatedAt(lastLoaded)}
           />
         }

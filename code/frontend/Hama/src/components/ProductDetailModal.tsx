@@ -10,6 +10,12 @@ import {
   X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  addWishlist,
+  fetchWishlists,
+  removeWishlist,
+  updateWishlistAlert,
+} from '../api/mypageApi';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { useProductDetailQuery } from '../queries/productQueries';
 import type { Product } from '../types/product';
@@ -17,16 +23,16 @@ import { hairline } from '../styles/hairline';
 import { formatWon } from '../utils/format';
 import {
   addPriceCompareProduct,
-  isProductWished,
   saveRecentProduct,
-  toggleWishlistProduct,
 } from '../utils/userProductLists';
 import { PriceInsightChart } from './PriceInsightChart';
 import { ProductVisual } from './ProductVisual';
 
 type ProductDetailModalProps = {
   product: Product | null;
+  isLoggedIn?: boolean;
   onClose: () => void;
+  onLoginRequired?: () => void;
   onOpenChatbot?: () => void;
   onOpenPriceCompare?: (product: Product) => void;
 };
@@ -40,7 +46,9 @@ type ImageSelectionState = {
 // TODO(BE): DB 기반 상세 API가 생기면 현재 endpoint 내부의 외부 페이지 조회를 제거합니다.
 export function ProductDetailModal({
   product,
+  isLoggedIn = false,
   onClose,
+  onLoginRequired,
   onOpenChatbot,
   onOpenPriceCompare,
 }: ProductDetailModalProps) {
@@ -57,9 +65,7 @@ export function ProductDetailModal({
     productKey: '',
     index: 0,
   });
-  const [isWished, setIsWished] = useState(() =>
-    product ? isProductWished(product) : false
-  );
+  const [isWished, setIsWished] = useState(false);
   const [isAlertEnabled, setIsAlertEnabled] = useState(false);
   const [activeToast, setActiveToast] = useState<'wish' | 'alert' | 'compare' | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -101,6 +107,20 @@ export function ProductDetailModal({
 
     saveRecentProduct(product);
   }, [product]);
+
+  useEffect(() => {
+    if (!product || !isLoggedIn) {
+      return;
+    }
+
+    fetchWishlists()
+      .then((rows) => {
+        const row = rows.find((item) => item.itemId === product.id);
+        setIsWished(Boolean(row));
+        setIsAlertEnabled(Boolean(row?.lowestAlert));
+      })
+      .catch(() => undefined);
+  }, [isLoggedIn, product]);
 
   if (!product) {
     return null;
@@ -168,11 +188,27 @@ export function ProductDetailModal({
     });
   };
 
-  const handleWishToggle = () => {
-    const nextValue = toggleWishlistProduct(visibleProduct);
+  const handleWishToggle = async () => {
+    if (!isLoggedIn) {
+      onClose();
+      onLoginRequired?.();
+      return;
+    }
 
+    const nextValue = !isWished;
     setIsWished(nextValue);
-    setActiveToast(nextValue ? 'wish' : null);
+
+    try {
+      if (nextValue) {
+        await addWishlist(visibleProduct.id);
+        setActiveToast('wish');
+      } else {
+        await removeWishlist(visibleProduct.id);
+        setIsAlertEnabled(false);
+      }
+    } catch {
+      setIsWished(!nextValue);
+    }
   };
 
   const goToWishlist = () => {
@@ -181,13 +217,29 @@ export function ProductDetailModal({
     navigate('/mypage');
   };
 
-  const handleAlertToggle = () => {
-    setIsAlertEnabled((current) => {
-      const nextValue = !current;
-      setActiveToast(nextValue ? 'alert' : null);
+  const handleAlertToggle = async () => {
+    if (!isLoggedIn) {
+      onClose();
+      onLoginRequired?.();
+      return;
+    }
 
-      return nextValue;
-    });
+    try {
+      if (!isWished) {
+        await addWishlist(visibleProduct.id);
+        setIsWished(true);
+      }
+
+      const nextValue = !isAlertEnabled;
+      await updateWishlistAlert({
+        itemId: visibleProduct.id,
+        lowestAlert: nextValue,
+      });
+      setIsAlertEnabled(nextValue);
+      setActiveToast(nextValue ? 'alert' : null);
+    } catch {
+      // Keep the current UI state when the API request fails.
+    }
   };
 
   const goToAlertSettings = () => {

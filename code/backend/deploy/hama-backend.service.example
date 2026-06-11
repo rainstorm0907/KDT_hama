@@ -1,0 +1,17 @@
+[Unit]
+Description=Hama Spring Boot backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/main/code/backend
+EnvironmentFile=/etc/hama-spring.env
+ExecStart=/usr/bin/java -jar /home/ubuntu/main/code/backend/build/libs/hama-backend-0.0.1-SNAPSHOT.jar
+SuccessExitStatus=143
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

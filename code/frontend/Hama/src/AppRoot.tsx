@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { fetchCurrentUser, logout } from './api/auth';
+import { fetchAdminStatus, saveRecentItem } from './api/mypageApi';
 import { AuthModal } from './components/AuthModal';
 import type { AuthMode } from './components/AuthModal';
 import { Header } from './components/Header';
@@ -17,13 +19,18 @@ import { hairline } from './styles/hairline';
 import type { Product } from './types/product';
 
 export function AppRoot() {
+  const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [chatProduct, setChatProduct] = useState<Product | null>(null);
+  const [chatProductRequestId, setChatProductRequestId] = useState(0);
+  const [chatSessionKey, setChatSessionKey] = useState(0);
   const [priceCompareProduct, setPriceCompareProduct] = useState<Product | null>(null);
   const [isPriceCompareOpen, setIsPriceCompareOpen] = useState(false);
   const [activeSidePanel, setActiveSidePanel] = useState<SidePanel | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const isAdmin = isLoggedIn;
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
   const isBlockingModalOpen = Boolean(selectedProduct) || isPriceCompareOpen;
 
   useEffect(() => {
@@ -58,14 +65,61 @@ export function AppRoot() {
     };
   }, []);
 
+  useEffect(() => {
+    fetchCurrentUser()
+      .then(async () => {
+        setIsLoggedIn(true);
+        const status = await fetchAdminStatus().catch(() => ({ admin: false }));
+        setIsAdmin(status.admin);
+      })
+      .catch(() => {
+        setIsLoggedIn(false);
+        setIsAdmin(false);
+      })
+      .finally(() => setIsAuthChecked(true));
+  }, []);
+
   const closeAuthModal = () => setAuthMode(null);
+
+  const handleLoggedOut = () => {
+    setIsLoggedIn(false);
+    setIsAdmin(false);
+    setSelectedProduct(null);
+    setChatProduct(null);
+    setActiveSidePanel(null);
+    setChatSessionKey((current) => current + 1);
+    navigate('/');
+  };
+
+  const handleLogout = () => {
+    logout().catch(() => undefined).finally(handleLoggedOut);
+  };
+
+  const handleProductSelect = (product: Product) => {
+    setSelectedProduct(product);
+
+    if (isLoggedIn) {
+      void saveRecentItem(product.id).catch(() => undefined);
+    }
+  };
+
   const openPriceCompare = (product: Product | null = null) => {
     setPriceCompareProduct(product);
     setIsPriceCompareOpen(true);
     setActiveSidePanel(null);
   };
 
-  const openChatbot = () => {
+  const openChatbot = (product?: Product) => {
+    if (!isLoggedIn) {
+      setAuthMode('login');
+      return;
+    }
+
+    if (product) {
+      setChatProduct(product);
+      setChatProductRequestId((current) => current + 1);
+    }
+
     setActiveSidePanel('chatbot');
   };
 
@@ -79,7 +133,7 @@ export function AppRoot() {
         <Header
           isLoggedIn={isLoggedIn}
           onAuthOpen={setAuthMode}
-          onLogout={() => setIsLoggedIn(false)}
+          onLogout={handleLogout}
         />
 
         <Routes>
@@ -87,7 +141,7 @@ export function AppRoot() {
             path="/"
             element={
               <HomePage
-                onProductSelect={setSelectedProduct}
+                onProductSelect={handleProductSelect}
               />
             }
           />
@@ -95,15 +149,26 @@ export function AppRoot() {
             path="/search"
             element={
               <SearchResultsPage
-                onProductSelect={setSelectedProduct}
+                onProductSelect={handleProductSelect}
               />
             }
           />
           <Route
             path="/mypage"
-            element={<MyPage onProductSelect={setSelectedProduct} isAdmin={isAdmin} />}
+            element={
+              isAuthChecked && !isLoggedIn
+                ? <Navigate to="/" replace />
+                : <MyPage
+                    onProductSelect={handleProductSelect}
+                    isAdmin={isAdmin}
+                    onWithdrawn={handleLoggedOut}
+                  />
+            }
           />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route
+            path="/admin"
+            element={isAdmin ? <AdminPage /> : <Navigate to="/" replace />}
+          />
           <Route path="/terms" element={<LegalPage type="terms" />} />
           <Route path="/privacy" element={<LegalPage type="privacy" />} />
         </Routes>
@@ -114,7 +179,12 @@ export function AppRoot() {
           activePanel={activeSidePanel}
           onOpenPriceCompare={() => openPriceCompare()}
           onPanelChange={setActiveSidePanel}
-          onProductSelect={setSelectedProduct}
+          onProductSelect={handleProductSelect}
+          isLoggedIn={isLoggedIn}
+          onLoginRequired={() => setAuthMode('login')}
+          chatSessionKey={chatSessionKey}
+          activeProduct={chatProduct}
+          activeProductRequestId={chatProductRequestId}
         />
       </div>
 
@@ -124,6 +194,10 @@ export function AppRoot() {
         onModeChange={setAuthMode}
         onLoginSuccess={() => {
           setIsLoggedIn(true);
+          void fetchAdminStatus()
+            .then((status) => setIsAdmin(status.admin))
+            .catch(() => setIsAdmin(false));
+          setChatSessionKey((current) => current + 1);
           closeAuthModal();
         }}
       />
@@ -139,14 +213,21 @@ export function AppRoot() {
             onOpenPriceCompare={() => undefined}
             onPanelChange={() => undefined}
             onProductSelect={() => undefined}
+            isLoggedIn={isLoggedIn}
+            onLoginRequired={() => setAuthMode('login')}
+            chatSessionKey={chatSessionKey}
+            activeProduct={chatProduct}
+            activeProductRequestId={chatProductRequestId}
           />
         </div>
       ) : null}
       <ProductDetailModal
         key={selectedProduct?.id ?? 'empty-product-modal'}
         product={selectedProduct}
+        isLoggedIn={isLoggedIn}
         onClose={() => setSelectedProduct(null)}
-        onOpenChatbot={openChatbot}
+        onLoginRequired={() => setAuthMode('login')}
+        onOpenChatbot={() => openChatbot(selectedProduct ?? undefined)}
         onOpenPriceCompare={openPriceCompare}
       />
       <PriceCompareModal
