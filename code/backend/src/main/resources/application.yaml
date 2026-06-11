@@ -28,6 +28,9 @@ gemini:
   base-url: https://generativelanguage.googleapis.com
   model: gemini-2.5-flash
 
+hama:
+  fastapi-base-url: ${FASTAPI_BASE_URL:http://127.0.0.1:8000}
+
 logging:
   level:
     root: INFO

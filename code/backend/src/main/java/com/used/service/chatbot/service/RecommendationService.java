@@ -25,6 +25,7 @@ public class RecommendationService {
 
     private final ItemRepository itemRepository;
     private final RecommendedItemRepository recommendedItemRepository;
+    private final OpenSearchProductService openSearchProductService;
 
     @Transactional
     public List<RecommendedItemDto> recommendByAnalysisResult(Long userId, ChatAnalysisResult analysis) {
@@ -41,6 +42,12 @@ public class RecommendationService {
                 + ", productType=" + normalizeText(analysis.getProductType())
                 + ", useCase=" + normalizeText(analysis.getUseCase())
                 + ", performanceLevel=" + normalizePerformanceLevel(analysis.getPerformanceLevel()));
+
+        List<RecommendedItemDto> openSearchResults = openSearchProductService.search(analysis, 10);
+        if (!openSearchResults.isEmpty()) {
+            saveRecommendedItemDtos(userId, openSearchResults);
+            return openSearchResults;
+        }
 
         List<RecommendedItemProjection> results = findScoredItems(keyword, minPrice, maxPrice, analysis, 10);
         saveRecommendedItems(userId, results);
@@ -187,6 +194,22 @@ public class RecommendationService {
         for (RecommendedItemProjection item : results) {
             if (item == null || item.getItemId() == null) continue;
             boolean exists = recommendedItemRepository.existsByUserIdAndItemIdAndRecommendType(userId, item.getItemId(), RECOMMEND_TYPE_CHATBOT);
+            if (exists) continue;
+            RecommendedItem recommendedItem = new RecommendedItem();
+            recommendedItem.setUserId(userId);
+            recommendedItem.setItemId(item.getItemId());
+            recommendedItem.setScore(item.getScore());
+            recommendedItem.setRecommendType(RECOMMEND_TYPE_CHATBOT);
+            recommendedItemRepository.save(recommendedItem);
+        }
+    }
+
+    private void saveRecommendedItemDtos(Long userId, List<RecommendedItemDto> results) {
+        if (userId == null || results == null || results.isEmpty()) return;
+        for (RecommendedItemDto item : results) {
+            if (item == null || item.getItemId() == null) continue;
+            boolean exists = recommendedItemRepository.existsByUserIdAndItemIdAndRecommendType(
+                    userId, item.getItemId(), RECOMMEND_TYPE_CHATBOT);
             if (exists) continue;
             RecommendedItem recommendedItem = new RecommendedItem();
             recommendedItem.setUserId(userId);
