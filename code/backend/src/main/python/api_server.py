@@ -562,3 +562,9 @@ def normalize_text(value: object) -> str:
 
 def clean_value(value: str | None) -> str:
     return str(value or "").strip()
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("api_server:app", host="127.0.0.1", port=8000, reload=True)
