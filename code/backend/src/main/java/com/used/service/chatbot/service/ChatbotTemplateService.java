@@ -34,7 +34,7 @@ public class ChatbotTemplateService {
             return Optional.of(new TemplateAnswer(
                     "PRICE_COMPARE_GUIDE",
                     "TEMPLATE",
-                    "가격 비교는 현재 판매가, 최저가, 비슷한 상품의 평균 매물가와 거래완료 평균가를 기준으로 판단합니다. 상품 상세에서 살래말래 AI를 누르면 해당 상품 기준으로 가격이 괜찮은지 확인할 수 있습니다."
+                    "가격 비교는 현재 판매가, 최저가, 비슷한 상품의 평균 매물가와 거래완료 평균가를 기준으로 판단합니다. 상품 상세에서 사육사 AI를 누르면 해당 상품 기준으로 가격이 괜찮은지 확인할 수 있습니다."
             ));
         }
 
