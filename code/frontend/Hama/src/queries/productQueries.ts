@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   fetchProductDetail,
+  fetchProductInsights,
   fetchRecommendedProducts,
   fetchSearchProducts,
   type ProductDetailParams,
@@ -30,6 +31,8 @@ export const productQueryKeys = {
     [PRODUCT_QUERY_ROOT, 'recommended', limit] as const,
   detail: ({ platform, pid }: ProductDetailQueryParams) =>
     [PRODUCT_QUERY_ROOT, 'detail', platform, pid] as const,
+  insights: ({ platform, pid }: ProductDetailQueryParams) =>
+    [PRODUCT_QUERY_ROOT, 'insights', platform, pid] as const,
 };
 
 export function useSearchProductsQuery(params: SearchProductsQueryParams) {
@@ -57,6 +60,15 @@ export function useProductDetailQuery(params: ProductDetailQueryParams) {
   return useQuery({
     queryKey: productQueryKeys.detail(params),
     queryFn: ({ signal }) => fetchProductDetail({ ...params, signal }),
+    enabled: params.platform.trim().length > 0 && params.pid.trim().length > 0,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useProductInsightsQuery(params: ProductDetailQueryParams) {
+  return useQuery({
+    queryKey: productQueryKeys.insights(params),
+    queryFn: ({ signal }) => fetchProductInsights({ ...params, signal }),
     enabled: params.platform.trim().length > 0 && params.pid.trim().length > 0,
     staleTime: 60 * 1000,
   });
