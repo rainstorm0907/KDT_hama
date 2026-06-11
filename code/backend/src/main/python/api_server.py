@@ -22,6 +22,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from lib.hama_data_pipeline import HamaDataPipeline
+from opensearch.documents import MIN_PLAUSIBLE_PRICE
 from opensearch.repository import (
     OpenSearchRepositoryError,
     is_opensearch_enabled,
@@ -492,11 +493,14 @@ def model_to_dict(model: object) -> dict[str, object]:
 
 
 def search_summary(products: list[dict[str, object]]) -> dict[str, object]:
-    prices = [
+    all_prices = [
         price
         for price in (product_price(product) for product in products)
         if price is not None and price > 0
     ]
+    # 교환/광고 글의 플레이스홀더 가격(1원·500원)은 시세 요약에서 제외한다.
+    # 전부 걸러지면(초저가 카테고리) 원본 표본으로 폴백한다.
+    prices = [price for price in all_prices if price >= MIN_PLAUSIBLE_PRICE] or all_prices
     if not prices:
         return {
             "lowestPrice": 0,

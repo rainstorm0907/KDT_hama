@@ -31,6 +31,10 @@ NOISE_TOKENS = {
     "보증금",
 }
 
+# 교환/광고/구매 글이 1원·500원 같은 플레이스홀더 가격을 달고 올라온다.
+# 이 가격대는 실거래 호가가 아니므로 invalid_price로 분류해 검색·시세 요약에서 뺀다.
+MIN_PLAUSIBLE_PRICE = 1000
+
 
 def build_search_document_from_item_row(row: dict[str, Any]) -> dict[str, Any] | None:
     item_id = parse_int(row.get("item_id"))
@@ -97,7 +101,7 @@ def quality_flags_for(*, title: str, price: int) -> list[str]:
         flags.append("accessory_candidate")
     if any(normalize_compact(token) in compact_title for token in NOISE_TOKENS):
         flags.append("noise_candidate")
-    if price <= 0:
+    if price < MIN_PLAUSIBLE_PRICE:
         flags.append("invalid_price")
     return flags
 
