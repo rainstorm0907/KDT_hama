@@ -58,7 +58,7 @@ public class User {
     @Column(name = "ACCOUNT_STATUS", length = 20)
     private String accountStatus = "ACTIVE";
 
-    @Transient
+    @Column(name = "ROLE", length = 20)
     private String role = "USER";
 
     @CreationTimestamp
