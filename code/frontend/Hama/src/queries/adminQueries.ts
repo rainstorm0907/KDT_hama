@@ -4,14 +4,16 @@ import {
   fetchAnomalies,
   fetchAnomalySummary,
   type AnomalyMode,
+  type AnomalySort,
 } from '../api/adminApi';
 
 export const ANOMALY_PAGE_SIZE = 20;
 
-export function useAnomaliesQuery(mode: AnomalyMode, page: number) {
+export function useAnomaliesQuery(mode: AnomalyMode, sort: AnomalySort, page: number) {
   return useQuery({
-    queryKey: ['admin', 'anomalies', mode, page],
-    queryFn: () => fetchAnomalies(mode, page * ANOMALY_PAGE_SIZE, ANOMALY_PAGE_SIZE),
+    queryKey: ['admin', 'anomalies', mode, sort, page],
+    queryFn: () =>
+      fetchAnomalies(mode, sort, page * ANOMALY_PAGE_SIZE, ANOMALY_PAGE_SIZE),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   });

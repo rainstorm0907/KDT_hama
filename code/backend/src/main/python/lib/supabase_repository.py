@@ -582,16 +582,24 @@ def _accessory_or_filter() -> str:
     return ",".join(f"title.ilike.%{token}%" for token in accessory_tokens())
 
 
+_ANOMALY_SORT_COLUMNS = {
+    "confidence": "cluster_confidence",
+    "price": "current_price",
+}
+
+
 def find_anomaly_items(
     mode: Literal["low_confidence", "accessory"],
     *,
+    sort: str = "confidence_asc",
     limit: int = 20,
     offset: int = 0,
 ) -> list[dict[str, object]]:
     """클러스터된 매물 중 이상 후보를 반환한다.
 
-    - low_confidence: cluster_confidence 낮은 순
-    - accessory: 제목에 악세서리 토큰이 포함된 매물 (신뢰도 낮은 순)
+    - low_confidence: 전체 클러스터 매물
+    - accessory: 제목에 악세서리 토큰이 포함된 매물
+    - sort: confidence_asc(기본)/confidence_desc/price_asc/price_desc
     """
     db = client()
     query = (
@@ -603,8 +611,10 @@ def find_anomaly_items(
     if mode == "accessory":
         query = query.or_(_accessory_or_filter())
 
+    field, _, direction = sort.partition("_")
+    column = _ANOMALY_SORT_COLUMNS.get(field, "cluster_confidence")
     rows = (
-        query.order("cluster_confidence", desc=False)
+        query.order(column, desc=direction == "desc", nullsfirst=False)
         .order("item_id", desc=False)
         .range(offset, offset + limit - 1)
         .execute()

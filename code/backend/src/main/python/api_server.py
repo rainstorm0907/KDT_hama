@@ -154,6 +154,7 @@ def recommended_products(
 @app.get("/api/products/anomalies")
 def product_anomalies(
     mode: Literal["low_confidence", "accessory"] = "low_confidence",
+    sort: Literal["confidence_asc", "confidence_desc", "price_asc", "price_desc"] = "confidence_asc",
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict[str, object]:
@@ -162,11 +163,11 @@ def product_anomalies(
         raise HTTPException(status_code=503, detail="Supabase가 설정되지 않았습니다.")
 
     try:
-        rows = find_anomaly_items(mode, limit=limit, offset=offset)
+        rows = find_anomaly_items(mode, sort=sort, limit=limit, offset=offset)
     except SupabaseRepositoryError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    return {"mode": mode, "limit": limit, "offset": offset, "rows": rows}
+    return {"mode": mode, "sort": sort, "limit": limit, "offset": offset, "rows": rows}
 
 
 @app.get("/api/products/anomalies/summary")

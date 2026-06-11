@@ -1,5 +1,8 @@
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   ChevronRight,
   Clock,
   Database,
@@ -12,7 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
-import type { AdminUserRow, AnomalyMode, AnomalyRow } from '../api/adminApi';
+import type { AdminUserRow, AnomalyMode, AnomalyRow, AnomalySort } from '../api/adminApi';
 import {
   ANOMALY_PAGE_SIZE,
   useAdminUsersQuery,
@@ -34,11 +37,13 @@ export function AdminPage() {
 
   const [tab, setTab] = useState<AdminTab>('anomaly');
   const [anomalyMode, setAnomalyMode] = useState<AnomalyMode>('low_confidence');
+  const [anomalySort, setAnomalySort] = useState<AnomalySort>('confidence_asc');
   const [anomalyPage, setAnomalyPage] = useState(0);
 
   const openAnomalyTab = (mode: AnomalyMode) => {
     setTab('anomaly');
     setAnomalyMode(mode);
+    setAnomalySort('confidence_asc');
     setAnomalyPage(0);
   };
 
@@ -107,9 +112,15 @@ export function AdminPage() {
           {tab === 'anomaly' ? (
             <AnomalySection
               mode={anomalyMode}
+              sort={anomalySort}
               page={anomalyPage}
               onModeChange={(mode) => {
                 setAnomalyMode(mode);
+                setAnomalySort('confidence_asc');
+                setAnomalyPage(0);
+              }}
+              onSortChange={(sort) => {
+                setAnomalySort(sort);
                 setAnomalyPage(0);
               }}
               onPageChange={setAnomalyPage}
@@ -285,16 +296,20 @@ const ANOMALY_GUIDE: Record<AnomalyMode, string> = {
 
 function AnomalySection({
   mode,
+  sort,
   page,
   onModeChange,
+  onSortChange,
   onPageChange,
 }: {
   mode: AnomalyMode;
+  sort: AnomalySort;
   page: number;
   onModeChange: (mode: AnomalyMode) => void;
+  onSortChange: (sort: AnomalySort) => void;
   onPageChange: (page: number) => void;
 }) {
-  const anomaliesQuery = useAnomaliesQuery(mode, page);
+  const anomaliesQuery = useAnomaliesQuery(mode, sort, page);
 
   const rows = anomaliesQuery.data?.rows ?? [];
   const hasNext = rows.length === ANOMALY_PAGE_SIZE;
@@ -329,7 +344,7 @@ function AnomalySection({
         <TablePlaceholder label="이상 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요." />
       ) : (
         <>
-          <AnomalyTable rows={rows} mode={mode} />
+          <AnomalyTable rows={rows} mode={mode} sort={sort} onSortChange={onSortChange} />
           <Pagination
             page={page}
             hasNext={hasNext}
@@ -343,7 +358,17 @@ function AnomalySection({
   );
 }
 
-function AnomalyTable({ rows, mode }: { rows: AnomalyRow[]; mode: AnomalyMode }) {
+function AnomalyTable({
+  rows,
+  mode,
+  sort,
+  onSortChange,
+}: {
+  rows: AnomalyRow[];
+  mode: AnomalyMode;
+  sort: AnomalySort;
+  onSortChange: (sort: AnomalySort) => void;
+}) {
   if (rows.length === 0) {
     return <TablePlaceholder label="조건에 맞는 매물이 없습니다." />;
   }
@@ -355,8 +380,23 @@ function AnomalyTable({ rows, mode }: { rows: AnomalyRow[]; mode: AnomalyMode })
           <tr className="border-b border-[#C9CFDA]/86 text-xs font-black text-[#626873]">
             <th className="px-4 py-3">매물</th>
             <th className="px-4 py-3">상품명 / 클러스터</th>
-            <th className="px-4 py-3 text-right">가격</th>
-            <th className="px-4 py-3">{mode === 'accessory' ? '매칭 토큰' : '신뢰도'}</th>
+            <SortableHeader
+              label="가격"
+              columnKey="price"
+              sort={sort}
+              onSortChange={onSortChange}
+              align="right"
+            />
+            {mode === 'accessory' ? (
+              <th className="px-4 py-3">매칭 토큰</th>
+            ) : (
+              <SortableHeader
+                label="신뢰도"
+                columnKey="confidence"
+                sort={sort}
+                onSortChange={onSortChange}
+              />
+            )}
             <th className="px-4 py-3">상태</th>
           </tr>
         </thead>
@@ -420,6 +460,44 @@ function AnomalyTable({ rows, mode }: { rows: AnomalyRow[]; mode: AnomalyMode })
         </tbody>
       </table>
     </div>
+  );
+}
+
+function SortableHeader({
+  label,
+  columnKey,
+  sort,
+  onSortChange,
+  align = 'left',
+}: {
+  label: string;
+  columnKey: 'price' | 'confidence';
+  sort: AnomalySort;
+  onSortChange: (sort: AnomalySort) => void;
+  align?: 'left' | 'right';
+}) {
+  const isActive = sort.startsWith(`${columnKey}_`);
+  const direction = isActive ? (sort.endsWith('_desc') ? 'desc' : 'asc') : null;
+  const Icon = direction === 'asc' ? ArrowUp : direction === 'desc' ? ArrowDown : ArrowUpDown;
+  const nextSort: AnomalySort = `${columnKey}_${direction === 'asc' ? 'desc' : 'asc'}`;
+
+  return (
+    <th
+      className={`px-4 py-2 ${align === 'right' ? 'text-right' : ''}`}
+      aria-sort={direction === null ? 'none' : direction === 'asc' ? 'ascending' : 'descending'}
+    >
+      <button
+        type="button"
+        onClick={() => onSortChange(nextSort)}
+        aria-label={`${label} ${direction === 'asc' ? '내림차순' : '오름차순'} 정렬`}
+        className={`inline-flex h-8 items-center gap-1.5 rounded-[10px] px-2 text-xs font-black transition-colors ${hairline.focus} ${
+          isActive ? 'bg-[#1D1D1F] text-white' : 'text-[#626873] hover:bg-white hover:text-gray-950'
+        }`}
+      >
+        {label}
+        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    </th>
   );
 }
 

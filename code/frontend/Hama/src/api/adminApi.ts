@@ -28,6 +28,12 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
 
 export type AnomalyMode = 'low_confidence' | 'accessory';
 
+export type AnomalySort =
+  | 'confidence_asc'
+  | 'confidence_desc'
+  | 'price_asc'
+  | 'price_desc';
+
 export type AnomalyRow = {
   itemId: number;
   platform: string;
@@ -43,6 +49,7 @@ export type AnomalyRow = {
 
 export type AnomalyPage = {
   mode: AnomalyMode;
+  sort: AnomalySort;
   limit: number;
   offset: number;
   rows: AnomalyRow[];
@@ -65,9 +72,14 @@ export type AdminUserRow = {
   wishlistCount: number;
 };
 
-export async function fetchAnomalies(mode: AnomalyMode, offset: number, limit = 20) {
+export async function fetchAnomalies(
+  mode: AnomalyMode,
+  sort: AnomalySort,
+  offset: number,
+  limit = 20
+) {
   return request<AnomalyPage>(
-    `/api/products/anomalies?mode=${mode}&limit=${limit}&offset=${offset}`
+    `/api/products/anomalies?mode=${mode}&sort=${sort}&limit=${limit}&offset=${offset}`
   );
 }
 
