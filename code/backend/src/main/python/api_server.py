@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 BACKEND_DIR = Path(__file__).resolve().parents[3]
 if str(BACKEND_DIR) not in sys.path:
-    sys.path.append(str(BACKEND_DIR))
+    sys.path.insert(0, str(BACKEND_DIR))
 
 from lib.hama_data_pipeline import HamaDataPipeline
 from opensearch.repository import (
