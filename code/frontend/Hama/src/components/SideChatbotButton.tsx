@@ -17,11 +17,12 @@ type SideChatbotButtonProps = {
 
 type ChatItem = {
   itemId: number;
+  platform?: string;
+  pid?: string;
   title: string;
   currentPrice: number;
   thumbnailUrl?: string;
   itemUrl?: string;
-  platform?: string;
   recommendReason?: string;
 };
 
@@ -560,12 +561,12 @@ function chatItemToProduct(item: ChatItem): Product {
   return {
     id: item.itemId,
     platform: item.platform ?? '',
-    pid: String(item.itemId),
+    pid: item.pid ?? extractPidFromItemUrl(item.itemUrl) ?? String(item.itemId),
     name: item.title,
     brand: '',
     price: item.currentPrice,
     status: '판매중',
-    description: item.recommendReason ?? '',
+    description: '',
     imageUrl: item.thumbnailUrl ?? null,
     images: item.thumbnailUrl ? [item.thumbnailUrl] : [],
     link: item.itemUrl ?? '#',
@@ -573,6 +574,15 @@ function chatItemToProduct(item: ChatItem): Product {
     category: '',
     priceHistory: [],
   };
+}
+
+function extractPidFromItemUrl(itemUrl?: string) {
+  if (!itemUrl) {
+    return undefined;
+  }
+
+  const match = itemUrl.match(/(?:product|products)\/([^/?#]+)/);
+  return match?.[1];
 }
 
 function formatTime(date: Date) {

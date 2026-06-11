@@ -59,26 +59,26 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     @Query(value = """
             SELECT
                 target.current_price AS "currentPrice",
-                AVG(CASE WHEN similar.status IN ('판매중', 'ON_SALE', 'SALE') THEN similar.current_price END) AS "averageListingPrice",
-                AVG(CASE WHEN similar.status IN ('거래완료', '판매완료', 'SOLD_OUT', 'SOLD') THEN similar.current_price END) AS "averageSoldPrice",
-                SUM(CASE WHEN similar.status IN ('판매중', 'ON_SALE', 'SALE') THEN 1 ELSE 0 END) AS "listingCount",
-                SUM(CASE WHEN similar.status IN ('거래완료', '판매완료', 'SOLD_OUT', 'SOLD') THEN 1 ELSE 0 END) AS "soldCount"
+                AVG(CASE WHEN sim.status IN ('판매중', 'ON_SALE', 'SALE') THEN sim.current_price END) AS "averageListingPrice",
+                AVG(CASE WHEN sim.status IN ('거래완료', '판매완료', 'SOLD_OUT', 'SOLD') THEN sim.current_price END) AS "averageSoldPrice",
+                SUM(CASE WHEN sim.status IN ('판매중', 'ON_SALE', 'SALE') THEN 1 ELSE 0 END) AS "listingCount",
+                SUM(CASE WHEN sim.status IN ('거래완료', '판매완료', 'SOLD_OUT', 'SOLD') THEN 1 ELSE 0 END) AS "soldCount"
             FROM items target
-            JOIN items similar
-              ON similar.current_price IS NOT NULL
-             AND similar.current_price > 0
-             AND similar.item_id <> target.item_id
+            JOIN items sim
+              ON sim.current_price IS NOT NULL
+             AND sim.current_price > 0
+             AND sim.item_id <> target.item_id
              AND (
                     (
                         target.canonical_name IS NOT NULL
-                        AND similar.canonical_name IS NOT NULL
-                        AND LOWER(similar.canonical_name) = LOWER(target.canonical_name)
+                        AND sim.canonical_name IS NOT NULL
+                        AND LOWER(sim.canonical_name) = LOWER(target.canonical_name)
                     )
                     OR
                     (
                         target.category_name IS NOT NULL
-                        AND similar.category_name IS NOT NULL
-                        AND LOWER(similar.category_name) = LOWER(target.category_name)
+                        AND sim.category_name IS NOT NULL
+                        AND LOWER(sim.category_name) = LOWER(target.category_name)
                     )
                  )
             WHERE target.item_id = :itemId

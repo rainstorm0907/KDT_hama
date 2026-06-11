@@ -253,11 +253,13 @@ def try_search_products_from_opensearch(
         return None
 
     try:
-        hits, total, summary = search_item_ids(q=q, platforms=platforms, sort=sort, page=page, limit=limit)
+        search_limit = expanded_search_limit(q, limit)
+        hits, total, summary = search_item_ids(q=q, platforms=platforms, sort=sort, page=page, limit=search_limit)
         products = find_products_by_item_ids_from_supabase([hit.item_id for hit in hits])
     except (OpenSearchRepositoryError, SupabaseRepositoryError):
         return None
 
+    products = filter_products_by_query_intent(q, products)[:limit]
     items = [{key: value for key, value in product.items() if key != "_searchText"} for product in products]
     return {
         "items": items,
@@ -267,6 +269,80 @@ def try_search_products_from_opensearch(
         "summary": summary,
         "searchSource": "opensearch",
     }
+
+
+def expanded_search_limit(q: str, limit: int) -> int:
+    if is_smartphone_body_query(q) and not is_accessory_query(q):
+        return min(max(limit * 4, limit + 20), 200)
+    return limit
+
+
+def filter_products_by_query_intent(q: str, products: list[dict[str, object]]) -> list[dict[str, object]]:
+    if not is_smartphone_body_query(q) or is_accessory_query(q):
+        return products
+
+    return [
+        product
+        for product in products
+        if matches_smartphone_query_brand(q, product_search_label(product))
+        and not contains_smartphone_accessory(product_search_label(product))
+    ]
+
+
+def is_smartphone_body_query(q: str) -> bool:
+    query = normalize_text(q)
+    return any(token in query for token in ("아이폰", "iphone", "갤럭시", "galaxy"))
+
+
+def is_accessory_query(q: str) -> bool:
+    query = normalize_text(q)
+    return any(token in query for token in smartphone_accessory_tokens())
+
+
+def contains_smartphone_accessory(text: str) -> bool:
+    normalized = normalize_text(text)
+    return any(token in normalized for token in smartphone_accessory_tokens())
+
+
+def matches_smartphone_query_brand(q: str, text: str) -> bool:
+    query = normalize_text(q)
+    normalized = normalize_text(text)
+    if any(token in query for token in ("아이폰", "iphone")):
+        return any(token in normalized for token in ("아이폰", "iphone"))
+    if any(token in query for token in ("갤럭시", "galaxy")):
+        return any(token in normalized for token in ("갤럭시", "galaxy"))
+    return True
+
+
+def smartphone_accessory_tokens() -> tuple[str, ...]:
+    return (
+        "케이스",
+        "젤리케이스",
+        "범퍼케이스",
+        "충전기",
+        "충전케이블",
+        "케이블",
+        "보호필름",
+        "필름",
+        "강화유리",
+        "맥세이프",
+        "magsafe",
+        "거치대",
+        "파우치",
+        "스트랩",
+        "어댑터",
+        "액정필름",
+        "카메라필름",
+        "커버",
+        "시계줄",
+    )
+
+
+def product_search_label(product: dict[str, object]) -> str:
+    return " ".join(
+        clean_value(str(product.get(key, "")))
+        for key in ("name", "title", "category", "description")
+    )
 
 
 @lru_cache(maxsize=1)

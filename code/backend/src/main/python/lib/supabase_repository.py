@@ -27,6 +27,7 @@ class SupabaseRepositoryError(RuntimeError):
 
 
 PRODUCT_SELECT = "*, price_history(price, recorded_at)"
+SIMILAR_PRICE_SELECT = "item_id, title, canonical_name, category_name, current_price, crawled_at"
 OPENSEARCH_ITEM_SELECT = "*"
 SUPABASE_PAGE_SIZE = 1000
 
@@ -100,7 +101,11 @@ def find_product_from_supabase(platform: str, pid: str) -> dict[str, object] | N
     if not row:
         return None
 
-    return to_product(row)
+    product = to_product(row)
+    similar_history = similar_group_price_history(row)
+    if len(similar_history) > len(product["priceHistory"]):
+        product["priceHistory"] = similar_history
+    return product
 
 
 def find_products_by_item_ids_from_supabase(item_ids: list[int]) -> list[dict[str, object]]:
@@ -207,6 +212,175 @@ def price_history(value: object, fallback_price: int) -> list[dict[str, int | st
         )
 
     return points or fallback_history(fallback_price)
+
+
+def similar_group_price_history(row: dict[str, object]) -> list[dict[str, int | str]]:
+    canonical_name = clean_value(row.get("canonical_name"))
+    category_name = clean_value(row.get("category_name"))
+    query_field = "canonical_name" if canonical_name else "category_name"
+    query_value = canonical_name or category_name
+    if not query_value:
+        return []
+
+    try:
+        response = (
+            client()
+            .table("items")
+            .select(SIMILAR_PRICE_SELECT)
+            .eq(query_field, query_value)
+            .not_.is_("current_price", "null")
+            .order("crawled_at")
+            .limit(300)
+            .execute()
+        )
+    except Exception:
+        return []
+
+    buckets: dict[str, list[int]] = {}
+    similar_rows = filter_similar_rows(row, response.data or [])
+    similar_prices = similar_group_prices(similar_rows)
+    filtered_prices = filter_price_outliers(similar_prices)
+    for crawled_at, price in filtered_prices:
+        label = format_date(crawled_at)
+        if not label:
+            continue
+        buckets.setdefault(label, []).append(price)
+
+    points = [
+        {
+            "label": label,
+            "price": round(sum(prices) / len(prices)),
+        }
+        for label, prices in sorted(buckets.items())
+        if prices
+    ]
+    return points
+
+
+def similar_group_prices(rows: object) -> list[tuple[object, int]]:
+    prices: list[tuple[object, int]] = []
+    if not isinstance(rows, list):
+        return prices
+
+    for similar in rows:
+        if not isinstance(similar, dict):
+            continue
+        price = int(similar.get("current_price") or 0)
+        if price <= 0:
+            continue
+        prices.append((similar.get("crawled_at"), price))
+    return prices
+
+
+def filter_similar_rows(target: dict[str, object], rows: object) -> list[dict[str, object]]:
+    if not isinstance(rows, list):
+        return []
+
+    candidates = [
+        row
+        for row in rows
+        if isinstance(row, dict) and not is_accessory_or_wanted_row(row)
+    ]
+    tokens = similarity_tokens(target)
+    if not tokens:
+        return candidates
+
+    filtered = [
+        row
+        for row in candidates
+        if all(token in normalize_compact(similar_text(row)) for token in tokens)
+    ]
+    return filtered
+
+
+def similarity_tokens(row: dict[str, object]) -> list[str]:
+    text = clean_value(
+        " ".join(
+            [
+                clean_value(row.get("title")),
+                clean_value(row.get("canonical_name")),
+                clean_value(row.get("matched_keywords")),
+            ]
+        )
+    ).lower()
+
+    tokens: list[str] = []
+    patterns = [
+        r"아이폰\s*\d+\s*(?:프로맥스|프로|max|plus|플러스|미니|mini|에어|air)?",
+        r"iphone\s*\d+\s*(?:promax|pro|max|plus|mini|air)?",
+        r"갤럭시\s*s\s*\d+\s*(?:울트라|플러스|plus)?",
+        r"galaxy\s*s\s*\d+\s*(?:ultra|plus)?",
+        r"(?<![a-z0-9])s\s*\d{2}\s*(?:울트라|플러스|plus)?",
+        r"z\s*플립\s*\d+",
+        r"z\s*폴드\s*\d+",
+        r"(?<!\d)\d{2,4}\s*(?:gb|기가|g)(?!\d)",
+        r"(?<!\d)(?:128|256|512|1024)\s*(?!\d)",
+        r"(?<!\d)1\s*(?:tb|테라)(?!\d)",
+    ]
+    for pattern in patterns:
+        for match in re.findall(pattern, text):
+            token = normalize_compact(match)
+            if token and token not in tokens:
+                tokens.append(token)
+    return tokens[:3]
+
+
+def similar_text(row: dict[str, object]) -> str:
+    return " ".join(
+        [
+            clean_value(row.get("title")),
+            clean_value(row.get("canonical_name")),
+            clean_value(row.get("category_name")),
+        ]
+    )
+
+
+def is_accessory_or_wanted_row(row: dict[str, object]) -> bool:
+    text = normalize_compact(similar_text(row))
+    accessory_terms = [
+        "케이스",
+        "필름",
+        "강화유리",
+        "렌즈필름",
+        "카메라필름",
+        "충전기",
+        "충전케이블",
+        "어댑터",
+        "맥세이프",
+        "거치대",
+        "스트랩",
+        "보호캡",
+    ]
+    wanted_terms = [
+        "삽니다",
+        "사봐요",
+        "구매합니다",
+        "구합니다",
+        "매입",
+        "교환",
+        "대리구매",
+    ]
+    return any(term in text for term in accessory_terms + wanted_terms)
+
+
+def normalize_compact(value: object) -> str:
+    return "".join(clean_value(value).lower().split())
+
+
+def filter_price_outliers(prices: list[tuple[object, int]]) -> list[tuple[object, int]]:
+    if len(prices) < 3:
+        return prices
+
+    ordered = sorted(price for _, price in prices)
+    median = ordered[len(ordered) // 2]
+    lower_bound = median * 0.35
+    upper_bound = median * 2.5
+    filtered = [
+        (crawled_at, price)
+        for crawled_at, price in prices
+        if lower_bound <= price <= upper_bound
+    ]
+    return filtered or prices
 
 
 def fallback_history(price: int) -> list[dict[str, int | str]]:

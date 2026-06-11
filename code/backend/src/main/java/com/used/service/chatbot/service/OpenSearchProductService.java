@@ -67,6 +67,8 @@ public class OpenSearchProductService {
 
                 results.add(RecommendedItemDto.builder()
                         .itemId(toLong(item.get("id")))
+                        .platform(toText(item.get("platform")))
+                        .pid(toText(item.get("pid")))
                         .title(toText(item.get("name")))
                         .currentPrice(currentPrice)
                         .lowestPrice(resolveLowestPrice(item, currentPrice))
@@ -98,12 +100,14 @@ public class OpenSearchProductService {
 
         if (containsAny(keyword, "iphone", "\uC544\uC774\uD3F0")) {
             if (!containsAny(title, "iphone", "\uC544\uC774\uD3F0")) return false;
+            if (!isAccessoryQuery(keyword) && containsSmartphoneAccessory(title)) return false;
             String modelNumber = firstNumber(keyword);
             return modelNumber == null || title.contains(modelNumber);
         }
 
         if (containsAny(keyword, "galaxy", "\uAC24\uB7ED\uC2DC")) {
             if (!containsAny(title, "galaxy", "\uAC24\uB7ED\uC2DC")) return false;
+            if (!isAccessoryQuery(keyword) && containsSmartphoneAccessory(title)) return false;
             String modelNumber = firstNumber(keyword);
             return modelNumber == null || title.contains(modelNumber);
         }
@@ -111,10 +115,17 @@ public class OpenSearchProductService {
         if ("desktop".equals(productType)) {
             boolean looksLikeDesktop = containsAny(title,
                     "pc", "\uCEF4\uD4E8\uD130", "\uBCF8\uCCB4", "\uB370\uC2A4\uD06C\uD0D1", "\uAC8C\uC774\uBC0D");
+            boolean looksLikeCompletePc = containsAny(title,
+                    "\uBCF8\uCCB4", "\uB370\uC2A4\uD06C\uD0D1", "\uC644\uBCF8\uCCB4", "\uC870\uB9BDpc", "\uC870\uB9BD pc",
+                    "\uAC8C\uC774\uBC0Dpc", "\uAC8C\uC774\uBC0D pc", "\uACE0\uC0AC\uC591 \uCEF4\uD4E8\uD130", "\uCEF4\uD4E8\uD130 \uD480\uC138\uD2B8");
             boolean looksLikeGpuOnly = containsAny(title,
                     "gpu", "rtx", "gtx", "\uADF8\uB798\uD53D\uCE74\uB4DC", "\uADF8\uB798\uD53D \uCE74\uB4DC")
                     && !looksLikeDesktop;
-            return looksLikeDesktop && !looksLikeGpuOnly;
+            boolean excludedAccessoryOrPart = containsAny(title,
+                    "\uBA54\uC778\uBCF4\uB4DC", "\uBCF4\uB4DC", "\uD30C\uC6CC", "\uB7A8", "ram", "ssd", "hdd",
+                    "\uCF00\uC774\uBE14", "\uC5B4\uB311\uD130", "\uCF00\uC774\uC2A4", "\uD0A4\uBCF4\uB4DC", "\uB9C8\uC6B0\uC2A4",
+                    "\uBAA8\uB2C8\uD130", "\uCC45\uC0C1", "\uD14C\uC774\uBE14", "\uB178\uD2B8\uBD81", "\uB9E5\uBBF8\uB2C8", "mac mini", "\uB9E5\uBD81");
+            return looksLikeDesktop && looksLikeCompletePc && !looksLikeGpuOnly && !excludedAccessoryOrPart;
         }
 
         if ("laptop".equals(productType)) {
@@ -122,6 +133,7 @@ public class OpenSearchProductService {
         }
 
         if ("smartphone".equals(productType)) {
+            if (!isAccessoryQuery(keyword) && containsSmartphoneAccessory(title)) return false;
             return containsAny(title, "\uC544\uC774\uD3F0", "iphone", "\uAC24\uB7ED\uC2DC", "galaxy", "\uD578\uB4DC\uD3F0", "\uC2A4\uB9C8\uD2B8\uD3F0");
         }
 
@@ -136,6 +148,21 @@ public class OpenSearchProductService {
             if (token.length() >= 2 && title.contains(token)) return true;
         }
         return false;
+    }
+
+    private boolean isAccessoryQuery(String keyword) {
+        return containsAny(keyword,
+                "\uCF00\uC774\uC2A4", "\uCDA9\uC804\uAE30", "\uCDA9\uC804", "\uCF00\uC774\uBE14", "\uBCF4\uD638\uD544\uB984", "\uD544\uB984",
+                "\uAC15\uD654\uC720\uB9AC", "\uB9E5\uC138\uC774\uD504", "magsafe", "\uAC70\uCE58\uB300", "\uD30C\uC6B0\uCE58",
+                "\uC2A4\uD2B8\uB7A9", "\uC5B4\uB311\uD130", "\uC561\uC138\uC11C\uB9AC");
+    }
+
+    private boolean containsSmartphoneAccessory(String title) {
+        return containsAny(title,
+                "\uCF00\uC774\uC2A4", "\uC820\uB9AC\uCF00\uC774\uC2A4", "\uBC94\uD37C\uCF00\uC774\uC2A4", "\uCDA9\uC804\uAE30",
+                "\uCDA9\uC804 \uCF00\uC774\uBE14", "\uCF00\uC774\uBE14", "\uBCF4\uD638\uD544\uB984", "\uD544\uB984", "\uAC15\uD654\uC720\uB9AC",
+                "\uB9E5\uC138\uC774\uD504", "magsafe", "\uAC70\uCE58\uB300", "\uD30C\uC6B0\uCE58", "\uC2A4\uD2B8\uB7A9",
+                "\uC5B4\uB311\uD130", "\uC561\uC815\uD544\uB984", "\uCE74\uBA54\uB77C\uD544\uB984");
     }
 
     private String firstNumber(String value) {
