@@ -1,9 +1,7 @@
-import { ArrowLeft, Check, Loader2, Mail, Search, X } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, Search, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { login, requestPasswordReset, signup } from '../api/auth';
 import { hairline } from '../styles/hairline';
-
-const NAVER_OAUTH_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/oauth2/authorization/naver`;
 
 export type AuthMode = 'login' | 'signup' | 'findPassword';
 
@@ -136,8 +134,6 @@ function LoginPanel({ onClose, onLoginSuccess, onModeChange }: LoginPanelProps) 
           {isLoading ? '로그인 중...' : '로그인'}
         </button>
       </form>
-      <SocialDivider />
-      <NaverLoginButton label="네이버로 로그인" />
 
       <div className="mt-6 text-sm text-gray-500">
         계정이 없으신가요?
@@ -153,10 +149,10 @@ function LoginPanel({ onClose, onLoginSuccess, onModeChange }: LoginPanelProps) 
 const TAKEN_BIRTH_DATES = ['1999-01-15', '2000-03-15', '2001-05-20'];
 const TAKEN_NICKNAMES   = ['하마팬', '중고왕', '번개맨'];
 
-type SignUpStep = 'choice' | 'basic' | 'terms' | 'personal';
+type SignUpStep = 'basic' | 'terms' | 'personal';
 
 function SignUpPanel({ onClose, onModeChange, onLoginSuccess }: PanelProps & { onLoginSuccess: () => void }) {
-  const [step, setStep] = useState<SignUpStep>('choice');
+  const [step, setStep] = useState<SignUpStep>('basic');
 
   // step 1
   const [email, setEmail]       = useState('');
@@ -235,13 +231,12 @@ function SignUpPanel({ onClose, onModeChange, onLoginSuccess }: PanelProps & { o
     }
   }
 
-  const VISUAL_STEPS: SignUpStep[] = ['choice', 'basic', 'terms', 'personal'];
-  const stepLabel = `${VISUAL_STEPS.indexOf(step) + 1} / 4`;
+  const VISUAL_STEPS: SignUpStep[] = ['basic', 'terms', 'personal'];
+  const stepLabel = `${VISUAL_STEPS.indexOf(step) + 1} / 3`;
   const isWide = step === 'terms';
 
   function handleBack() {
-    if (step === 'basic') setStep('choice');
-    else if (step === 'terms') setStep('basic');
+    if (step === 'terms') setStep('basic');
     else if (step === 'personal') setStep('terms');
   }
 
@@ -254,7 +249,7 @@ function SignUpPanel({ onClose, onModeChange, onLoginSuccess }: PanelProps & { o
         isWide ? 'max-w-lg' : 'max-w-md'
       } ${hairline.panel}`}
     >
-      {step !== 'choice' && (
+      {step !== 'basic' && (
         <button
           type="button"
           onClick={handleBack}
@@ -279,54 +274,7 @@ function SignUpPanel({ onClose, onModeChange, onLoginSuccess }: PanelProps & { o
         <span className={`ml-1 text-xs font-bold ${hairline.quietText}`}>{stepLabel}</span>
       </div>
 
-      {/* ── Step 1-0: 회원가입 방법 선택 ── */}
-      {step === 'choice' && (
-        <>
-          <h2 id="signup-title" className="text-2xl font-bold mb-2 text-center leading-tight">
-            계정을 만들어보세요
-          </h2>
-          <p className={`text-sm text-center mb-8 ${hairline.mutedText}`}>회원가입 방법을 선택해주세요</p>
-          <div className="w-full flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={() => setStep('basic')}
-              className={`flex items-center gap-4 w-full rounded-2xl border-2 border-[#C9CFDA] bg-white px-6 py-5 text-left hover:border-black transition-all group ${hairline.focus}`}
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 group-hover:bg-gray-200 transition-colors">
-                <Mail className="w-5 h-5 text-gray-600" />
-              </span>
-              <div>
-                <p className="font-bold text-gray-900">이메일로 회원가입</p>
-                <p className="text-xs text-gray-400 mt-0.5">이메일과 비밀번호로 가입</p>
-              </div>
-            </button>
-            <a
-              href={NAVER_OAUTH_URL}
-              className="flex items-center gap-4 w-full rounded-2xl border-2 border-[#C9CFDA] bg-white px-6 py-5 text-left hover:border-[#03C75A] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#03C75A]"
-            >
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black leading-none"
-                style={{ backgroundColor: '#03C75A', color: '#fff' }}
-                aria-hidden="true"
-              >
-                N
-              </span>
-              <div>
-                <p className="font-bold text-gray-900">네이버로 회원가입</p>
-                <p className="text-xs text-gray-400 mt-0.5">네이버 계정으로 간편 가입</p>
-              </div>
-            </a>
-          </div>
-          <div className="mt-6 text-sm text-gray-500 text-center">
-            이미 회원이신가요?
-            <button type="button" onClick={() => onModeChange('login')} className="ml-2 text-black font-bold underline">
-              로그인
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* ── Step 1-1: 계정 정보 입력 ── */}
+      {/* ── Step 1: 계정 정보 입력 ── */}
       {step === 'basic' && (
         <>
           <h2 id="signup-title" className="text-2xl font-bold mb-6 text-center leading-tight">
@@ -369,6 +317,12 @@ function SignUpPanel({ onClose, onModeChange, onLoginSuccess }: PanelProps & { o
               다음
             </button>
           </form>
+          <div className="mt-6 text-sm text-gray-500 text-center">
+            이미 회원이신가요?
+            <button type="button" onClick={() => onModeChange('login')} className="ml-2 text-black font-bold underline">
+              로그인
+            </button>
+          </div>
         </>
       )}
 
@@ -690,34 +644,6 @@ function ModalCloseButton({ onClose }: { onClose: () => void }) {
     >
       <X className="w-6 h-6 text-gray-400" />
     </button>
-  );
-}
-
-function NaverLoginButton({ label }: { label: string }) {
-  return (
-    <a
-      href={NAVER_OAUTH_URL}
-      className="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-[#C9CFDA] bg-white py-4 font-bold text-gray-900 transition-all hover:border-[#03C75A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#03C75A]"
-    >
-      <span
-        className="flex h-6 w-6 items-center justify-center rounded-md text-sm font-black leading-none"
-        style={{ backgroundColor: '#03C75A', color: '#fff' }}
-        aria-hidden="true"
-      >
-        N
-      </span>
-      {label}
-    </a>
-  );
-}
-
-function SocialDivider() {
-  return (
-    <div className="flex w-full items-center gap-4 my-6">
-      <div className="h-px flex-1 bg-[#C9CFDA]" />
-      <span className={`text-xs font-semibold ${hairline.quietText}`}>또는</span>
-      <div className="h-px flex-1 bg-[#C9CFDA]" />
-    </div>
   );
 }
 
