@@ -29,11 +29,21 @@ NOISE_TOKENS = {
     "임대",
     "빌리",
     "보증금",
+    "구매합니다",
+    "구합니다",
+    "구해요",
+    "구함",
+    "사요",
 }
 
 # 교환/광고/구매 글이 1원·500원 같은 플레이스홀더 가격을 달고 올라온다.
 # 이 가격대는 실거래 호가가 아니므로 invalid_price로 분류해 검색·시세 요약에서 뺀다.
 MIN_PLAUSIBLE_PRICE = 1000
+
+# 교환글의 가격란은 플레이스홀더(1,000원)나 추가금이라 판매가가 아니다.
+# 단, 이 금액 이상이면 판매 겸 교환 글로 보고 검색에 유지한다.
+EXCHANGE_TOKEN = "교환"
+MAX_EXCHANGE_PLACEHOLDER_PRICE = 100_000
 
 
 def build_search_document_from_item_row(row: dict[str, Any]) -> dict[str, Any] | None:
@@ -101,7 +111,9 @@ def quality_flags_for(*, title: str, price: int) -> list[str]:
         flags.append("accessory_candidate")
     if any(normalize_compact(token) in compact_title for token in NOISE_TOKENS):
         flags.append("noise_candidate")
-    if price < MIN_PLAUSIBLE_PRICE:
+    if price < MIN_PLAUSIBLE_PRICE or (
+        EXCHANGE_TOKEN in compact_title and price < MAX_EXCHANGE_PLACEHOLDER_PRICE
+    ):
         flags.append("invalid_price")
     return flags
 
