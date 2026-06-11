@@ -8,6 +8,8 @@ import type { Product } from '../types/product';
 import { formatWon } from '../utils/format';
 
 type SideChatbotButtonProps = {
+  activeProduct?: Product | null;
+  activeProductRequestId?: number;
   isOpen: boolean;
   onProductSelect?: (product: Product) => void;
   onToggle: () => void;
@@ -120,6 +122,8 @@ function HippoIcon({ className }: { className?: string }) {
 }
 
 export function SideChatbotButton({
+  activeProduct,
+  activeProductRequestId = 0,
   isOpen,
   onProductSelect,
   onToggle,
@@ -162,7 +166,7 @@ export function SideChatbotButton({
     }
   }, [isTyping, messages]);
 
-  const sendMessageText = async (text: string) => {
+  const sendMessageText = async (text: string, items?: ChatItem[]) => {
     const trimmedText = text.trim();
 
     if (!trimmedText || isTyping) {
@@ -173,6 +177,7 @@ export function SideChatbotButton({
       id: createMessageId('u'),
       role: 'user',
       text: trimmedText,
+      items,
       timestamp: new Date(),
     };
 
@@ -214,6 +219,32 @@ export function SideChatbotButton({
   const sendMessage = () => {
     void sendMessageText(input);
   };
+
+  useEffect(() => {
+    if (!activeProduct || activeProductRequestId <= 0) {
+      return;
+    }
+
+    const item: ChatItem = {
+      itemId: activeProduct.id,
+      title: activeProduct.name,
+      currentPrice: activeProduct.price,
+      thumbnailUrl: activeProduct.imageUrl ?? undefined,
+      itemUrl: activeProduct.link,
+      platform: activeProduct.platform,
+    };
+
+    const timerId = window.setTimeout(() => {
+      void sendMessageText(
+        `${activeProduct.name} 살래말래 AI로 판단해줘`,
+        [item]
+      );
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+    // A new request id means the user clicked the product chatbot button again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProductRequestId]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -455,6 +486,7 @@ async function fetchChatbotAnswer(
 ): Promise<{ answer: string; items: ChatItem[]; intent?: string }> {
   const response = await fetch('/api/chatbot/message', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: text }),
   });

@@ -22,6 +22,7 @@ import type { Product } from '../types/product';
 type MyPageProps = {
   onProductSelect: (product: Product) => void;
   isAdmin?: boolean;
+  onWithdrawn: () => void;
 };
 
 type Tab = 'wishlist' | 'recent' | 'notifications' | 'priceCompare' | 'settings';
@@ -75,7 +76,11 @@ const tabs: TabItem[] = [
 const inactiveNavItemClass =
   'border border-[#D7DDE7]/72 bg-white/[0.48] text-[#565D68] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] hover:border-[#C9CFDA] hover:bg-white/[0.78] hover:text-[#1D1D1F]';
 
-export function MyPage({ onProductSelect, isAdmin = false }: MyPageProps) {
+export function MyPage({
+  onProductSelect,
+  isAdmin = false,
+  onWithdrawn,
+}: MyPageProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('wishlist');
   const [settingsView, setSettingsView] = useState<SettingsView>('main');
@@ -151,6 +156,7 @@ export function MyPage({ onProductSelect, isAdmin = false }: MyPageProps) {
               <MyPageSettingsTab
                 view={settingsView}
                 setView={setSettingsView}
+                onWithdrawn={onWithdrawn}
               />
             ) : null}
           </div>

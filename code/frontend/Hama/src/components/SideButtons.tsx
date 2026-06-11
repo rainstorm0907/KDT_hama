@@ -10,6 +10,11 @@ export type SidePanel = 'chatbot' | 'notification';
 
 type SideButtonsProps = {
   activePanel: SidePanel | null;
+  activeProduct?: Product | null;
+  activeProductRequestId?: number;
+  chatSessionKey?: number;
+  isLoggedIn: boolean;
+  onLoginRequired: () => void;
   onProductSelect?: (product: Product) => void;
   onOpenPriceCompare: () => void;
   onPanelChange: (panel: SidePanel | null) => void;
@@ -17,6 +22,11 @@ type SideButtonsProps = {
 
 export function SideButtons({
   activePanel,
+  activeProduct,
+  activeProductRequestId = 0,
+  chatSessionKey = 0,
+  isLoggedIn,
+  onLoginRequired,
   onOpenPriceCompare,
   onPanelChange,
   onProductSelect,
@@ -81,8 +91,17 @@ export function SideButtons({
         }}
       />
       <SideChatbotButton
+        key={chatSessionKey}
+        activeProduct={activeProduct}
+        activeProductRequestId={activeProductRequestId}
         isOpen={activePanel === 'chatbot'}
-        onToggle={() => togglePanel('chatbot')}
+        onToggle={() => {
+          if (!isLoggedIn) {
+            onLoginRequired();
+            return;
+          }
+          togglePanel('chatbot');
+        }}
         onProductSelect={(product) => {
           onPanelChange(null);
           onProductSelect?.(product);
@@ -92,7 +111,13 @@ export function SideButtons({
         isOpen={activePanel === 'notification'}
         onClose={() => onPanelChange(null)}
         onProductSelect={onProductSelect}
-        onToggle={() => togglePanel('notification')}
+        onToggle={() => {
+          if (!isLoggedIn) {
+            onLoginRequired();
+            return;
+          }
+          togglePanel('notification');
+        }}
       />
     </div>
   );

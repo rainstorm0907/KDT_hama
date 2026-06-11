@@ -1,5 +1,6 @@
 import { ArrowLeft, Check, Loader2, Mail, Search, X } from 'lucide-react';
 import React, { useState } from 'react';
+import { login, requestPasswordReset, signup } from '../api/auth';
 import { hairline } from '../styles/hairline';
 
 const NAVER_OAUTH_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/oauth2/authorization/naver`;
@@ -51,22 +52,19 @@ function LoginPanel({ onClose, onLoginSuccess, onModeChange }: LoginPanelProps) 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (isLoading) return;
     setError('');
     setIsLoading(true);
-    // TODO(BE): POST /api/auth/login { email, password, keepLoggedIn }
-    setTimeout(() => {
-      const isInvalid = email === 'wrong@test.com' || password === 'wrong';
-      if (isInvalid) {
-        setIsLoading(false);
-        setError('이메일 또는 비밀번호가 일치하지 않습니다.');
-        return;
-      }
-      setIsLoading(false);
+    try {
+      await login({ email: email.trim(), password });
       onLoginSuccess();
-    }, 900);
+    } catch {
+      setError('해당 아이디/비밀번호가 일치하지 않습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -193,7 +191,7 @@ function SignUpPanel({ onClose, onModeChange, onLoginSuccess }: PanelProps & { o
     setStep('personal');
   }
 
-  function handlePersonalSubmit(e: React.FormEvent) {
+  async function handlePersonalSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (isSubmitting) return;
     let valid = true;
@@ -214,11 +212,26 @@ function SignUpPanel({ onClose, onModeChange, onLoginSuccess }: PanelProps & { o
 
     if (valid) {
       setIsSubmitting(true);
-      // TODO(BE): POST /api/auth/signup
-      setTimeout(() => {
-        setIsSubmitting(false);
+      try {
+        await signup({
+          email: email.trim(),
+          password: pw,
+          passwordConfirm: pwConfirm,
+          name: name.trim(),
+          birthDate,
+          phone: phone.trim(),
+          nickname: nickname.trim(),
+          agreeMarketing,
+        });
+        await login({ email: email.trim(), password: pw });
         onLoginSuccess();
-      }, 900);
+      } catch (error) {
+        setNicknameError(
+          error instanceof Error ? error.message : '회원가입을 처리하지 못했습니다.'
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   }
 
@@ -567,15 +580,18 @@ function FindPasswordPanel({ onClose, onModeChange }: PanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (isLoading || !email) return;
     setIsLoading(true);
-    // TODO(BE): POST /api/auth/password/reset-request { email }
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await requestPasswordReset(email.trim());
       setSent(true);
-    }, 900);
+    } catch {
+      setSent(true);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (

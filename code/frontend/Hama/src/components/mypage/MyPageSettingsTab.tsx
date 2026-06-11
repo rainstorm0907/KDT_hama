@@ -8,7 +8,13 @@ import {
   Trash2,
   UserRound,
 } from 'lucide-react';
-import { type FormEvent, type ReactNode, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
+import {
+  changeMyPassword,
+  fetchMyProfile,
+  updateMyProfile,
+  withdrawMe,
+} from '../../api/mypageApi';
 import { hairline } from '../../styles/hairline';
 import { TabHeader } from './MyPageShared';
 
@@ -25,11 +31,25 @@ export type SettingsView =
 type MyPageSettingsTabProps = {
   view: SettingsView;
   setView: (view: SettingsView) => void;
+  onWithdrawn: () => void;
 };
 
-export function MyPageSettingsTab({ view, setView }: MyPageSettingsTabProps) {
+export function MyPageSettingsTab({
+  view,
+  setView,
+  onWithdrawn,
+}: MyPageSettingsTabProps) {
   const [displayName, setDisplayName] = useState('');
   const [displayEmail, setDisplayEmail] = useState('');
+
+  useEffect(() => {
+    fetchMyProfile()
+      .then((profile) => {
+        setDisplayName(profile.name ?? '');
+        setDisplayEmail(profile.email ?? '');
+      })
+      .catch(() => undefined);
+  }, []);
 
   if (view === 'editName') {
     return (
@@ -39,7 +59,8 @@ export function MyPageSettingsTab({ view, setView }: MyPageSettingsTabProps) {
         currentValue={displayName}
         placeholder="새 이름 입력"
         onBack={() => setView('main')}
-        onSave={(value) => {
+        onSave={async (value) => {
+          await updateMyProfile({ name: value });
           setDisplayName(value);
           setView('main');
         }}
@@ -56,7 +77,8 @@ export function MyPageSettingsTab({ view, setView }: MyPageSettingsTabProps) {
         placeholder="새 이메일 주소 입력"
         type="email"
         onBack={() => setView('main')}
-        onSave={(value) => {
+        onSave={async (value) => {
+          await updateMyProfile({ email: value });
           setDisplayEmail(value);
           setView('main');
         }}
@@ -102,14 +124,19 @@ export function MyPageSettingsTab({ view, setView }: MyPageSettingsTabProps) {
   }
 
   if (view === 'withdrawal') {
-    return <WithdrawalView onBack={() => setView('main')} />;
+    return (
+      <WithdrawalView
+        onBack={() => setView('main')}
+        onWithdrawn={onWithdrawn}
+      />
+    );
   }
 
   return (
     <>
       <TabHeader
         title="설정"
-        description="로그인 API가 연결되면 실제 프로필 정보와 동기화합니다"
+        description="계정 정보와 알림 설정을 관리합니다"
       />
       <div className={`rounded-[28px] p-6 ${hairline.panelSoft}`}>
         <SettingsGroup title="프로필">
@@ -273,17 +300,29 @@ function EditTextView({
   placeholder: string;
   type?: 'text' | 'email';
   onBack: () => void;
-  onSave: (value: string) => void;
+  onSave: (value: string) => Promise<void>;
 }) {
   const [value, setValue] = useState(currentValue);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!value.trim()) {
       return;
     }
 
-    onSave(value.trim());
+    setIsSaving(true);
+    setErrorMessage('');
+    try {
+      await onSave(value.trim());
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : '변경 내용을 저장하지 못했습니다.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -299,46 +338,168 @@ function EditTextView({
         />
         <button
           type="submit"
-          disabled={!value.trim()}
+          disabled={!value.trim() || isSaving}
           className={`w-full rounded-2xl py-4 text-lg font-black transition-all ${hairline.primaryButton} ${hairline.focus} disabled:cursor-not-allowed disabled:opacity-40`}
         >
-          저장하기
+          {isSaving ? '저장 중...' : '저장하기'}
         </button>
+        {errorMessage ? (
+          <p className="text-sm font-bold text-rose-600">{errorMessage}</p>
+        ) : null}
       </form>
     </>
   );
 }
 
 function PasswordView({ onBack }: { onBack: () => void }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [message, setMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage('');
+
+    if (newPassword !== newPasswordConfirm) {
+      setMessage('새 비밀번호 확인이 일치하지 않습니다.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await changeMyPassword({
+        currentPassword,
+        newPassword,
+        newPasswordConfirm,
+      });
+      setMessage(response.message);
+      setCurrentPassword('');
+      setNewPassword('');
+      setNewPasswordConfirm('');
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : '비밀번호를 변경하지 못했습니다.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <>
       <BackHeader
         title="비밀번호 변경"
-        description="백엔드 인증 API가 연결되면 현재 비밀번호 검증 후 변경합니다."
+        description="현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다."
         onBack={onBack}
       />
-      <div className={`rounded-[24px] p-6 ${hairline.panelSoft}`}>
-        <p className={`text-sm font-black ${hairline.mutedText}`}>
-          TODO(BE): PATCH /api/users/me/password 연결 예정
-        </p>
-      </div>
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <PasswordInput
+          value={currentPassword}
+          onChange={setCurrentPassword}
+          placeholder="현재 비밀번호"
+        />
+        <PasswordInput
+          value={newPassword}
+          onChange={setNewPassword}
+          placeholder="새 비밀번호"
+        />
+        <PasswordInput
+          value={newPasswordConfirm}
+          onChange={setNewPasswordConfirm}
+          placeholder="새 비밀번호 확인"
+        />
+        <button
+          type="submit"
+          disabled={
+            isSaving ||
+            !currentPassword ||
+            !newPassword ||
+            !newPasswordConfirm
+          }
+          className={`w-full rounded-2xl py-4 text-lg font-black ${hairline.primaryButton} ${hairline.focus} disabled:opacity-40`}
+        >
+          {isSaving ? '변경 중...' : '비밀번호 변경'}
+        </button>
+        {message ? <p className="text-sm font-bold text-gray-700">{message}</p> : null}
+      </form>
     </>
   );
 }
 
-function WithdrawalView({ onBack }: { onBack: () => void }) {
+function PasswordInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <input
+      type="password"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      className="w-full rounded-2xl border border-[#C9CFDA] bg-white px-5 py-4 text-lg font-black outline-none focus:border-black focus:ring-2 focus:ring-black"
+      required
+    />
+  );
+}
+
+function WithdrawalView({
+  onBack,
+  onWithdrawn,
+}: {
+  onBack: () => void;
+  onWithdrawn: () => void;
+}) {
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleWithdrawal = async () => {
+    if (!window.confirm('회원 정보와 저장된 데이터를 삭제하고 탈퇴하시겠습니까?')) {
+      return;
+    }
+
+    setIsWithdrawing(true);
+    setErrorMessage('');
+    try {
+      await withdrawMe();
+      onWithdrawn();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : '회원 탈퇴를 처리하지 못했습니다.'
+      );
+      setIsWithdrawing(false);
+    }
+  };
+
   return (
     <>
       <BackHeader
         title="회원 탈퇴"
-        description="실수 방지를 위해 백엔드 API 연결 후 최종 확인 단계와 함께 처리합니다."
+        description="탈퇴하면 계정과 저장된 사용자 데이터가 삭제됩니다."
         onBack={onBack}
       />
       <div className={`rounded-[24px] p-6 ${hairline.panelSoft}`}>
         <div className="flex items-center gap-3 text-rose-600">
           <Trash2 className="h-5 w-5" aria-hidden="true" />
-          <p className="text-sm font-black">TODO(BE): DELETE /api/users/me 연결 예정</p>
+          <p className="text-sm font-black">탈퇴 후에는 계정을 복구할 수 없습니다.</p>
         </div>
+        <button
+          type="button"
+          onClick={() => void handleWithdrawal()}
+          disabled={isWithdrawing}
+          className="mt-5 w-full rounded-2xl bg-rose-600 py-4 text-base font-black text-white disabled:opacity-50"
+        >
+          {isWithdrawing ? '탈퇴 처리 중...' : '회원 탈퇴'}
+        </button>
+        {errorMessage ? (
+          <p className="mt-3 text-sm font-bold text-rose-600">{errorMessage}</p>
+        ) : null}
       </div>
     </>
   );

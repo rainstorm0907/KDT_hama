@@ -1,16 +1,16 @@
 import { Bell, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  fetchNotifications,
+  markNotificationRead as markNotificationReadApi,
+} from '../api/mypageApi';
 import { PlatformPill } from './PlatformPill';
 import { ProductVisual } from './ProductVisual';
 import { sideButtonClass, sidePanelPositionClass } from './sideButtonStyles';
 import { hairline } from '../styles/hairline';
 import type { Product } from '../types/product';
 import { formatWon } from '../utils/format';
-import {
-  getStoredWishlistProducts,
-  productStorageKey,
-} from '../utils/userProductLists';
 
 type SideNotificationButtonProps = {
   isOpen: boolean;
@@ -21,6 +21,7 @@ type SideNotificationButtonProps = {
 
 type FloatingNotification = {
   id: string;
+  notificationId?: number;
   product: Product;
 };
 
@@ -36,9 +37,7 @@ export function SideNotificationButton({
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>(
     getStoredReadNotificationIds
   );
-  const [notifications, setNotifications] = useState<FloatingNotification[]>(
-    getLocalFloatingNotifications
-  );
+  const [notifications, setNotifications] = useState<FloatingNotification[]>([]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -48,18 +47,22 @@ export function SideNotificationButton({
   }, [readNotificationIds]);
 
   useEffect(() => {
-    function refreshNotifications() {
-      setNotifications(getLocalFloatingNotifications());
-    }
+    if (!isOpen) return;
 
-    window.addEventListener('storage', refreshNotifications);
-    window.addEventListener('focus', refreshNotifications);
-
-    return () => {
-      window.removeEventListener('storage', refreshNotifications);
-      window.removeEventListener('focus', refreshNotifications);
-    };
-  }, []);
+    fetchNotifications()
+      .then((rows) => {
+        setNotifications(
+          rows
+            .filter((row) => row.product)
+            .map((row) => ({
+              id: String(row.notificationId),
+              notificationId: row.notificationId,
+              product: row.product as Product,
+            }))
+        );
+      })
+      .catch(() => setNotifications([]));
+  }, [isOpen]);
 
   const unreadNotifications = notifications.filter(
     (notification) => !readNotificationIds.includes(notification.id)
@@ -73,6 +76,9 @@ export function SideNotificationButton({
 
   const openNotificationProduct = (notification: FloatingNotification) => {
     markNotificationRead(notification.id);
+    if (notification.notificationId) {
+      void markNotificationReadApi(notification.notificationId);
+    }
     onClose();
     onProductSelect?.(notification.product);
   };
@@ -195,17 +201,6 @@ export function SideNotificationButton({
       </button>
     </div>
   );
-}
-
-function getLocalFloatingNotifications(): FloatingNotification[] {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-
-  return getStoredWishlistProducts().slice(0, 5).map((product) => ({
-    id: `status:${productStorageKey(product)}:${product.status}`,
-    product,
-  }));
 }
 
 function getStoredReadNotificationIds(): string[] {
