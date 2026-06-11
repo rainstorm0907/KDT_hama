@@ -47,10 +47,19 @@ MIN_PLAUSIBLE_PRICE = 1000
 EXCHANGE_TOKEN = "교환"
 MAX_EXCHANGE_PLACEHOLDER_PRICE = 100_000
 
+# 교환글은 999,999,999원 같은 고가 플레이스홀더도 단다.
+# 중고 전자기기 교환글에서 1천만 원 이상은 실거래 호가가 아니다.
+EXCHANGE_PLACEHOLDER_CEILING = 10_000_000
+
+# 도메인(중고 전자기기) 기준 이 금액 이상은 구매글·교환글의 플레이스홀더다.
+# 5백만~2천만 구간엔 실매물(맥스튜디오, 게이밍 노트북)이 있어 2천만을 상한으로 둔다.
+MAX_PLAUSIBLE_PRICE = 20_000_000
+
 # 시세 요약(최저가/평균가)에서 결과 중앙값 대비 이 비율 미만 가격은
 # 토큰으로 못 잡은 낚시·잡글의 플레이스홀더로 보고 집계에서 제외한다.
 # (검색 결과 노출에는 영향 없음)
-SUMMARY_PRICE_FLOOR_RATIO = 0.03
+# 본체 시세 대비 케이스·공박스류(중앙값의 2~5%)를 거르려면 0.2가 필요하다.
+SUMMARY_PRICE_FLOOR_RATIO = 0.2
 
 
 def build_search_document_from_item_row(row: dict[str, Any]) -> dict[str, Any] | None:
@@ -118,8 +127,12 @@ def quality_flags_for(*, title: str, price: int) -> list[str]:
         flags.append("accessory_candidate")
     if any(normalize_compact(token) in compact_title for token in NOISE_TOKENS):
         flags.append("noise_candidate")
-    if price < MIN_PLAUSIBLE_PRICE or (
-        EXCHANGE_TOKEN in compact_title and price < MAX_EXCHANGE_PLACEHOLDER_PRICE
+    is_exchange = EXCHANGE_TOKEN in compact_title
+    if (
+        price < MIN_PLAUSIBLE_PRICE
+        or price >= MAX_PLAUSIBLE_PRICE
+        or (is_exchange and price < MAX_EXCHANGE_PLACEHOLDER_PRICE)
+        or (is_exchange and price >= EXCHANGE_PLACEHOLDER_CEILING)
     ):
         flags.append("invalid_price")
     return flags

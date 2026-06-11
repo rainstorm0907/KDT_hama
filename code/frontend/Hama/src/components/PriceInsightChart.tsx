@@ -34,10 +34,10 @@ type PointLabelPlacement = LabelBox & {
 
 type PriceRangeId = '3m' | '1m' | '1w';
 
-const priceRangeOptions: Array<{ id: PriceRangeId; label: string; take: number | null }> = [
-  { id: '3m', label: '3달', take: null },
-  { id: '1m', label: '1달', take: 32 },
-  { id: '1w', label: '1주', take: 8 },
+const priceRangeOptions: Array<{ id: PriceRangeId; label: string; days: number | null }> = [
+  { id: '3m', label: '3달', days: null },
+  { id: '1m', label: '1달', days: 30 },
+  { id: '1w', label: '1주', days: 7 },
 ];
 
 const chartWidth = 720;
@@ -426,7 +426,32 @@ function createRangePoints(points: PricePoint[], rangeId: PriceRangeId) {
   const rangeOption =
     priceRangeOptions.find((option) => option.id === rangeId) ?? priceRangeOptions[0];
 
-  return rangeOption.take ? points.slice(-rangeOption.take) : points;
+  if (!rangeOption.days) {
+    return points;
+  }
+
+  // 마지막 데이터 날짜 기준 N일 윈도우. 크롤링이 멈춘 기간에도 차트가 비지 않는다.
+  const lastDate = parsePointDate(points[points.length - 1]);
+  if (!lastDate) {
+    return points;
+  }
+
+  const cutoff = new Date(lastDate);
+  cutoff.setDate(cutoff.getDate() - (rangeOption.days - 1));
+
+  return points.filter((point) => {
+    const pointDate = parsePointDate(point);
+    return pointDate === null || pointDate >= cutoff;
+  });
+}
+
+function parsePointDate(point: PricePoint | undefined): Date | null {
+  if (!point?.date) {
+    return null;
+  }
+
+  const parsed = new Date(point.date);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function buildMarketPath(points: ChartPoint[]) {

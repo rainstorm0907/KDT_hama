@@ -2,6 +2,8 @@ export type ProductStatus = '판매중' | '예약중' | '판매완료';
 
 export type PricePoint = {
   label: string;
+  // ISO 날짜(YYYY-MM-DD). 기간 필터에 사용하며, 폴백 포인트('현재')에는 없다.
+  date?: string;
   price: number;
 };
 

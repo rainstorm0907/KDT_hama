@@ -476,6 +476,13 @@ function getVisibleMarkerIndexes(
 function getVisibleDateLabelIndexes(points: ChartPoint[], latestPoint: ChartPoint) {
   const indexes = new Set<number>();
 
+  // 데이터가 듬성한 기간(크롤링 공백)에는 모든 일자를 보여줘야
+  // "두 날짜뿐"으로 오해하지 않는다. 라벨 폭(14px 폰트) 기준 12개까지는 겹치지 않는다.
+  if (points.length <= 12) {
+    points.forEach((point) => indexes.add(point.index));
+    return indexes;
+  }
+
   points.forEach((point) => {
     if (point.index % 2 === 0) {
       indexes.add(point.index);

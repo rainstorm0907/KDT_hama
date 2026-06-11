@@ -207,6 +207,7 @@ def price_history(value: object, fallback_price: int) -> list[dict[str, int | st
         points.append(
             {
                 "label": format_date(row.get("recorded_at")),
+                "date": iso_date(row.get("recorded_at")),
                 "price": price,
             }
         )
@@ -241,17 +242,18 @@ def similar_group_price_history(row: dict[str, object]) -> list[dict[str, int | 
     similar_prices = similar_group_prices(similar_rows)
     filtered_prices = filter_price_outliers(similar_prices)
     for crawled_at, price in filtered_prices:
-        label = format_date(crawled_at)
-        if not label:
+        day = iso_date(crawled_at)
+        if not day:
             continue
-        buckets.setdefault(label, []).append(price)
+        buckets.setdefault(day, []).append(price)
 
     points = [
         {
-            "label": label,
+            "label": format_date(day),
+            "date": day,
             "price": round(sum(prices) / len(prices)),
         }
-        for label, prices in sorted(buckets.items())
+        for day, prices in sorted(buckets.items())
         if prices
     ]
     return points
@@ -419,6 +421,16 @@ def format_date(value: object) -> str:
         return text[:5]
 
 
+def iso_date(value: object) -> str:
+    """차트 기간 필터용 ISO 날짜(YYYY-MM-DD). 파싱 불가 시 빈 문자열."""
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    text = clean_value(value)
+    return text[:10] if len(text) >= 10 else ""
+
+
 def clean_value(value: object) -> str:
     return str(value or "").strip()
 
@@ -459,7 +471,13 @@ def _daily_points(date_prices: dict[str, list[int]]) -> list[dict[str, int | str
     for recorded_at in sorted(d for d in date_prices if d):
         prices = date_prices[recorded_at]
         if prices:
-            points.append({"label": format_date(recorded_at), "price": round(sum(prices) / len(prices))})
+            points.append(
+                {
+                    "label": format_date(recorded_at),
+                    "date": iso_date(recorded_at),
+                    "price": round(sum(prices) / len(prices)),
+                }
+            )
     return points
 
 
