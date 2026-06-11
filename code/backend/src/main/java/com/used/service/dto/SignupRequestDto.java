@@ -13,6 +13,7 @@ public class SignupRequestDto {
     private String password;
     private String passwordConfirm;
 
+    private String name;
     private LocalDate birthDate;
     private String phone;
     private String nickname;
@@ -28,8 +29,8 @@ public class SignupRequestDto {
     }
 
     public String getFinalName() {
-        if (nickname != null && !nickname.isBlank()) {
-            return nickname.trim();
+        if (name != null && !name.isBlank()) {
+            return name.trim();
         }
 
         return null;
