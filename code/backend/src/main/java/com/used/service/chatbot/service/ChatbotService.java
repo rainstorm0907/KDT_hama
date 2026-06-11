@@ -63,20 +63,21 @@ public class ChatbotService {
             return simpleResponse(answer, "PRICE_ADVICE", "DB_PRICE_ADVICE", "");
         }
 
-        var faqAnswer = faqService.findAnswer(userMessage);
-        if (faqAnswer.isPresent()) {
-            String answer = faqAnswer.get();
-            logGeminiSkipped();
-            logAnalysis("FAQ", "", null, null, null, null, null, null);
-            saveAndLog(userId, userMessage, answer, "FAQ", "FAQ");
-            return simpleResponse(answer, "FAQ", "FAQ", "");
-        }
-
         ChatAnalysisResult analysis = geminiClientService.analyzeMessage(userMessage);
         String intent = safeIntent(analysis.getIntent());
         String keyword = safeKeyword(analysis.getKeyword());
         String gameName = resolveGameName(userMessage, analysis.getGameName());
         String performanceLevel = analysis.getPerformanceLevel();
+
+        if ("FAQ".equals(intent) || "UNKNOWN".equals(intent)) {
+            var faqAnswer = faqService.findAnswer(userMessage);
+            if (faqAnswer.isPresent()) {
+                String answer = faqAnswer.get();
+                logAnalysis("FAQ", "", null, null, null, null, null, null);
+                saveAndLog(userId, userMessage, answer, "FAQ", "FAQ");
+                return simpleResponse(answer, "FAQ", "FAQ", "");
+            }
+        }
 
         logAnalysis(intent, keyword, analysis.getMinPrice(), analysis.getMaxPrice(), analysis.getProductType(), analysis.getUseCase(), gameName, performanceLevel);
 
@@ -119,7 +120,22 @@ public class ChatbotService {
 
             searchLogService.saveSearchKeyword(userId, keyword);
             List<RecommendedItemDto> items = recommendationService.recommendByAnalysisResult(userId, analysis);
-            String answer = makeRecommendationAnswer(keyword, analysis.getMinPrice(), analysis.getMaxPrice(), analysis.getUseCase(), gameName, performanceLevel, items);
+            String fallbackAnswer = makeRecommendationAnswer(
+                    keyword,
+                    analysis.getMinPrice(),
+                    analysis.getMaxPrice(),
+                    analysis.getUseCase(),
+                    gameName,
+                    performanceLevel,
+                    items
+            );
+            String answer = geminiClientService.generateProductAnswer(
+                    userMessage,
+                    analysis,
+                    items,
+                    faqService.findAnswer(userMessage).orElse(""),
+                    fallbackAnswer
+            );
 
             saveAndLog(userId, userMessage, answer, intent, "DB_RECOMMEND");
             return itemResponse(answer, intent, "DB_RECOMMEND", keyword, items);
@@ -140,7 +156,14 @@ public class ChatbotService {
 
             searchLogService.saveSearchKeyword(userId, keyword);
             List<RecommendedItemDto> items = recommendationService.recommendByAnalysisResult(userId, analysis);
-            String answer = makePriceCompareAnswer(keyword, items);
+            String fallbackAnswer = makePriceCompareAnswer(keyword, items);
+            String answer = geminiClientService.generateProductAnswer(
+                    userMessage,
+                    analysis,
+                    items,
+                    faqService.findAnswer(userMessage).orElse(""),
+                    fallbackAnswer
+            );
             saveAndLog(userId, userMessage, answer, intent, "DB_PRICE_COMPARE");
             return itemResponse(answer, intent, "DB_PRICE_COMPARE", keyword, items);
         }

@@ -1,6 +1,7 @@
 package com.used.service.chatbot.service;
 
 import com.used.service.chatbot.dto.ChatAnalysisResult;
+import com.used.service.chatbot.dto.RecommendedItemDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -92,6 +93,62 @@ public class GeminiClientService {
         String prompt = "Answer only about used-product search, recommendation, price comparison, and site usage. User: " + message;
         String answer = generateText(prompt, 512);
         return answer == null || answer.isBlank() || "{}".equals(answer) ? "This question could not be handled. Please include a product name or price comparison condition." : answer;
+    }
+
+    public String generateProductAnswer(
+            String userMessage,
+            ChatAnalysisResult analysis,
+            List<RecommendedItemDto> items,
+            String faqAnswer,
+            String fallbackAnswer
+    ) {
+        if (items == null || items.isEmpty()) {
+            return fallbackAnswer;
+        }
+
+        StringBuilder productContext = new StringBuilder();
+        items.stream().limit(5).forEach(item -> productContext
+                .append("- ")
+                .append(safeText(item.getTitle()))
+                .append(" | 현재가 ")
+                .append(formatPrice(item.getCurrentPrice()))
+                .append(" | 최저가 ")
+                .append(formatPrice(item.getLowestPrice()))
+                .append('\n'));
+
+        String prompt = """
+                You are Hama, a Korean used-product search assistant.
+                Answer in Korean using only the supplied search results.
+                Do not invent specifications, prices, product availability, or release information.
+                First give a concise answer to the user's question, then explain the search criteria.
+                Mention that the product cards shown below are the actual search results.
+                Keep the answer within 5 short sentences.
+                If FAQ guidance is supplied, use it only when it is relevant to the question.
+
+                User question: %s
+                Intent: %s
+                Keyword: %s
+                Product type: %s
+                Use case: %s
+                FAQ guidance: %s
+
+                OpenSearch results:
+                %s
+                """.formatted(
+                safeText(userMessage),
+                analysis == null ? "" : safeText(analysis.getIntent()),
+                analysis == null ? "" : safeText(analysis.getKeyword()),
+                analysis == null ? "" : safeText(analysis.getProductType()),
+                analysis == null ? "" : safeText(analysis.getUseCase()),
+                safeText(faqAnswer),
+                productContext
+        );
+
+        String answer = generateText(prompt, 384);
+        if (answer == null || answer.isBlank() || "{}".equals(answer)) {
+            return fallbackAnswer;
+        }
+        return answer.trim();
     }
 
     private ChatAnalysisResult fallbackAnalyze(String message) {
@@ -253,6 +310,14 @@ public class GeminiClientService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private String safeText(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String formatPrice(Long price) {
+        return price == null || price <= 0 ? "정보 없음" : String.format("%,d원", price);
     }
 
     private String safeIntent(String intent) {

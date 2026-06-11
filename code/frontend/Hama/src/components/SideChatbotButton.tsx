@@ -186,12 +186,17 @@ export function SideChatbotButton({
     setIsTyping(true);
 
     try {
-      const { answer, items, intent } = await fetchChatbotAnswer(trimmedText);
+      const requestItemId = resolveChatbotItemId(trimmedText, items, activeProduct);
+      const {
+        answer,
+        items: responseItems,
+        intent,
+      } = await fetchChatbotAnswer(trimmedText, requestItemId);
       const botMessage: Message = {
         id: createMessageId('b'),
         role: 'bot',
         text: answer,
-        items,
+        items: responseItems,
         intent,
         timestamp: new Date(),
       };
@@ -236,7 +241,7 @@ export function SideChatbotButton({
 
     const timerId = window.setTimeout(() => {
       void sendMessageText(
-        `${activeProduct.name} 살래말래 AI로 판단해줘`,
+        `${activeProduct.name} 사육사 AI로 판단해줘`,
         [item]
       );
     }, 0);
@@ -482,13 +487,14 @@ function CopyMessageButton({
 }
 
 async function fetchChatbotAnswer(
-  text: string
+  text: string,
+  itemId?: number
 ): Promise<{ answer: string; items: ChatItem[]; intent?: string }> {
   const response = await fetch('/api/chatbot/message', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: text }),
+    body: JSON.stringify({ message: text, itemId }),
   });
 
   if (!response.ok) {
@@ -506,6 +512,36 @@ async function fetchChatbotAnswer(
     items: data.items ?? [],
     intent: data.intent,
   };
+}
+
+function resolveChatbotItemId(
+  text: string,
+  items: ChatItem[] | undefined,
+  activeProduct: Product | null | undefined
+) {
+  if (items && items.length === 1) {
+    return items[0].itemId;
+  }
+
+  if (!activeProduct) {
+    return undefined;
+  }
+
+  const normalized = text.replaceAll(/\s+/g, '').toLowerCase();
+  const activeName = activeProduct.name.replaceAll(/\s+/g, '').toLowerCase();
+  const asksAboutActiveProduct =
+    normalized.includes(activeName)
+    || normalized.includes('이상품')
+    || normalized.includes('해당상품')
+    || normalized.includes('이거')
+    || normalized.includes('사육사')
+    || normalized.includes('살래')
+    || normalized.includes('판단')
+    || normalized.includes('괜찮')
+    || normalized.includes('비싼')
+    || normalized.includes('설명');
+
+  return asksAboutActiveProduct ? activeProduct.id : undefined;
 }
 
 function openChatItem(

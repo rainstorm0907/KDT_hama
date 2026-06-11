@@ -18,7 +18,7 @@ public class PriceAdviceService {
     @Transactional(readOnly = true)
     public String makePriceAdvice(Long itemId) {
         if (itemId == null) {
-            return "상품 상세 정보가 없어 가격 판단을 할 수 없습니다. 상품 상세 화면에서 살래말래 AI를 다시 실행해 주세요.";
+            return "상품 상세 정보가 없어 가격 판단을 할 수 없습니다. 상품 상세 화면에서 사육사 AI를 다시 실행해 주세요.";
         }
 
         PriceStatsProjection stats = itemRepository.findPriceStatsByItemId(itemId);
