@@ -7,14 +7,23 @@ import com.used.service.chatbot.entity.RecommendedItem;
 import com.used.service.chatbot.repository.ItemRepository;
 import com.used.service.chatbot.repository.RecommendedItemRepository;
 import com.used.service.chatbot.repository.projection.RecommendedItemProjection;
+import com.used.service.entity.ItemView;
+import com.used.service.entity.User;
+import com.used.service.entity.Wishlist;
+import com.used.service.repository.ItemViewRepository;
+import com.used.service.repository.UserRepository;
+import com.used.service.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +35,9 @@ public class RecommendationService {
     private final ItemRepository itemRepository;
     private final RecommendedItemRepository recommendedItemRepository;
     private final OpenSearchProductService openSearchProductService;
+    private final UserRepository userRepository;
+    private final WishlistRepository wishlistRepository;
+    private final ItemViewRepository itemViewRepository;
 
     @Transactional
     public List<RecommendedItemDto> recommendByAnalysisResult(Long userId, ChatAnalysisResult analysis) {
@@ -45,13 +57,18 @@ public class RecommendationService {
 
         List<RecommendedItemDto> openSearchResults = openSearchProductService.search(analysis, 10);
         if (!openSearchResults.isEmpty()) {
+            openSearchResults = applyPersonalContextScores(userId, openSearchResults);
             saveRecommendedItemDtos(userId, openSearchResults);
             return openSearchResults;
         }
 
         List<RecommendedItemProjection> results = findScoredItems(keyword, minPrice, maxPrice, analysis, 10);
-        saveRecommendedItems(userId, results);
-        return results.stream().map(item -> toDto(item, analysis)).toList();
+        List<RecommendedItemDto> recommendedItems = applyPersonalContextScores(
+                userId,
+                results.stream().map(item -> toDto(item, analysis)).toList()
+        );
+        saveRecommendedItemDtos(userId, recommendedItems);
+        return recommendedItems;
     }
 
     @Transactional
@@ -218,6 +235,68 @@ public class RecommendationService {
             recommendedItem.setRecommendType(RECOMMEND_TYPE_CHATBOT);
             recommendedItemRepository.save(recommendedItem);
         }
+    }
+
+    private List<RecommendedItemDto> applyPersonalContextScores(Long userId, List<RecommendedItemDto> items) {
+        if (userId == null || items == null || items.isEmpty()) return items == null ? List.of() : items;
+
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return items;
+
+        Set<Long> wishlistIds = new HashSet<>();
+        for (Wishlist wishlist : wishlistRepository.findByUserOrderByAddedAtDesc(user)) {
+            if (wishlist.getItem() != null && wishlist.getItem().getItemId() != null) {
+                wishlistIds.add(wishlist.getItem().getItemId());
+            }
+        }
+
+        Set<Long> recentItemIds = new HashSet<>();
+        for (ItemView view : itemViewRepository.findTop20ByUserOrderByViewedAtDesc(user)) {
+            if (view.getItem() != null && view.getItem().getItemId() != null) {
+                recentItemIds.add(view.getItem().getItemId());
+            }
+        }
+
+        List<RecommendedItemDto> scoredItems = new ArrayList<>();
+        for (RecommendedItemDto item : items) {
+            Long itemId = item.getItemId();
+            int bonus = 0;
+            String reason = item.getRecommendReason();
+
+            if (itemId != null && wishlistIds.contains(itemId)) {
+                bonus += 30;
+                reason = appendReason(reason, "찜 목록에 있는 상품이라 우선 추천했습니다.");
+            }
+            if (itemId != null && recentItemIds.contains(itemId)) {
+                bonus += 15;
+                reason = appendReason(reason, "최근 본 상품과도 연결되는 후보입니다.");
+            }
+
+            scoredItems.add(RecommendedItemDto.builder()
+                    .itemId(item.getItemId())
+                    .title(item.getTitle())
+                    .currentPrice(item.getCurrentPrice())
+                    .lowestPrice(item.getLowestPrice())
+                    .categoryName(item.getCategoryName())
+                    .thumbnailUrl(item.getThumbnailUrl())
+                    .itemUrl(item.getItemUrl())
+                    .score((item.getScore() == null ? 0 : item.getScore()) + bonus)
+                    .recommendReason(reason)
+                    .build());
+        }
+
+        return scoredItems.stream()
+                .sorted(Comparator
+                        .comparing((RecommendedItemDto item) -> item.getScore() == null ? 0 : item.getScore()).reversed()
+                        .thenComparing(item -> item.getCurrentPrice() == null ? Long.MAX_VALUE : item.getCurrentPrice()))
+                .toList();
+    }
+
+    private String appendReason(String reason, String addition) {
+        if (addition == null || addition.isBlank()) return reason;
+        if (reason == null || reason.isBlank()) return addition;
+        if (reason.contains(addition)) return reason;
+        return reason + " " + addition;
     }
 
     private RecommendedItemDto toDto(RecommendedItemProjection item) {

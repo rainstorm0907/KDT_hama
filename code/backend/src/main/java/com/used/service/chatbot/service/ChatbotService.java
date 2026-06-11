@@ -120,7 +120,22 @@ public class ChatbotService {
 
             searchLogService.saveSearchKeyword(userId, keyword);
             List<RecommendedItemDto> items = recommendationService.recommendByAnalysisResult(userId, analysis);
-            String answer = makeRecommendationAnswer(keyword, analysis.getMinPrice(), analysis.getMaxPrice(), analysis.getUseCase(), gameName, performanceLevel, items);
+            String fallbackAnswer = makeRecommendationAnswer(
+                    keyword,
+                    analysis.getMinPrice(),
+                    analysis.getMaxPrice(),
+                    analysis.getUseCase(),
+                    gameName,
+                    performanceLevel,
+                    items
+            );
+            String answer = geminiClientService.generateProductAnswer(
+                    userMessage,
+                    analysis,
+                    items,
+                    faqService.findAnswer(userMessage).orElse(""),
+                    fallbackAnswer
+            );
 
             saveAndLog(userId, userMessage, answer, intent, "DB_RECOMMEND");
             return itemResponse(answer, intent, "DB_RECOMMEND", keyword, items);
@@ -141,7 +156,14 @@ public class ChatbotService {
 
             searchLogService.saveSearchKeyword(userId, keyword);
             List<RecommendedItemDto> items = recommendationService.recommendByAnalysisResult(userId, analysis);
-            String answer = makePriceCompareAnswer(keyword, items);
+            String fallbackAnswer = makePriceCompareAnswer(keyword, items);
+            String answer = geminiClientService.generateProductAnswer(
+                    userMessage,
+                    analysis,
+                    items,
+                    faqService.findAnswer(userMessage).orElse(""),
+                    fallbackAnswer
+            );
             saveAndLog(userId, userMessage, answer, intent, "DB_PRICE_COMPARE");
             return itemResponse(answer, intent, "DB_PRICE_COMPARE", keyword, items);
         }

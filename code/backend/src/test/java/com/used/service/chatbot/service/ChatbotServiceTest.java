@@ -76,12 +76,27 @@ class ChatbotServiceTest {
         when(chatbotTemplateService.findAnswer(request.getMessage())).thenReturn(Optional.empty());
         when(geminiClientService.analyzeMessage(request.getMessage())).thenReturn(analysis);
         when(recommendationService.recommendByAnalysisResult(7L, analysis)).thenReturn(List.of(item));
+        when(faqService.findAnswer(request.getMessage())).thenReturn(Optional.empty());
+        when(geminiClientService.generateProductAnswer(
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+        )).thenReturn("OpenSearch 결과를 기준으로 배그용 컴퓨터 후보를 정리했습니다.");
 
         ChatMessageResponse response = chatbotService.handleMessage(7L, request);
 
         assertThat(response.getIntent()).isEqualTo("PRODUCT_RECOMMEND");
         assertThat(response.getItems()).containsExactly(item);
-        verify(faqService, never()).findAnswer(any());
+        verify(faqService).findAnswer(request.getMessage());
         verify(recommendationService).recommendByAnalysisResult(7L, analysis);
+        verify(geminiClientService).generateProductAnswer(
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+        );
     }
 }
