@@ -10,6 +10,8 @@ type PriceInsightChartProps = {
   points: PricePoint[];
   // 같은 모델 관련 클러스터별 가격 트렌드. 있으면 드롭다운/그래프의 기준이 된다.
   clusters?: ClusterInsight[];
+  // 클러스터 조회가 끝나기 전에 '현재 상품'으로 단정하지 않기 위한 로딩 플래그
+  isClustersLoading?: boolean;
 };
 
 type ChartPoint = PricePoint & {
@@ -56,12 +58,13 @@ const chartInnerHeight = chartBottom - chartTop;
 export function PriceInsightChart({
   points,
   clusters,
+  isClustersLoading = false,
 }: PriceInsightChartProps) {
   const clusterList = clusters ?? [];
   const hasClusters = clusterList.length > 0;
   const keywords = hasClusters
     ? clusterList.map((cluster) => cluster.clusterName)
-    : ['현재 상품'];
+    : [isClustersLoading ? '시세 분류 확인 중…' : '현재 상품'];
   const [activeKeywordIndex, setActiveKeywordIndex] = useState(0);
   const [activeRange, setActiveRange] = useState<PriceRangeId>('3m');
   const [isKeywordMenuOpen, setIsKeywordMenuOpen] = useState(false);

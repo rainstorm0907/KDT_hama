@@ -21,6 +21,8 @@ import {
 type PriceCompareWorkspaceProps = {
   initialProduct?: Product | null;
   mode?: 'modal' | 'page';
+  isLoggedIn?: boolean;
+  onLoginRequired?: () => void;
 };
 
 const maxCompareCount = 4;
@@ -29,6 +31,8 @@ const minCompareCount = 2;
 export function PriceCompareWorkspace({
   initialProduct = null,
   mode = 'modal',
+  isLoggedIn = false,
+  onLoginRequired,
 }: PriceCompareWorkspaceProps) {
   const initialProductKey = initialProduct ? productStorageKey(initialProduct) : '';
   const [candidateProducts, setCandidateProducts] = useState<Product[]>(() =>
@@ -300,7 +304,9 @@ export function PriceCompareWorkspace({
       <ProductDetailModal
         key={detailProduct ? `${detailProduct.platform}:${detailProduct.pid}` : 'empty-price-compare-detail'}
         product={detailProduct}
+        isLoggedIn={isLoggedIn}
         onClose={() => setDetailProduct(null)}
+        onLoginRequired={onLoginRequired}
       />
     </div>
   );

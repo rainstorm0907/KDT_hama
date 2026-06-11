@@ -438,6 +438,7 @@ export function ProductDetailModal({
               <PriceInsightChart
                 points={visibleProduct.priceHistory}
                 clusters={relatedClusters}
+                isClustersLoading={productInsightsQuery.isLoading}
               />
             </div>
 

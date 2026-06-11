@@ -161,6 +161,8 @@ export function AppRoot() {
                 : <MyPage
                     onProductSelect={handleProductSelect}
                     isAdmin={isAdmin}
+                    isLoggedIn={isLoggedIn}
+                    onLoginRequired={() => setAuthMode('login')}
                     onWithdrawn={handleLoggedOut}
                   />
             }
@@ -236,6 +238,8 @@ export function AppRoot() {
         isOpen={isPriceCompareOpen}
         initialProduct={priceCompareProduct}
         onClose={() => setIsPriceCompareOpen(false)}
+        isLoggedIn={isLoggedIn}
+        onLoginRequired={() => setAuthMode('login')}
       />
     </div>
   );

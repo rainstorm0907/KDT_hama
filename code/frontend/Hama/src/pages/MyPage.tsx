@@ -22,6 +22,8 @@ import type { Product } from '../types/product';
 type MyPageProps = {
   onProductSelect: (product: Product) => void;
   isAdmin?: boolean;
+  isLoggedIn?: boolean;
+  onLoginRequired?: () => void;
   onWithdrawn: () => void;
 };
 
@@ -79,6 +81,8 @@ const inactiveNavItemClass =
 export function MyPage({
   onProductSelect,
   isAdmin = false,
+  isLoggedIn = false,
+  onLoginRequired,
   onWithdrawn,
 }: MyPageProps) {
   const navigate = useNavigate();
@@ -151,7 +155,12 @@ export function MyPage({
               />
             ) : null}
             {activeTab === 'notifications' ? <MyPageNotificationsTab /> : null}
-            {activeTab === 'priceCompare' ? <MyPagePriceCompareTab /> : null}
+            {activeTab === 'priceCompare' ? (
+              <MyPagePriceCompareTab
+                isLoggedIn={isLoggedIn}
+                onLoginRequired={onLoginRequired}
+              />
+            ) : null}
             {activeTab === 'settings' ? (
               <MyPageSettingsTab
                 view={settingsView}
