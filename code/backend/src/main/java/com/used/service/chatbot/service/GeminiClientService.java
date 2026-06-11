@@ -144,11 +144,25 @@ public class GeminiClientService {
                 productContext
         );
 
-        String answer = generateText(prompt, 384);
-        if (answer == null || answer.isBlank() || "{}".equals(answer)) {
+        String answer = generateText(prompt, 768);
+        if (isInvalidProductAnswer(answer)) {
             return fallbackAnswer;
         }
         return answer.trim();
+    }
+
+    private boolean isInvalidProductAnswer(String answer) {
+        if (answer == null) return true;
+        String trimmed = answer.trim();
+        if (trimmed.isBlank() || "{}".equals(trimmed)) return true;
+        if (trimmed.length() < 25) return true;
+
+        String compact = trimmed.replaceAll("\\s+", "");
+        if (compact.endsWith(",") || compact.endsWith("，") || compact.endsWith("、")) return true;
+        if (compact.endsWith("아이폰") || compact.endsWith("갤럭시") || compact.endsWith("노트북") || compact.endsWith("컴퓨터")) return true;
+        if (compact.matches(".*(아이폰|갤럭시|노트북|컴퓨터|상품|제품)[,，、]?$")) return true;
+
+        return !compact.matches(".*(다\\.|요\\.|니다\\.|습니다\\.|세요\\.|다!|요!|니다!|습니다!|[.!?])$");
     }
 
     private ChatAnalysisResult fallbackAnalyze(String message) {

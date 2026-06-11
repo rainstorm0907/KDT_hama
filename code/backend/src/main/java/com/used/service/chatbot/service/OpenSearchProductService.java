@@ -67,6 +67,8 @@ public class OpenSearchProductService {
 
                 results.add(RecommendedItemDto.builder()
                         .itemId(toLong(item.get("id")))
+                        .platform(toText(item.get("platform")))
+                        .pid(toText(item.get("pid")))
                         .title(toText(item.get("name")))
                         .currentPrice(currentPrice)
                         .lowestPrice(resolveLowestPrice(item, currentPrice))

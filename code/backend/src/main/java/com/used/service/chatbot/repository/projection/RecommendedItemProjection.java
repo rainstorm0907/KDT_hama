@@ -4,6 +4,10 @@ public interface RecommendedItemProjection {
 
     Long getItemId();
 
+    String getPlatform();
+
+    String getPid();
+
     String getTitle();
 
     Long getCurrentPrice();

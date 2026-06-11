@@ -9,6 +9,8 @@ import lombok.Getter;
 public class RecommendedItemDto {
 
     private Long itemId;
+    private String platform;
+    private String pid;
     private String title;
     private Long currentPrice;
     private Long lowestPrice;

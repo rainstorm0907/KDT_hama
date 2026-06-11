@@ -274,6 +274,8 @@ public class RecommendationService {
 
             scoredItems.add(RecommendedItemDto.builder()
                     .itemId(item.getItemId())
+                    .platform(item.getPlatform())
+                    .pid(item.getPid())
                     .title(item.getTitle())
                     .currentPrice(item.getCurrentPrice())
                     .lowestPrice(item.getLowestPrice())
@@ -306,6 +308,8 @@ public class RecommendationService {
     private RecommendedItemDto toDto(RecommendedItemProjection item, ChatAnalysisResult analysis) {
         return RecommendedItemDto.builder()
                 .itemId(item.getItemId())
+                .platform(item.getPlatform())
+                .pid(item.getPid())
                 .title(item.getTitle())
                 .currentPrice(item.getCurrentPrice())
                 .lowestPrice(item.getLowestPrice())
@@ -386,6 +390,8 @@ public class RecommendationService {
         }
 
         @Override public Long getItemId() { return item.getItemId(); }
+        @Override public String getPlatform() { return item.getPlatformName(); }
+        @Override public String getPid() { return item.getOriginalId(); }
         @Override public String getTitle() { return item.getTitle(); }
         @Override public Long getCurrentPrice() { return item.getCurrentPrice(); }
         @Override public Long getLowestPrice() { return item.getLowestPrice(); }
