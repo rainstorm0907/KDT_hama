@@ -6,10 +6,12 @@ from pathlib import Path
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 PYTHON_DIR = BACKEND_DIR / "src" / "main" / "python"
+# opensearch-protobufs(pip)의 최상위 opensearch 패키지가 로컬 opensearch 패키지를
+# 가리므로 반드시 sys.path 맨 앞에 둔다 (api_server.py와 동일한 이슈).
 if str(BACKEND_DIR) not in sys.path:
-    sys.path.append(str(BACKEND_DIR))
+    sys.path.insert(0, str(BACKEND_DIR))
 if str(PYTHON_DIR) not in sys.path:
-    sys.path.append(str(PYTHON_DIR))
+    sys.path.insert(1, str(PYTHON_DIR))
 
 from opensearch.documents import build_search_document_from_item_row
 from opensearch.repository import bulk_index_documents, ensure_index
