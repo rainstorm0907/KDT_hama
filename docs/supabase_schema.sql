@@ -1,3 +1,7 @@
+-- ⚠️ [폐기된 설계 문서] 이 파일은 Supabase Auth(auth.users) + uuid 기반 초기 설계안입니다.
+-- 실제 라이브 DB는 bigint PK + 자체 인증(Spring) 구조이며, 최신 스키마는 docs/db_schema.sql 참고.
+-- 적용 이력은 code/supabase/migrations/*.sql 가 기준입니다. 참고용으로만 보관합니다.
+
 -- Hama Supabase/Postgres schema
 -- Supabase Auth(auth.users)를 메인 사용자 원본으로 두고, public.users는 앱 프로필로 사용합니다.
 -- 실제 적용 기준 파일은 code/supabase/migrations/*.sql 입니다.

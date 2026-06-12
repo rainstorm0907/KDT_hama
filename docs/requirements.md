@@ -1,138 +1,142 @@
-# 프로젝트 구조 및 작성 기준
+# Hama 요구사항정의서
 
-이 문서는 현재 프로젝트에서 코드를 작성할 위치와 문서 관리 기준을 정리합니다.
+| 항목 | 내용 |
+|---|---|
+| 프로젝트명 | Hama (하우마치) — 중고 매물 통합 검색·가격 비교 서비스 |
+| 작성 기준일 | 2026-06-12 (라이브 구현 기준) |
+| 배포 | FE: Vercel (https://kdt-hama.vercel.app) / BE: AWS EC2 (nginx + FastAPI + Spring Boot) / DB: Supabase(PostgreSQL) + OpenSearch |
 
-## Backend Java
+## 1. 프로젝트 개요
 
-기준 위치:
+### 1.1 배경
+중고 거래 사용자는 같은 물건을 사고팔 때마다 번개장터·중고나라 등 여러 앱을 번갈아 비교해야 한다. 기존 통합 검색 서비스는 외부 플랫폼을 실시간 호출해 응답이 느리고, 검색어가 태그에만 걸린 광고성 매물과 1원·999,999,999원 같은 플레이스홀더 가격이 섞여 "믿을 수 있는 시세"를 제공하지 못한다.
 
-```text
-code/backend/src/main/java/com/used/service
-```
+### 1.2 목표
+- 두 플랫폼의 매물을 자체 DB로 수집·정제해 **빠르고 신뢰할 수 있는 통합 검색**을 제공한다.
+- 정크 매물(교환글·구매글·악세서리·플레이스홀더 가격)을 걸러낸 **신뢰 가능한 시세 요약**(최저가/평균가/가격 추이)을 제공한다.
+- 찜·알림·가격비교·챗봇으로 **구매 의사결정을 돕는 부가 기능**을 제공한다.
 
-현재 Java 백엔드는 `code/backend`의 Spring Boot 프로젝트로 통합되어 있습니다. 기능 추가 시 아래 기준으로 작성합니다.
+### 1.3 대상 플랫폼
+번개장터, 중고나라 (수집 키워드: 아이폰, 맥북, 갤럭시, 아이패드, 에어팟 등)
 
-- `config`: 보안, CORS, 외부 연동 설정
-- `controller`: REST API 요청 처리
-- `service`: 비즈니스 로직
-- `repository`: DB 접근
-- `dto`: Request/Response 객체
-- `entity`: DB 테이블 매핑
-- `scheduler`: 정기 실행 작업
-- `notification`: 알림 생성/조회 로직
-- `chatbot`: 챗봇 관련 로직
-- `exception`: 공통 예외 처리
+## 2. 기능 요구사항
 
-작성 기준:
+### 2.1 회원 (FR-AUTH)
 
-- Controller는 요청/응답과 검증만 담당합니다.
-- Service에 핵심 로직을 둡니다.
-- Repository는 DB 접근만 담당합니다.
-- Entity를 API 응답으로 직접 반환하지 않고 DTO를 사용합니다.
-- 민감 정보는 코드에 직접 작성하지 않고 환경 변수 또는 설정 파일로 분리합니다.
+| ID | 요구사항 | 구현 |
+|---|---|---|
+| FR-AUTH-01 | 이메일/비밀번호 회원가입 (약관 동의, 프로필 입력 단계) | Spring `/api/auth/signup` |
+| FR-AUTH-02 | 로그인/로그아웃 (세션 쿠키 기반) | Spring `/api/auth/login`, `/api/auth/logout` |
+| FR-AUTH-03 | 프로필 조회/수정, 비밀번호 변경 | Spring `/api/mypage/profile`, `/api/mypage/password` |
+| FR-AUTH-04 | 회원 탈퇴 — soft delete(`account_status='WITHDRAWN'`, 행 유지) | Spring `/api/mypage/me` DELETE |
+| FR-AUTH-05 | 관리자 권한 — `users.role='ADMIN'`만 관리자 페이지 접근 | Spring `/api/mypage/admin/check` + FE 라우트 가드 |
 
-## Backend Python
+### 2.2 통합 검색 (FR-SEARCH)
 
-기준 위치:
+| ID | 요구사항 | 구현 |
+|---|---|---|
+| FR-SEARCH-01 | 키워드로 두 플랫폼 매물 통합 검색 | FastAPI `/api/products/search` + OpenSearch `hama_items` |
+| FR-SEARCH-02 | 정렬: 정확도순 / 낮은 가격순 / 최신순 | OpenSearch sort |
+| FR-SEARCH-03 | 플랫폼 필터 (번개장터/중고나라 토글) | terms filter |
+| FR-SEARCH-04 | 시세 요약 카드: 최저가·평균가·업데이트 시각 | OpenSearch 집계 + 정크 하한/상한 (4.2 참고) |
+| FR-SEARCH-05 | 페이지네이션, 행수(4/6/8줄) 선택 | from/size |
+| FR-SEARCH-06 | 인기 검색 키워드 칩 노출 | FE 정적 + 최근 검색 기록(localStorage) |
+| FR-SEARCH-07 | 오타 허용(fuzziness), 제목/표준상품명/키워드 다중 필드 매칭 | multi_match best_fields + fuzziness AUTO |
 
-```text
-code/backend/src/main/python
-```
+### 2.3 상품 상세·시세 (FR-DETAIL)
 
-현재 Python 영역은 MVP 상품 API, 크롤링 입력값, 분석, 상품명 매칭 파이프라인, Supabase 적재를 담당합니다.
+| ID | 요구사항 | 구현 |
+|---|---|---|
+| FR-DETAIL-01 | 상세 모달: 이미지, 가격, 상태, 설명, 원본 링크 | FastAPI `/api/products/{platform}/{pid}` |
+| FR-DETAIL-02 | 가격 추이 차트 — 상품이 속한 클러스터의 일자별 평균 시세 | FastAPI `/api/products/{platform}/{pid}/insights` (price_history 온더플라이 집계) |
+| FR-DETAIL-03 | 관련 클러스터(같은 모델 다른 용량 등) 전환 드롭다운 | insights `relatedClusters` |
+| FR-DETAIL-04 | 기간 필터 3달/1달/1주 — 날짜 기반 윈도우 | points의 ISO `date` 필드 기준 필터 |
+| FR-DETAIL-05 | 상세 조회 시 최근 본 상품 기록(로그인 시) | Spring `/api/mypage/recent-items` |
 
-- `crawling`: 키워드 목록, 블랙리스트 설정, 키워드 갱신 스크립트
-- `analysis`: 크롤링 결과 검증, 가격 이상치, 토큰 분석
-- `config`: 상품명 매칭 사전, 카테고리 규칙, 제외 토큰 CSV
-- `lib`: 상품명 매칭·전처리·rating·Supabase 조회 핵심 모듈
-- `tools`: 스키마 적용, ERD·설정 참고 CSV 생성 유틸
-- `api_server.py`: 로컬 MVP 상품 검색/추천/상세 FastAPI 서버 (`127.0.0.1:8000`)
-- `lib/hama_data_pipeline.py`: 상품명 매칭/카테고리 배정 파이프라인
-- `lib/keyword_preprocessing.py`: keyword_final 전처리·클러스터 규칙
-- `lib/product_matching.py`: 상품명 정규화와 토큰 매칭 보조 로직
-- `lib/supabase_repository.py`: Supabase 상품 조회와 CSV fallback을 분리하는 저장소 모듈
-- `tools/apply_supabase_schema.py`: Supabase/PostgreSQL 스키마 적용 스크립트
-- `import_csv_to_supabase.py`: 크롤링 CSV를 Supabase 테이블로 적재하는 스크립트
+### 2.4 가격 비교 (FR-COMPARE)
 
-### `code/supabase/migrations`
+| ID | 요구사항 | 구현 |
+|---|---|---|
+| FR-COMPARE-01 | 상품 2~4개를 골라 클러스터 시세 라인 위에 등록일 기준 마커로 비교 | PriceCompareWorkspace + insights 클러스터 트렌드 |
+| FR-COMPARE-02 | 선택 상품 가격순 목록, 카드에서 상세 진입 | FE |
+| FR-COMPARE-03 | 비교 후보 보관(비로그인 가능, localStorage) | FE |
 
-Supabase/PostgreSQL 테이블 생성 migration을 관리합니다.
+### 2.5 찜·알림 (FR-WISH / FR-NOTI)
 
-현재 작성된 파일:
+| ID | 요구사항 | 구현 |
+|---|---|---|
+| FR-WISH-01 | 상품 찜 추가/삭제 (로그인 필요, 비로그인 시 로그인 유도) | Spring `/api/mypage/wishlists` (DB 저장) |
+| FR-WISH-02 | 찜 목록 조회·삭제·되돌리기 토스트 | 마이페이지 찜 탭 |
+| FR-WISH-03 | 상품별 최저가 알림 토글 | `/api/mypage/wishlists/alert` (`is_lowest_alert`) |
+| FR-NOTI-01 | 알림 설정 3종: 최저가/판매 상태/새 상품 키워드 | `/api/mypage/notification-settings` |
+| FR-NOTI-02 | 키워드 알림 등록/해제 | FE + keyword_alerts |
+| FR-NOTI-03 | 마이페이지 탭 재진입 시 자동 재조회 없이 캐시 즉시 표시, 갱신은 수동 새로고침 | react-query 캐시 (staleTime 30분) |
 
-- `20260519000000_hama_schema.sql`: Hama MVP Supabase 스키마
+### 2.6 챗봇 (FR-CHAT)
 
-### `backend/src/main/python/lib`
+| ID | 요구사항 | 구현 |
+|---|---|---|
+| FR-CHAT-01 | 자연어 질의 → Gemini 의도 분석(추천/시세/FAQ) | Spring chatbot + Gemini API |
+| FR-CHAT-02 | 조건(키워드·가격 상한) 파싱 후 매물 추천 카드 응답 — 가격 오름차순 정렬 | RecommendationService + OpenSearch |
+| FR-CHAT-03 | FAQ 패턴 응답 (chat_faq 188행) | ChatbotService |
+| FR-CHAT-04 | 대화 이력 저장 (로그인 필요) | chat_history |
 
-Python 기반 데이터 전처리·매칭·rating 로직을 관리합니다.
+### 2.7 관리자 (FR-ADMIN)
 
-주요 모듈:
+| ID | 요구사항 | 구현 |
+|---|---|---|
+| FR-ADMIN-01 | 운영 지표 카드: 전체 매물 수, 클러스터 배정 수, 저신뢰 매물, 악세서리 의심 | FastAPI `/api/products/anomalies/summary` |
+| FR-ADMIN-02 | 이상 데이터 검수: 저신뢰(cluster_confidence) / 악세서리 토큰 모드 | `/api/products/anomalies?mode=` |
+| FR-ADMIN-03 | 이상 데이터 가격·신뢰도 정렬(서버 정렬) + 페이지네이션 | `sort=confidence_asc\|confidence_desc\|price_asc\|price_desc` |
+| FR-ADMIN-04 | 회원 조회: 검색·필터(전체/관리자/탈퇴), 찜 수 | Spring `/api/admin/users` (ADMIN 403 가드) |
 
-- `lib/keyword_preprocessing.py`: 블랙리스트, 가격 이상치, 클러스터 전처리 (`keyword_final.ipynb` 규칙)
-- `lib/item_rating.py`: `items.rating` 및 파생 점수 계산
-- `item_rating.py`: `items.rating` 계산 공식
+### 2.8 데이터 파이프라인 (FR-DATA)
 
-작성 기준:
+| ID | 요구사항 | 구현 |
+|---|---|---|
+| FR-DATA-01 | 키워드 기반 크롤링 → CSV → Supabase 적재 (items, price_history) | crawling/ + import_csv_to_supabase.py |
+| FR-DATA-02 | 상품명 정규화·토큰 매칭 → 클러스터 배정(cluster_product_name) + 신뢰도 | lib/keyword_preprocessing.py, keyword_final 파이프라인 |
+| FR-DATA-03 | 종합 점수(rating): 클러스터/가격/조회/최근성 가중합 | lib/item_rating.py |
+| FR-DATA-04 | OpenSearch 인덱싱 + 품질 플래그(quality_flags) 부여 | opensearch/sync_from_supabase.py, documents.py |
 
-- 크롤링 원본 결과는 `crawling/results`에 보관합니다. 이 폴더는 대용량 로컬 결과물이라 Git 추적 대상에서 제외될 수 있습니다.
-- 과거/실험용 크롤링 스크립트는 `crawling/archive`에 둘 수 있지만 제출 대상인지 별도로 확인합니다.
-- 분석 결과는 `analysis/results`에 보관합니다.
-- 서비스 실행 코드와 검토용 노트북/분석 스크립트는 분리합니다.
-- DB 저장 전에는 가격, 날짜, 상태값, 중복 상품을 정리합니다.
+## 3. 비기능 요구사항
 
-## Frontend
+| ID | 요구사항 | 구현 |
+|---|---|---|
+| NFR-01 | 검색 응답: 외부 플랫폼 실시간 호출 없이 자체 인덱스로 응답 | OpenSearch 단일 쿼리 (45,249건 인덱스) |
+| NFR-02 | 검색 폴백: OpenSearch 장애 시 Supabase/CSV 경로로 동작 (`searchSource` 필드로 구분) | FastAPI python 폴백 |
+| NFR-03 | 인증: 세션 쿠키, 비밀번호 해시 저장 | Spring Security |
+| NFR-04 | 시크릿 분리: API 키·DB 자격증명은 .env/환경파일, repo에는 example만 | .env.example, /etc/hama-spring.env |
+| NFR-05 | 배포 재현성: nginx/systemd 설정과 마이그레이션을 repo에 수록 | code/backend/deploy/, code/supabase/migrations/ |
 
-기준 위치:
+## 4. 데이터 품질 규칙 (시세 신뢰성의 핵심)
 
-```text
-code/frontend/Hama/src
-```
+### 4.1 quality_flags (인덱싱 시 부여, 검색·집계에서 제외)
+| 플래그 | 조건 | 거르는 대상 |
+|---|---|---|
+| `noise_candidate` | 제목에 구매/매입/삽니다/대여/사기꾼 등 토큰 | 판매글이 아닌 글 |
+| `accessory_candidate` | 제목에 케이스/필름/공박스 등 토큰 (악세서리 검색 의도일 땐 유지) | 본체 검색에 섞이는 악세서리 |
+| `invalid_price` | 가격 < 1,000원, 가격 ≥ 2,000만원, 교환글 && (가격 < 10만원 또는 ≥ 1,000만원) | 1원·999,999,999원 플레이스홀더 |
 
-현재 프론트엔드는 Vite + React + TypeScript 기반입니다.
+### 4.2 시세 요약 상대 하한
+- 검색 결과 중앙값 × 0.2 미만 가격은 최저가/평균가 집계에서 제외 (케이스·공박스 등 토큰 미적중 정크 방어).
+- 검색 결과 목록 노출에는 영향 없음.
 
-- `AppRoot.tsx`: 앱 최상위 화면 구성
-- `main.tsx`: React 렌더링 진입점
-- `components`: 재사용 UI 컴포넌트
-- `pages`: 화면 단위 컴포넌트
-- `hooks`: 화면 상태와 브라우저 동작을 분리한 React hook
-- `api`: API 호출 또는 데이터 접근 함수
-- `queries`: React Query 기반 데이터 조회 로직
-- `lib`: 공통 클라이언트/라이브러리 설정
-- `data`: 화면용 정적 데이터
-- `types`: TypeScript 타입
-- `utils`: 공통 유틸리티
-- `styles`: 공통 스타일 유틸
+## 5. 화면 목록
 
-작성 기준:
+| 화면 | 경로 | 주요 기능 |
+|---|---|---|
+| 홈 | `/` | 배너, 인기 키워드, 추천 상품 |
+| 검색 결과 | `/search?q=` | 통합 검색, 정렬/필터, 시세 요약 카드 |
+| 상품 상세 | (모달) | 시세 차트, 찜/알림, 원본 링크 |
+| 가격 비교 | (모달) | 다중 상품 시세 비교 |
+| 마이페이지 | `/mypage` | 찜/최근 본/알림/가격비교/설정 탭 |
+| 관리자 | `/admin` | 지표, 이상 데이터 검수, 회원 조회 |
+| 약관/정책 | `/legal/*` | 이용약관, 개인정보처리방침 |
 
-- 여러 화면에서 쓰는 UI는 `components`에 둡니다.
-- 화면 단위 컴포넌트는 `pages`에 둡니다.
-- 서버 데이터 접근은 `api` 또는 `queries`로 분리합니다.
-- 여러 파일에서 공유하는 타입은 `types`에 둡니다.
-- 화면 표시용 포맷팅은 `utils`에 둡니다.
+## 6. 제약 및 알려진 한계
 
-## DB 문서
-
-`docs/db_schema.sql`은 현재 Oracle 계열 문법을 기준으로 작성되어 있습니다.
-
-PostgreSQL 또는 Supabase에 적용할 경우 아래 항목을 변환해야 합니다.
-
-- `NUMBER` -> `BIGINT`, `INTEGER`, `NUMERIC` 등
-- `VARCHAR2` -> `VARCHAR`
-- `SYSDATE` -> `CURRENT_TIMESTAMP`
-- 시퀀스/자동 증가 전략 별도 정의
-
-Entity 작성 시에는 실제 사용하는 DB 문법과 `db_schema.sql`의 컬럼명이 일치하는지 확인해야 합니다.
-
-## Spring Boot 실행 기준
-
-Spring Boot 프로젝트 루트는 `code/backend`입니다.
-
-기본 설정:
-
-- 패키지명: `com.used.service`
-- 기본 포트: `8080`
-- 설정 파일: `code/backend/src/main/resources/application.yaml`
-- 환경변수 예시: `code/backend/.env.example`
-
-현재 프론트 MVP는 기본적으로 Python FastAPI를 호출합니다. Spring API로 전환하려면 Vite 프록시, CORS, 인증 쿠키 처리를 별도 작업으로 맞춥니다.
+- 가격 이력은 수집 시작 시점부터 누적 — 수집 공백 기간(예: 5/28~6/6)의 시세 포인트는 존재하지 않는다.
+- 탈퇴 회원의 이메일/닉네임은 soft delete 정책상 중복 체크를 계속 점유한다.
+- 맥북 등 일부 키워드는 수집 커버리지가 낮아 검색 결과가 적다.
+- 휴대폰 검색 2페이지 이후 `expanded_search_limit`로 인한 페이지네이션 오프셋 어긋남(P3, 공유됨).

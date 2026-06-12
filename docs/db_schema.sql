@@ -1,221 +1,262 @@
--- 현재 DDL은 Oracle 계열 문법 기준입니다.
--- PostgreSQL 또는 Supabase에 적용할 경우 NUMBER, VARCHAR2, SYSDATE 등을 변환해야 합니다.
--- 실제 Entity 작성 시에는 사용하는 DB와 컬럼명을 다시 맞춰야 합니다.
+-- Hama DB 스키마 (PostgreSQL / Supabase)
+-- 2026-06-12 라이브 DB(kgpkcvuawbpgdcyykfdk) 기준 덤프 정리본.
+-- 실제 적용 이력은 code/supabase/migrations/*.sql 참고.
+-- ERD: docs/db_erd.md
 
--- [1. 사용자 및 보안 관리]
-CREATE TABLE Users (
-    user_id         NUMBER PRIMARY KEY,
-    login_id        VARCHAR2(50) UNIQUE NOT NULL,
-    email           VARCHAR2(100) UNIQUE NOT NULL,
-    password        VARCHAR2(255) NOT NULL,
-    name            VARCHAR2(50) NOT NULL,
-    birth_date      DATE,
-    nickname        VARCHAR2(50) NOT NULL,
-    privacy_agreed_at TIMESTAMP NOT NULL,
+-- ============================================================
+-- 시퀀스 (Spring JPA 엔티티가 사용하는 수동 시퀀스)
+-- ============================================================
+CREATE SEQUENCE IF NOT EXISTS user_seq;
+CREATE SEQUENCE IF NOT EXISTS wishlist_seq;
+CREATE SEQUENCE IF NOT EXISTS notification_seq;
+CREATE SEQUENCE IF NOT EXISTS notification_setting_seq;
+CREATE SEQUENCE IF NOT EXISTS keyword_alert_seq;
+CREATE SEQUENCE IF NOT EXISTS item_view_seq;
+CREATE SEQUENCE IF NOT EXISTS search_log_seq;
+CREATE SEQUENCE IF NOT EXISTS chat_history_seq;
+CREATE SEQUENCE IF NOT EXISTS chat_faq_seq;
+CREATE SEQUENCE IF NOT EXISTS recommended_items_seq;
+
+-- ============================================================
+-- 1. 사용자
+-- ============================================================
+CREATE TABLE IF NOT EXISTS users (
+    user_id             BIGINT PRIMARY KEY DEFAULT nextval('user_seq'),
+    login_id            VARCHAR UNIQUE NOT NULL,
+    email               VARCHAR UNIQUE NOT NULL,
+    password            VARCHAR NOT NULL,
+    name                VARCHAR NOT NULL,
+    birth_date          DATE,
+    nickname            VARCHAR UNIQUE NOT NULL,
+    privacy_agreed_at   TIMESTAMP NOT NULL DEFAULT now(),
     marketing_agreed_at TIMESTAMP,
-    account_status  VARCHAR2(20) DEFAULT 'ACTIVE',
-    phone_number    VARCHAR2(20) not null,
-    created_at      TIMESTAMP DEFAULT SYSDATE,
-    updated_at      TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT uq_users_nickname UNIQUE (nickname),
-    CONSTRAINT uq_users_name_birth UNIQUE (name, birth_date)
+    account_status      VARCHAR NOT NULL DEFAULT 'ACTIVE',   -- ACTIVE | WITHDRAWN (탈퇴는 soft delete)
+    role                VARCHAR NOT NULL DEFAULT 'USER',     -- USER | ADMIN (관리자 페이지 가드)
+    created_at          TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- [2. 매물 정보]
-CREATE TABLE Items (
-    item_id         NUMBER PRIMARY KEY,
-    platform_name   VARCHAR2(50) NOT NULL, -- 번개장터, 중고나라 등
-    original_id     VARCHAR2(100) NOT NULL,
-    canonical_name  VARCHAR2(200) NOT NULL, -- 표준 상품명, 가격 집계 기준
-    title           VARCHAR2(300) NOT NULL,
-    description     CLOB,
-    current_price   NUMBER NOT NULL,
-    lowest_price    NUMBER, -- 역대 최저가 저장용
-    category_name   VARCHAR2(100), -- 카테고리 분류용
-    matched_keywords VARCHAR2(500), -- 크롤링 시 매칭된 키워드 목록
-    sale_status     VARCHAR2(20) DEFAULT 'ON_SALE' NOT NULL, -- ON_SALE, RESERVED, SOLD_OUT
-    sold_at         TIMESTAMP,
-    thumbnail_url   VARCHAR2(500),
-    item_url        VARCHAR2(500) NOT NULL,
-    url_checked_at  TIMESTAMP,
-    url_status      VARCHAR2(20), -- ACTIVE, REDIRECTED, NOT_FOUND
-    crawled_at      TIMESTAMP DEFAULT SYSDATE,
-    last_seen_at    TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT uq_items_platform_original UNIQUE (platform_name, original_id)
+CREATE TABLE IF NOT EXISTS notification_settings (
+    setting_id           BIGINT PRIMARY KEY DEFAULT nextval('notification_setting_seq'),
+    user_id              BIGINT UNIQUE NOT NULL REFERENCES users(user_id),
+    lowest_price_enabled VARCHAR NOT NULL DEFAULT 'Y',
+    sold_status_enabled  VARCHAR NOT NULL DEFAULT 'Y',
+    new_item_enabled     VARCHAR NOT NULL DEFAULT 'Y',
+    updated_at           TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- [3. 시세 그래프 및 알림용 이력]
-CREATE TABLE Price_History (
-    history_id      NUMBER PRIMARY KEY,
-    item_id         NUMBER,
-    price           NUMBER NOT NULL,
-    title           VARCHAR2(300),
-    sale_status     VARCHAR2(20),
-    item_url        VARCHAR2(500),
-    recorded_at     DATE DEFAULT SYSDATE, -- 일별 시세 추적용
-    CONSTRAINT fk_price_history_item FOREIGN KEY (item_id) REFERENCES Items(item_id)
+CREATE TABLE IF NOT EXISTS keyword_alerts (
+    keyword_alert_id BIGINT PRIMARY KEY DEFAULT nextval('keyword_alert_seq'),
+    user_id          BIGINT NOT NULL REFERENCES users(user_id),
+    keyword          VARCHAR NOT NULL,
+    is_active        VARCHAR NOT NULL DEFAULT 'Y',
+    created_at       TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- [4. 개인 페이지 및 알림 (U02~U05)]
-CREATE TABLE Wishlists (
-    wish_id         NUMBER PRIMARY KEY,
-    user_id         NUMBER,
-    item_id         NUMBER,
-    target_price    NUMBER, -- 사용자 설정 희망 알림가
-    is_lowest_alert CHAR(1) DEFAULT 'Y',
-    is_sold_alert   CHAR(1) DEFAULT 'Y',
-    added_at        TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT fk_wish_user FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    CONSTRAINT fk_wish_item FOREIGN KEY (item_id) REFERENCES Items(item_id),
-    CONSTRAINT uq_wish_user_item UNIQUE (user_id, item_id)
+CREATE TABLE IF NOT EXISTS user_preferences (
+    pref_id       BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    user_id       BIGINT NOT NULL,
+    preferred_tag TEXT NOT NULL
 );
 
--- [5. 홈화면: 검색 로그 및 맞춤 추천]
-CREATE TABLE Search_Logs (
-    log_id          NUMBER PRIMARY KEY,
-    user_id         NUMBER,
-    keyword         VARCHAR2(100) NOT NULL, -- 최근 검색 및 검색 순위 원천 데이터
-    clicked_item_id NUMBER,
-    created_at      TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT fk_logs_user FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    CONSTRAINT fk_logs_item FOREIGN KEY (clicked_item_id) REFERENCES Items(item_id)
+-- ============================================================
+-- 2. 매물
+-- ============================================================
+CREATE TABLE IF NOT EXISTS platforms (
+    platform_id   BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    platform_name TEXT UNIQUE NOT NULL,        -- 번개장터 | 중고나라
+    is_active     BOOLEAN NOT NULL DEFAULT true
 );
 
--- [5-1. 검색 이벤트: 검색/노출/클릭/최근검색어/인기검색어 원천 로그]
-CREATE TABLE Search_Events (
-    event_id        NUMBER PRIMARY KEY,
-    user_id         NUMBER,
-    keyword         VARCHAR2(100) NOT NULL,
-    platform_name   VARCHAR2(50),
-    item_id         NUMBER,
-    event_type      VARCHAR2(20) NOT NULL, -- SEARCH, IMPRESSION, CLICK
-    result_rank     NUMBER,
-    relevance_score NUMBER,
-    created_at      TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT fk_search_events_user FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    CONSTRAINT fk_search_events_item FOREIGN KEY (item_id) REFERENCES Items(item_id)
+CREATE TABLE IF NOT EXISTS items (
+    item_id              BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    platform_id          BIGINT REFERENCES platforms(platform_id),
+    platform_name        TEXT,                 -- 비정규화 컬럼 (트리거로 platform_id와 동기화)
+    original_id          TEXT NOT NULL,        -- 플랫폼별 상품 ID(pid)
+    canonical_name       TEXT NOT NULL,        -- 표준 상품명 (검색/집계 기준)
+    cluster_product_name TEXT,                 -- 클러스터 표준 상품명 (파생, keyword_final 파이프라인)
+    title                TEXT NOT NULL,
+    current_price        INTEGER NOT NULL CHECK (current_price >= 0),
+    lowest_price         INTEGER CHECK (lowest_price IS NULL OR lowest_price >= 0),
+    status               TEXT NOT NULL DEFAULT '판매중',   -- 판매중 | 예약중 | 판매완료
+    description          TEXT,
+    category_name        TEXT,
+    matched_keywords     TEXT,
+    thumbnail_url        TEXT,
+    item_url             TEXT NOT NULL,
+    rating               NUMERIC,              -- 종합 점수 (cluster/price/view/recency 가중합)
+    cluster_score        NUMERIC,
+    price_score          NUMERIC,
+    view_score           NUMERIC,
+    recency_score        NUMERIC,
+    cluster_confidence   NUMERIC,              -- 클러스터 신뢰도 (관리자 이상데이터 기준)
+    view_count           INTEGER NOT NULL DEFAULT 0,
+    crawled_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    sold_at              TIMESTAMPTZ,
+    url_checked_at       TIMESTAMPTZ,
+    url_status           TEXT,
+    last_seen_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- [5-2. 검색어와 상품 연결 루트: 정확도순/매칭 근거 제공]
-CREATE TABLE Item_Search_Matches (
-    match_id        NUMBER PRIMARY KEY,
-    item_id         NUMBER NOT NULL,
-    keyword         VARCHAR2(100) NOT NULL,
-    canonical_name  VARCHAR2(200),
-    match_score     NUMBER,
-    match_reason    VARCHAR2(500), -- 키워드 매칭, 모델 점수, 수동 라벨 등
-    matched_at      TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT fk_item_search_matches_item FOREIGN KEY (item_id) REFERENCES Items(item_id),
-    CONSTRAINT uq_item_search_keyword UNIQUE (item_id, keyword)
+CREATE TABLE IF NOT EXISTS price_history (
+    history_id  BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    item_id     BIGINT NOT NULL REFERENCES items(item_id),
+    price       INTEGER NOT NULL CHECK (price >= 0),
+    recorded_at DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- [5-3. 상품 조회 이력: 최근 본 상품 및 추천 원천]
-CREATE TABLE Item_Views (
-    view_id         NUMBER PRIMARY KEY,
-    user_id         NUMBER NOT NULL,
-    item_id         NUMBER NOT NULL,
-    viewed_at       TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT fk_item_views_user FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    CONSTRAINT fk_item_views_item FOREIGN KEY (item_id) REFERENCES Items(item_id)
+CREATE TABLE IF NOT EXISTS item_search_matches (
+    match_id       BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    item_id        BIGINT NOT NULL REFERENCES items(item_id),
+    keyword        TEXT NOT NULL,
+    canonical_name TEXT,
+    match_score    NUMERIC,
+    match_reason   TEXT,
+    match_source   TEXT NOT NULL DEFAULT 'batch',
+    matched_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- [6. 홈화면: 실시간 검색 순위 집계 (Batch 결과 저장용)]
-CREATE TABLE Search_Rankings (
-    rank_id         NUMBER PRIMARY KEY,
-    keyword         VARCHAR2(100) NOT NULL,
-    platform_name   VARCHAR2(50),
-    period_start    DATE,
-    period_end      DATE,
-    search_count    NUMBER DEFAULT 0,
-    trend_status    VARCHAR2(10), -- 상승, 하락, 유지
-    calculated_at   TIMESTAMP DEFAULT SYSDATE
+-- ============================================================
+-- 3. 시세 집계
+-- ============================================================
+CREATE TABLE IF NOT EXISTS price_stats_daily (
+    stat_id        BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    canonical_name TEXT NOT NULL,
+    platform_name  TEXT,
+    stat_date      DATE NOT NULL,
+    lowest_price   INTEGER CHECK (lowest_price IS NULL OR lowest_price >= 0),
+    average_price  NUMERIC CHECK (average_price IS NULL OR average_price >= 0),
+    item_count     INTEGER NOT NULL DEFAULT 0 CHECK (item_count >= 0),
+    calculated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- [6-1. 기간별 가격 통계 캐시: 최저가/평균가 대시보드 성능용]
-CREATE TABLE Price_Stats_Daily (
-    stat_id         NUMBER PRIMARY KEY,
-    canonical_name  VARCHAR2(200) NOT NULL,
-    platform_name   VARCHAR2(50),
-    stat_date       DATE NOT NULL,
-    lowest_price    NUMBER,
-    average_price   NUMBER,
-    item_count      NUMBER DEFAULT 0,
-    calculated_at   TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT uq_price_stats_daily UNIQUE (canonical_name, platform_name, stat_date)
+CREATE TABLE IF NOT EXISTS keyword_price_daily (
+    trend_id      BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    keyword       TEXT NOT NULL,
+    recorded_at   DATE NOT NULL,
+    lowest_price  INTEGER NOT NULL CHECK (lowest_price >= 0),
+    average_price INTEGER NOT NULL CHECK (average_price >= 0),
+    sample_count  INTEGER NOT NULL DEFAULT 0 CHECK (sample_count >= 0),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- [7. 홈화면: 사용자 맞춤 추천 태그]
-CREATE TABLE User_Preferences (
-    pref_id         NUMBER PRIMARY KEY,
-    user_id         NUMBER,
-    preferred_tag   VARCHAR2(50), -- 자주 찾는 카테고리/태그 저장
-    CONSTRAINT fk_pref_user FOREIGN KEY (user_id) REFERENCES Users(user_id)
+CREATE TABLE IF NOT EXISTS search_rankings (
+    rank_id       BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    keyword       TEXT NOT NULL,
+    search_count  INTEGER NOT NULL DEFAULT 0,
+    trend_status  TEXT,
+    platform_name TEXT,
+    period_start  DATE,
+    period_end    DATE,
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    calculated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- [8. 홈화면: 배너 관리]
-CREATE TABLE Banners (
-    banner_id       NUMBER PRIMARY KEY,
-    image_url       VARCHAR2(500) NOT NULL,
-    link_url        VARCHAR2(500),
-    display_order   NUMBER,
-    is_active       CHAR(1) DEFAULT 'Y'
+-- ============================================================
+-- 4. 사용자 활동
+-- ============================================================
+CREATE TABLE IF NOT EXISTS wishlists (
+    wish_id         BIGINT PRIMARY KEY DEFAULT nextval('wishlist_seq'),
+    user_id         BIGINT NOT NULL REFERENCES users(user_id),
+    item_id         BIGINT NOT NULL REFERENCES items(item_id),
+    target_price    BIGINT CHECK (target_price IS NULL OR target_price >= 0),
+    is_lowest_alert VARCHAR NOT NULL DEFAULT 'Y',
+    added_at        TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- [8-1. 공지사항 및 약관/개인정보처리방침 문서]
-CREATE TABLE Content_Pages (
-    content_id      NUMBER PRIMARY KEY,
-    content_type    VARCHAR2(30) NOT NULL, -- NOTICE, TERMS, PRIVACY
-    title           VARCHAR2(200) NOT NULL,
-    body            CLOB NOT NULL,
-    version         VARCHAR2(30),
-    is_active       CHAR(1) DEFAULT 'Y',
-    published_at    TIMESTAMP,
-    created_at      TIMESTAMP DEFAULT SYSDATE
+CREATE TABLE IF NOT EXISTS item_views (
+    view_id   BIGINT PRIMARY KEY DEFAULT nextval('item_view_seq'),
+    user_id   BIGINT NOT NULL REFERENCES users(user_id),
+    item_id   BIGINT NOT NULL REFERENCES items(item_id),
+    viewed_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- [9. 챗봇: 대화 내역]
-CREATE TABLE Chat_History (
-    chat_id         NUMBER PRIMARY KEY,
-    user_id         NUMBER,
-    user_message    CLOB,
-    bot_response    CLOB,
-    created_at      TIMESTAMP DEFAULT SYSDATE,
-    CONSTRAINT fk_chat_user FOREIGN KEY (user_id) REFERENCES Users(user_id)
+CREATE TABLE IF NOT EXISTS search_logs (
+    log_id          BIGINT PRIMARY KEY DEFAULT nextval('search_log_seq'),
+    user_id         BIGINT REFERENCES users(user_id),
+    keyword         VARCHAR NOT NULL,
+    clicked_item_id BIGINT REFERENCES items(item_id),
+    created_at      TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- [10. 챗봇: 자주 묻는 질문 답변셋]
-CREATE TABLE Chat_FAQ (
-    faq_id          NUMBER PRIMARY KEY,
-    question_pattern VARCHAR2(200),
-    answer_text     CLOB
+CREATE TABLE IF NOT EXISTS search_events (
+    event_id        BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    user_id         BIGINT REFERENCES users(user_id),
+    keyword         TEXT NOT NULL,
+    platform_name   TEXT,
+    item_id         BIGINT REFERENCES items(item_id),
+    event_type      TEXT NOT NULL CHECK (event_type IN ('SEARCH', 'IMPRESSION', 'CLICK')),
+    result_rank     INTEGER CHECK (result_rank IS NULL OR result_rank > 0),
+    relevance_score NUMERIC,
+    query_source    TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- [11. 알림함 및 발송 상태]
-CREATE TABLE Notifications (
-    notification_id NUMBER PRIMARY KEY,
-    user_id         NUMBER NOT NULL,
-    item_id         NUMBER,
-    notification_type VARCHAR2(30) NOT NULL, -- SOLD_OUT, LOWEST_PRICE, TARGET_PRICE, NOTICE
-    title           VARCHAR2(200) NOT NULL,
-    message         VARCHAR2(1000),
-    payload         CLOB,
-    is_read         CHAR(1) DEFAULT 'N',
-    send_status     VARCHAR2(20) DEFAULT 'PENDING', -- PENDING, SENT, FAILED, SKIPPED
-    created_at      TIMESTAMP DEFAULT SYSDATE,
-    sent_at         TIMESTAMP,
-    read_at         TIMESTAMP,
-    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    CONSTRAINT fk_notifications_item FOREIGN KEY (item_id) REFERENCES Items(item_id)
+CREATE TABLE IF NOT EXISTS recommended_items (
+    recommend_id   BIGINT PRIMARY KEY DEFAULT nextval('recommended_items_seq'),
+    user_id        BIGINT NOT NULL REFERENCES users(user_id),
+    item_id        BIGINT NOT NULL REFERENCES items(item_id),
+    score          INTEGER,
+    recommend_type VARCHAR,                    -- 예: CHATBOT_RECOMMEND
+    created_at     TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- [12. 맞춤 추천 상품 연결 테이블]
-CREATE TABLE Recommended_Items (
-    recommend_id    NUMBER PRIMARY KEY,
-    user_id         NUMBER NOT NULL, -- 필수: 대상 유저가 있어야 함
-    item_id         NUMBER NOT NULL, -- 필수: 추천할 상품이 있어야 함
-    score           NUMBER,          -- 선택: 점수는 없을 수 있음
-    recommend_type  VARCHAR2(50),    -- 선택: 사유는 생략 가능
-    created_at      TIMESTAMP DEFAULT SYSDATE NOT NULL,
-    CONSTRAINT fk_rec_user FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    CONSTRAINT fk_rec_item FOREIGN KEY (item_id) REFERENCES Items(item_id)
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id   BIGINT PRIMARY KEY DEFAULT nextval('notification_seq'),
+    user_id           BIGINT NOT NULL REFERENCES users(user_id),
+    item_id           BIGINT REFERENCES items(item_id),
+    notification_type VARCHAR NOT NULL,
+    title             VARCHAR NOT NULL,
+    message           VARCHAR,
+    payload           TEXT,
+    is_read           VARCHAR NOT NULL DEFAULT 'N',
+    send_status       VARCHAR NOT NULL DEFAULT 'PENDING',
+    created_at        TIMESTAMP NOT NULL DEFAULT now(),
+    sent_at           TIMESTAMP,
+    read_at           TIMESTAMP
+);
+
+-- ============================================================
+-- 5. 챗봇
+-- ============================================================
+CREATE TABLE IF NOT EXISTS chat_history (
+    chat_id       BIGINT PRIMARY KEY DEFAULT nextval('chat_history_seq'),
+    user_id       BIGINT REFERENCES users(user_id),
+    user_message  TEXT,
+    bot_response  TEXT,
+    intent        VARCHAR,
+    response_type VARCHAR,
+    created_at    TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS chat_faq (
+    faq_id           BIGINT PRIMARY KEY DEFAULT nextval('chat_faq_seq'),
+    question_pattern TEXT,
+    answer_text      TEXT
+);
+
+-- ============================================================
+-- 6. 콘텐츠/운영
+-- ============================================================
+CREATE TABLE IF NOT EXISTS content_pages (
+    content_id   BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    content_type TEXT NOT NULL CHECK (content_type IN ('NOTICE', 'TERMS', 'PRIVACY', 'FAQ', 'GUIDE')),
+    title        TEXT NOT NULL,
+    body         TEXT NOT NULL,
+    version      TEXT,
+    is_active    BOOLEAN NOT NULL DEFAULT true,
+    published_at TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS banners (
+    banner_id     BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    image_url     TEXT NOT NULL,
+    link_url      TEXT,
+    display_order INTEGER NOT NULL DEFAULT 0,
+    is_active     BOOLEAN NOT NULL DEFAULT true
 );

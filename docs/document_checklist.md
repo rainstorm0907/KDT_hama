@@ -170,17 +170,23 @@ code/frontend/Hama/src
 
 ## Docs
 
+- [x] `requirements.md` — 요구사항정의서 (라이브 구현 기준)
+- [x] `db_schema.sql` — 라이브 PostgreSQL DDL 정리본
+- [x] `db_erd.md` — 최신 ERD (mermaid)
+- [x] `db_column_catalog.md` — items 파생 컬럼 카탈로그
 - [x] `api_spec.md`
-- [x] `db_schema.sql`
+- [x] `code_guidelines.md` — 코드 작성 위치/기준 (구 requirements.md)
 - [x] `document_checklist.md`
 - [x] `project_structure.md`
-- [x] `requirements.md`
 - [x] `search_relevance_plan.md`
-- [x] `supabase_schema.sql`
+- [x] `supabase_schema.sql` — ⚠️ 폐기된 초기 설계안 (참고용)
 - [x] `supabase_setup.md`
+- [x] `implementation_gap_report.md`
+- [x] `portfolio_draft.md`
 - [x] `chatbot_expected_answers.csv`
-- [x] `ERD.drawio.png`
+- [x] `ERD.drawio.png` — 구버전 ERD 이미지 (`db_erd.md`가 최신)
 - [x] `데이터 명세서.xlsx`
+- [x] `../code/backend/README.md` — 백엔드 통합 문서 (배포 토폴로지·운영 절차)
 
 ## Spring Boot 통합 상태
 

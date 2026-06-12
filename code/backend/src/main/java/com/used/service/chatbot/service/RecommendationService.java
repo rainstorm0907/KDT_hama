@@ -58,6 +58,7 @@ public class RecommendationService {
         List<RecommendedItemDto> openSearchResults = openSearchProductService.search(analysis, 10);
         if (!openSearchResults.isEmpty()) {
             openSearchResults = applyPersonalContextScores(userId, openSearchResults);
+            openSearchResults = orderChatbotRecommendations(openSearchResults);
             saveRecommendedItemDtos(userId, openSearchResults);
             return openSearchResults;
         }
@@ -67,6 +68,7 @@ public class RecommendationService {
                 userId,
                 results.stream().map(item -> toDto(item, analysis)).toList()
         );
+        recommendedItems = orderChatbotRecommendations(recommendedItems);
         saveRecommendedItemDtos(userId, recommendedItems);
         return recommendedItems;
     }
@@ -292,6 +294,20 @@ public class RecommendationService {
                         .comparing((RecommendedItemDto item) -> item.getScore() == null ? 0 : item.getScore()).reversed()
                         .thenComparing(item -> item.getCurrentPrice() == null ? Long.MAX_VALUE : item.getCurrentPrice()))
                 .toList();
+    }
+
+    private List<RecommendedItemDto> orderChatbotRecommendations(List<RecommendedItemDto> items) {
+        if (items == null || items.isEmpty()) return List.of();
+
+        return items.stream()
+                .sorted(Comparator
+                        .comparing((RecommendedItemDto item) -> validPrice(item.getCurrentPrice()))
+                        .thenComparing((RecommendedItemDto item) -> item.getScore() == null ? 0 : item.getScore(), Comparator.reverseOrder()))
+                .toList();
+    }
+
+    private Long validPrice(Long price) {
+        return price == null || price <= 0 ? Long.MAX_VALUE : price;
     }
 
     private String appendReason(String reason, String addition) {

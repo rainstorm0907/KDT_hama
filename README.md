@@ -81,6 +81,16 @@ npm install
 npm run dev -- --host 127.0.0.1 --port 5178 --strictPort --force
 ```
 
+`/api` 프록시 대상은 환경변수로 바꿀 수 있습니다 (기본값: FastAPI `127.0.0.1:8000`, Spring `127.0.0.1:8001`).
+로컬에서 Spring 없이 회원/찜/알림 기능까지 확인하려면 Spring 프록시만 라이브 EC2로 돌립니다.
+
+```bash
+# 예: 검색은 로컬 FastAPI, 회원/찜/알림/챗봇은 라이브 EC2 Spring
+FASTAPI_PROXY_TARGET=http://127.0.0.1:8000 \
+SPRING_API_PROXY_TARGET=http://15.134.191.154 \
+npm run dev
+```
+
 브라우저에서 접속:
 
 ```text
