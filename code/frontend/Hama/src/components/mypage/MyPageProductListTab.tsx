@@ -1,12 +1,17 @@
 import { Clock, Heart } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   addWishlist,
-  fetchRecentItems,
-  fetchWishlists,
   removeWishlist,
   updateWishlistAlert,
+  type WishlistResponse,
 } from '../../api/mypageApi';
+import {
+  mypageQueryKeys,
+  useRecentItemsQuery,
+  useWishlistsQuery,
+} from '../../queries/mypageQueries';
 import { hairline } from '../../styles/hairline';
 import type { Product } from '../../types/product';
 import { formatUpdatedAt } from '../../utils/format';
@@ -35,47 +40,57 @@ export function MyPageProductListTab({
   );
 }
 
+// 찜/알림 상태의 SSOT는 wishlists 쿼리 캐시다. 탭 재진입 시 캐시를 그대로
+// 보여주고(자동 재조회 없음), 로컬 조작은 setQueryData로 캐시에 반영한다.
+function useWishlistRowsUpdater() {
+  const queryClient = useQueryClient();
+
+  return (updater: (rows: WishlistResponse[]) => WishlistResponse[]) => {
+    queryClient.setQueryData<WishlistResponse[]>(
+      mypageQueryKeys.wishlists,
+      (current) => updater(current ?? [])
+    );
+  };
+}
+
+function formatQueryUpdatedAt(dataUpdatedAt: number) {
+  return dataUpdatedAt
+    ? formatUpdatedAt(new Date(dataUpdatedAt).toISOString())
+    : undefined;
+}
+
 function WishlistProductList({
   onProductSelect,
 }: {
   onProductSelect: (product: Product) => void;
 }) {
-  const [wishlist, setWishlist] = useState<Product[]>([]);
-  const [lastLoaded, setLastLoaded] = useState(() => new Date().toISOString());
-  const [isLoading, setIsLoading] = useState(false);
+  const wishlistQuery = useWishlistsQuery();
+  const setWishlistRows = useWishlistRowsUpdater();
   const [errorMessage, setErrorMessage] = useState('');
   const [toast, setToast] = useState<MyPageToastState | null>(null);
-  const [enabledAlertKeys, setEnabledAlertKeys] = useState<string[]>([]);
+
+  const rows = wishlistQuery.data ?? [];
+  const wishlist = rows.map((row) => row.product);
+  const enabledAlertKeys = rows
+    .filter((row) => row.lowestAlert)
+    .map((row) => getProductListKey(row.product));
+  const isLoading = wishlistQuery.isFetching;
+  const loadErrorMessage = wishlistQuery.isError
+    ? '찜 목록을 불러오지 못했습니다. 백엔드 연결 상태를 확인해 주세요.'
+    : '';
 
   const refreshWishlist = async () => {
-    setIsLoading(true);
     setErrorMessage('');
-
-    try {
-      const rows = await fetchWishlists();
-      setWishlist(rows.map((row) => row.product));
-      setEnabledAlertKeys(
-        rows
-          .filter((row) => row.lowestAlert)
-          .map((row) => getProductListKey(row.product))
-      );
-      setLastLoaded(new Date().toISOString());
-    } catch {
-      setErrorMessage('찜 목록을 불러오지 못했습니다. 백엔드 연결 상태를 확인해 주세요.');
-    } finally {
-      setIsLoading(false);
-    }
+    await wishlistQuery.refetch();
   };
-
-  useEffect(() => {
-    const timerId = window.setTimeout(() => void refreshWishlist(), 0);
-    return () => window.clearTimeout(timerId);
-  }, []);
 
   const restoreWishlistProduct = async (product: Product) => {
     try {
       const row = await addWishlist(product.id);
-      setWishlist((current) => [row.product, ...current]);
+      setWishlistRows((current) => [
+        row,
+        ...current.filter((item) => item.itemId !== row.itemId),
+      ]);
       setToast(null);
     } catch {
       setErrorMessage('찜 목록 복구에 실패했습니다.');
@@ -83,7 +98,9 @@ function WishlistProductList({
   };
 
   const removeItem = async (product: Product) => {
-    setWishlist((current) => current.filter((item) => item.id !== product.id));
+    setWishlistRows((current) =>
+      current.filter((row) => row.product.id !== product.id)
+    );
     setToast({
       product,
       message: '찜 목록에서 상품을 제거했습니다',
@@ -96,17 +113,23 @@ function WishlistProductList({
       await removeWishlist(product.id);
     } catch {
       setErrorMessage('찜 목록 삭제에 실패했습니다.');
-      void refreshWishlist();
+      void wishlistQuery.refetch();
     }
+  };
+
+  const setRowAlert = (productId: number, lowestAlert: boolean) => {
+    setWishlistRows((current) =>
+      current.map((row) =>
+        row.product.id === productId ? { ...row, lowestAlert } : row
+      )
+    );
   };
 
   const toggleProductAlert = async (product: Product) => {
     const key = getProductListKey(product);
     const isEnabled = enabledAlertKeys.includes(key);
 
-    setEnabledAlertKeys((current) =>
-      isEnabled ? current.filter((item) => item !== key) : [...current, key]
-    );
+    setRowAlert(product.id, !isEnabled);
     setToast(
       isEnabled
         ? {
@@ -115,9 +138,7 @@ function WishlistProductList({
             tone: 'amber',
             actionLabel: '되돌리기',
             onAction: () => {
-              setEnabledAlertKeys((current) =>
-                current.includes(key) ? current : [...current, key]
-              );
+              setRowAlert(product.id, true);
               setToast(null);
             },
           }
@@ -130,11 +151,7 @@ function WishlistProductList({
         lowestAlert: !isEnabled,
       });
     } catch {
-      setEnabledAlertKeys((current) =>
-        isEnabled
-          ? current.includes(key) ? current : [...current, key]
-          : current.filter((item) => item !== key)
-      );
+      setRowAlert(product.id, isEnabled);
       setErrorMessage('상품 알림 설정을 변경하지 못했습니다.');
     }
   };
@@ -149,12 +166,14 @@ function WishlistProductList({
             label={isLoading ? '불러오는 중...' : '새로고침'}
             onClick={() => void refreshWishlist()}
             isLoading={isLoading}
-            updatedAt={formatUpdatedAt(lastLoaded)}
+            updatedAt={formatQueryUpdatedAt(wishlistQuery.dataUpdatedAt)}
           />
         }
       />
 
-      {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+      {errorMessage || loadErrorMessage ? (
+        <ErrorMessage message={errorMessage || loadErrorMessage} />
+      ) : null}
 
       {wishlist.length === 0 ? (
         <EmptyState
@@ -196,55 +215,37 @@ function RecentProductList({
 }: {
   onProductSelect: (product: Product) => void;
 }) {
-  const [recentProducts, setRecentProducts] = useState<Product[]>([]);
-  const [wishlistProductIds, setWishlistProductIds] = useState<number[]>([]);
-  const [lastLoaded, setLastLoaded] = useState(() => new Date().toISOString());
-  const [isLoading, setIsLoading] = useState(false);
+  const recentItemsQuery = useRecentItemsQuery();
+  const wishlistQuery = useWishlistsQuery();
+  const setWishlistRows = useWishlistRowsUpdater();
   const [errorMessage, setErrorMessage] = useState('');
   const [toast, setToast] = useState<MyPageToastState | null>(null);
-  const [enabledAlertKeys, setEnabledAlertKeys] = useState<string[]>([]);
+
+  const recentProducts = recentItemsQuery.data ?? [];
+  const wishlistRows = wishlistQuery.data ?? [];
+  const wishlistProductIds = wishlistRows.map((row) => row.product.id);
+  const enabledAlertKeys = wishlistRows
+    .filter((row) => row.lowestAlert)
+    .map((row) => getProductListKey(row.product));
+  const isLoading = recentItemsQuery.isFetching || wishlistQuery.isFetching;
+  const loadErrorMessage =
+    recentItemsQuery.isError || wishlistQuery.isError
+      ? '최근 본 상품을 불러오지 못했습니다. 백엔드 연결 상태를 확인해 주세요.'
+      : '';
 
   const reload = async () => {
-    setIsLoading(true);
     setErrorMessage('');
-
-    try {
-      const [recentItems, wishlistRows] = await Promise.all([
-        fetchRecentItems(),
-        fetchWishlists(),
-      ]);
-
-      setRecentProducts(recentItems);
-      setWishlistProductIds(wishlistRows.map((row) => row.product.id));
-      setEnabledAlertKeys(
-        wishlistRows
-          .filter((row) => row.lowestAlert)
-          .map((row) => getProductListKey(row.product))
-      );
-      setLastLoaded(new Date().toISOString());
-    } catch {
-      setErrorMessage('최근 본 상품을 불러오지 못했습니다. 백엔드 연결 상태를 확인해 주세요.');
-    } finally {
-      setIsLoading(false);
-    }
+    await Promise.all([recentItemsQuery.refetch(), wishlistQuery.refetch()]);
   };
-
-  useEffect(() => {
-    const timerId = window.setTimeout(() => void reload(), 0);
-    return () => window.clearTimeout(timerId);
-  }, []);
 
   const toggleWish = async (product: Product) => {
     const wasWished = wishlistProductIds.includes(product.id);
 
-    setWishlistProductIds((current) =>
-      wasWished
-        ? current.filter((itemId) => itemId !== product.id)
-        : [...current, product.id]
-    );
-
     try {
       if (wasWished) {
+        setWishlistRows((current) =>
+          current.filter((row) => row.product.id !== product.id)
+        );
         await removeWishlist(product.id);
         setToast({
           product,
@@ -252,22 +253,32 @@ function RecentProductList({
           tone: 'rose',
         });
       } else {
-        await addWishlist(product.id);
+        const row = await addWishlist(product.id);
+        setWishlistRows((current) => [
+          row,
+          ...current.filter((item) => item.itemId !== row.itemId),
+        ]);
         setToast({ product });
       }
     } catch {
       setErrorMessage('찜 목록 변경에 실패했습니다.');
-      void reload();
+      void wishlistQuery.refetch();
     }
+  };
+
+  const setRowAlert = (productId: number, lowestAlert: boolean) => {
+    setWishlistRows((current) =>
+      current.map((row) =>
+        row.product.id === productId ? { ...row, lowestAlert } : row
+      )
+    );
   };
 
   const toggleProductAlert = async (product: Product) => {
     const key = getProductListKey(product);
     const isEnabled = enabledAlertKeys.includes(key);
 
-    setEnabledAlertKeys((current) =>
-      isEnabled ? current.filter((item) => item !== key) : [...current, key]
-    );
+    setRowAlert(product.id, !isEnabled);
     setToast(
       isEnabled
         ? {
@@ -276,9 +287,7 @@ function RecentProductList({
             tone: 'amber',
             actionLabel: '되돌리기',
             onAction: () => {
-              setEnabledAlertKeys((current) =>
-                current.includes(key) ? current : [...current, key]
-              );
+              setRowAlert(product.id, true);
               setToast(null);
             },
           }
@@ -287,19 +296,21 @@ function RecentProductList({
 
     try {
       if (!wishlistProductIds.includes(product.id)) {
-        await addWishlist(product.id);
-        setWishlistProductIds((current) => [...current, product.id]);
+        const row = await addWishlist(product.id);
+        setWishlistRows((current) => [
+          row,
+          ...current.filter((item) => item.itemId !== row.itemId),
+        ]);
       }
-      await updateWishlistAlert({
+      const updated = await updateWishlistAlert({
         itemId: product.id,
         lowestAlert: !isEnabled,
       });
-    } catch {
-      setEnabledAlertKeys((current) =>
-        isEnabled
-          ? current.includes(key) ? current : [...current, key]
-          : current.filter((item) => item !== key)
+      setWishlistRows((current) =>
+        current.map((row) => (row.itemId === updated.itemId ? updated : row))
       );
+    } catch {
+      setRowAlert(product.id, isEnabled);
       setErrorMessage('상품 알림 설정을 변경하지 못했습니다.');
     }
   };
@@ -314,12 +325,14 @@ function RecentProductList({
             label={isLoading ? '불러오는 중...' : '새로고침'}
             onClick={() => void reload()}
             isLoading={isLoading}
-            updatedAt={formatUpdatedAt(lastLoaded)}
+            updatedAt={formatQueryUpdatedAt(recentItemsQuery.dataUpdatedAt)}
           />
         }
       />
 
-      {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+      {errorMessage || loadErrorMessage ? (
+        <ErrorMessage message={errorMessage || loadErrorMessage} />
+      ) : null}
 
       {recentProducts.length === 0 ? (
         <EmptyState

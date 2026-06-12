@@ -1,10 +1,15 @@
 import { Plus, Search, X } from 'lucide-react';
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  fetchNotificationSetting,
-  fetchWishlists,
   updateNotificationSetting,
+  type NotificationSettingResponse,
 } from '../../api/mypageApi';
+import {
+  mypageQueryKeys,
+  useNotificationSettingQuery,
+  useWishlistsQuery,
+} from '../../queries/mypageQueries';
 import { PlatformPill } from '../PlatformPill';
 import { ProductVisual } from '../ProductVisual';
 import { hairline } from '../../styles/hairline';
@@ -38,9 +43,20 @@ const defaultNotificationPreferences: Record<NotificationSection, boolean> = {
   keyword: true,
 };
 
+function toSettingResponse(
+  preferences: Record<NotificationSection, boolean>
+): NotificationSettingResponse {
+  return {
+    lowestPriceEnabled: preferences.lowPrice,
+    soldStatusEnabled: preferences.status,
+    newItemEnabled: preferences.keyword,
+  };
+}
+
 export function MyPageNotificationsTab() {
-  const [wishlist, setWishlist] = useState<Product[]>([]);
-  const [lastLoaded, setLastLoaded] = useState(() => new Date().toISOString());
+  const queryClient = useQueryClient();
+  const wishlistQuery = useWishlistsQuery();
+  const settingQuery = useNotificationSettingQuery();
   const [showAllStatusItems, setShowAllStatusItems] = useState(false);
   const [enabledAlertKeys, setEnabledAlertKeys] = useState<string[]>([]);
   const [customKeywordAlerts, setCustomKeywordAlerts] = useState<string[]>([]);
@@ -49,9 +65,18 @@ export function MyPageNotificationsTab() {
   const [removedStatusProduct, setRemovedStatusProduct] = useState<Product | null>(
     null
   );
-  const [sectionPreferences, setSectionPreferences] = useState(
-    getStoredNotificationPreferences
-  );
+  // 서버 설정이 도착하기 전까지만 localStorage 백업값을 쓴다.
+  const [fallbackPreferences] = useState(getStoredNotificationPreferences);
+
+  const wishlist = (wishlistQuery.data ?? []).map((row) => row.product);
+  const settings = settingQuery.data;
+  const sectionPreferences: Record<NotificationSection, boolean> = settings
+    ? {
+        lowPrice: settings.lowestPriceEnabled,
+        status: settings.soldStatusEnabled,
+        keyword: settings.newItemEnabled,
+      }
+    : fallbackPreferences;
   const lowPriceProducts = wishlist.slice(0, 2);
   const visibleWishlistForStatus = wishlist.filter(
     (product) => !dismissedStatusKeys.includes(getProductListKey(product))
@@ -76,50 +101,34 @@ export function MyPageNotificationsTab() {
     ),
   ];
 
+  const { lowPrice, status, keyword } = sectionPreferences;
   useEffect(() => {
     window.localStorage.setItem(
       notificationPreferenceStorageKey,
-      JSON.stringify(sectionPreferences)
+      JSON.stringify({ lowPrice, status, keyword })
     );
-  }, [sectionPreferences]);
+  }, [lowPrice, status, keyword]);
 
   const refreshNotifications = async () => {
-    const [wishlistRows, settings] = await Promise.all([
-      fetchWishlists(),
-      fetchNotificationSetting(),
-    ]);
-    setWishlist(wishlistRows.map((row) => row.product));
-    setSectionPreferences({
-      lowPrice: settings.lowestPriceEnabled,
-      status: settings.soldStatusEnabled,
-      keyword: settings.newItemEnabled,
-    });
     setDismissedStatusKeys([]);
     setRemovedStatusProduct(null);
-    setLastLoaded(new Date().toISOString());
+    await Promise.all([wishlistQuery.refetch(), settingQuery.refetch()]);
   };
 
-  useEffect(() => {
-    const timerId = window.setTimeout(() => {
-      void refreshNotifications().catch(() => undefined);
-    }, 0);
-
-    return () => window.clearTimeout(timerId);
-  }, []);
-
   const toggleSection = (section: NotificationSection) => {
-    setSectionPreferences((current) => {
-      const next = {
-      ...current,
-      [section]: !current[section],
-      };
-      void updateNotificationSetting({
-        lowestPriceEnabled: next.lowPrice,
-        soldStatusEnabled: next.status,
-        newItemEnabled: next.keyword,
-      }).catch(() => setSectionPreferences(current));
-      return next;
-    });
+    const current = sectionPreferences;
+    const next = { ...current, [section]: !current[section] };
+
+    queryClient.setQueryData(
+      mypageQueryKeys.notificationSetting,
+      toSettingResponse(next)
+    );
+    void updateNotificationSetting(toSettingResponse(next)).catch(() =>
+      queryClient.setQueryData(
+        mypageQueryKeys.notificationSetting,
+        toSettingResponse(current)
+      )
+    );
   };
 
   const toggleAlertKey = (key: string) => {
@@ -192,9 +201,16 @@ export function MyPageNotificationsTab() {
         description="가격 알림과 찜 상품 변동 알림을 한곳에서 관리합니다"
         action={
           <RefreshButton
-            label="새로고침"
+            label={wishlistQuery.isFetching ? '불러오는 중...' : '새로고침'}
             onClick={() => void refreshNotifications()}
-            updatedAt={formatUpdatedAt(lastLoaded)}
+            isLoading={wishlistQuery.isFetching || settingQuery.isFetching}
+            updatedAt={
+              wishlistQuery.dataUpdatedAt
+                ? formatUpdatedAt(
+                    new Date(wishlistQuery.dataUpdatedAt).toISOString()
+                  )
+                : undefined
+            }
           />
         }
       />
