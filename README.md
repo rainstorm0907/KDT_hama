@@ -3,6 +3,7 @@
 - 조이름: 사육사조
 - GitHub: https://github.com/shortKDT
 - Notion: https://suave-kip-fd7.notion.site/KDT-350c2695cef080ec881ad5a86bdd8da8
+- DRIVE: https://drive.google.com/drive/u/0/folders/1_V8_IYdDE5DPy7e_IqMRJWGsNFNyX0dF
 
 ## 프로젝트 설명
 
