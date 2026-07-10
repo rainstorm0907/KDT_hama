@@ -1,0 +1,48 @@
+server {
+    listen 80;
+    server_name _;
+
+    client_max_body_size 10M;
+
+    # FastAPI: 상태 확인
+    location = /api/health {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # FastAPI: 상품 검색/추천/상세/insights/anomalies 전부 (prefix 매칭)
+    location /api/products/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Spring: 챗봇 (Gemini 의도분석 + OpenSearch 추천 + chat_history 저장, 로그인 필요)
+    # FastAPI 경량 챗봇(:8000)도 코드에 남아 있으나 라이브는 Spring 정교본을 쓴다.
+    location /api/chatbot/ {
+        proxy_pass http://127.0.0.1:8001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 나머지 API는 Spring Boot (auth/mypage/찜/알림/관리자 유저 조회)
+    location /api/ {
+        proxy_pass http://127.0.0.1:8001;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_set_header Cookie $http_cookie;
+        proxy_pass_header Set-Cookie;
+    }
+}

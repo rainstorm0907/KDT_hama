@@ -1,138 +1,243 @@
-readme
-=======
-- 조이름 : 집에가고싶조
-- git : https://github.com/shortKDT
-- notion : https://suave-kip-fd7.notion.site/KDT-350c2695cef080ec881ad5a86bdd8da8
+# Hama
 
-=======
-# 팀원 정보
-- **정지원**
-  - 역할
-      - 팀장
-      - Back-end & DB 설계
-        - 11개 테이블 아키텍처 설계 및 데이터 명세서(Data Dictionary) 표준화
-        - 사용자 검색 로그 기반 맞춤 상품 추천 알고리즘 및 가중치 로직 설계
-      - 깃 관리자
-        - GitHub 레포지토리 환경 구축 및 SQL 스크립트 형상 관리 총괄
-  - GIT URL: https://github.com/jiwon-jung323
-- **정우진**
-  - 역할
-      - 프로젝트 매니저
-      - Back-end
-        - 플랫폼별(번개장터, 중고나라 등) 데이터 수집 파이프라인 및 중복 매물 방지 로직 설계
-        - 시세 추적을 위한 일 단위 가격 데이터 수집 주기 및 저장 구조 최적화
-      - Front-end & UI/UX
-        - Vite 및 React 기반의 프로젝트 아키텍처 설계 및 최적화된 초기 구조 구축
-        - Tailwind CSS를 활용한 커스텀 디자인 시스템(컬러셋, 폰트, 그리드) 및 공통 컴포넌트
-        - KREAM/Apple 스타일의 미니멀한 UI 구현 및 고도화된 반응형 레이아웃 퍼블리싱
-  - GIT URL: https://github.com/rainstorm0907
-- **김다은**
-  - 역할
-      - 프론트엔드
-  - GIT URL: https://github.com/rlekdm
-- **이준호**
-  - 역할
-      - 백엔드
-  - GIT URL: https://github.com/dlwnsgh1130
+- 조이름: 사육사조
+- GitHub: https://github.com/shortKDT
+- Notion: https://suave-kip-fd7.notion.site/KDT-350c2695cef080ec881ad5a86bdd8da8
+- 작업일지: https://docs.google.com/document/d/1dVSdk9_XY6iGct6hbBqkIfOONJ4G7_REaNwQ3mR1rSQ/edit
 
-=======
-# 프로젝트 설명
+## 프로젝트 설명
 
-본 프로젝트는 중고거래 플랫폼의 상품 데이터를 수집하고, 사용자의 검색 이력과 찜 정보를 기반으로 상품 검색, 가격 비교, 최저가 알림, 맞춤 추천 기능을 제공하는 웹 서비스입니다.
+Hama는 번개장터, 중고나라 등 중고거래 플랫폼의 상품 데이터를 모아 검색, 가격 비교, 가격 추이 확인, 찜 목록, 추천 상품을 제공하는 웹 서비스입니다.
 
-주요 데이터는 Python 크롤링/전처리 작업을 통해 수집한 뒤 DB에 저장하고, Spring Boot 백엔드가 DB 데이터를 조회하여 React 프론트엔드에 API로 제공합니다.
+현재 로컬 MVP 구조는 다음과 같습니다.
+
+- Frontend: Vite, React, TypeScript
+- Backend API: Python FastAPI
+- Backend Java: Spring Boot, Java 21, Gradle
+- Database: Supabase/PostgreSQL, 미설정 시 CSV fallback
+- Crawling/Analysis: Python 크롤링, 상품명 매칭·클러스터링, rating 계산, 가격 이상치/정합성 분석
+
+프론트는 Vite 개발 서버에서 실행되고, `/api` 요청은 기본적으로 Python FastAPI 서버(`http://127.0.0.1:8000`)로 프록시됩니다. Spring Boot 백엔드는 `code/backend`에 통합되어 있으며 인증, 상품, 마이페이지, 챗봇 API 구현을 포함합니다.
+
+## 실행 방법
+
+아래 명령어는 현재 저장소 루트가 `c:\project\kdtproject\kdtproject`인 기준입니다. 백엔드와 프론트엔드는 각각 별도 터미널에서 실행합니다.
+
+### 1. 백엔드 API 서버 실행
+
+PowerShell 기준:
+
+```powershell
+cd "c:\project\kdtproject\kdtproject\code\backend\src\main\python"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+macOS/Linux 기준:
+
+```bash
+cd code/backend/src/main/python
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+Supabase를 사용할 경우 `.env.example`을 참고해서 `.env`를 만듭니다. `.env`가 없거나 Supabase 값이 비어 있으면 `crawling/results`의 최신 CSV를 fallback 데이터로 읽습니다.
+
+스키마 적용과 데이터 적재:
+
+```powershell
+python tools/apply_supabase_schema.py
+python import_csv_to_supabase.py --use-cluster-preview
+```
+
+자세한 내용은 [Supabase 설정](./docs/supabase_setup.md)을 참고합니다.
+
+```text
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_DATABASE_URL=...
+```
+
+서버 실행:
+
+```powershell
+python -m uvicorn api_server:app --host 127.0.0.1 --port 8000 --reload
+```
+
+정상 확인:
+
+```powershell
+curl http://127.0.0.1:8000/api/health
+```
+
+### 2. 프론트엔드 서버 실행
+
+PowerShell 기준:
+
+```powershell
+cd "c:\project\kdtproject\kdtproject\code\frontend\Hama"
+npm install
+npm run dev -- --host 127.0.0.1 --port 5178 --strictPort --force
+```
+
+`/api` 프록시 대상은 환경변수로 바꿀 수 있습니다 (기본값: FastAPI `127.0.0.1:8000`, Spring `127.0.0.1:8001`).
+로컬에서 Spring 없이 회원/찜/알림 기능까지 확인하려면 Spring 프록시만 라이브 EC2로 돌립니다.
+
+```bash
+# 예: 검색은 로컬 FastAPI, 회원/찜/알림/챗봇은 라이브 EC2 Spring
+FASTAPI_PROXY_TARGET=http://127.0.0.1:8000 \
+SPRING_API_PROXY_TARGET=http://15.134.191.154 \
+npm run dev
+```
+
+브라우저에서 접속:
+
+```text
+http://127.0.0.1:5178
+```
+
+프론트 빌드 확인:
+
+```powershell
+npm run build
+```
+
+### 3. Spring Boot 백엔드 확인
+
+Spring Boot 프로젝트 루트는 `code/backend`입니다. Python FastAPI와 포트가 겹치지 않도록 기본 포트는 `8080`으로 분리되어 있습니다.
+
+```powershell
+cd "c:\project\kdtproject\kdtproject\code\backend"
+```
+
+필요 환경변수는 `.env.example`을 참고합니다.
+
+```text
+SERVER_PORT=8080
+DB_URL=jdbc:postgresql://localhost:5432/postgres
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+GEMINI_API_KEY=...
+```
+
+현재 저장소에는 `gradle-wrapper.jar`가 없으면 `gradlew.bat` 실행이 실패할 수 있습니다. 이 경우 Gradle wrapper를 재생성하거나 시스템 Gradle을 설치한 뒤 빌드합니다.
+
+## 데이터 적재 흐름
+
+```text
+크롤링 CSV
+  -> analysis/notebooks/keyword_final.ipynb (전처리, cluster_product_name, rating)
+  -> analysis/handoff/keyword_db_input_df.csv
+  -> import_csv_to_supabase.py --use-cluster-preview
+  -> Supabase items (platform_name, original_id, rating 등) / price_history
+  -> opensearch/sync_from_supabase.py (검색 인덱스 갱신, 선택)
+```
+
+`items` 테이블은 `platform_name` + `original_id`로 플랫폼별 상품을 식별합니다. 별도 `platforms` 테이블은 사용하지 않습니다.
 
 ## 주요 기능
 
-- 회원가입 및 로그인
-- 개인 페이지 및 찜 목록 관리
-- 찜 상품의 현재 가격, 가격 변동, 역대 최저가 정보 제공
-- 가격 갱신 시 최저가 알림 제공
-- 검색 키워드 기반 상품 검색
-- 검색 결과 상단 가격 대시보드 제공
-- 최근 검색어 및 검색 순위 제공
-- 최근 검색 결과 기반 맞춤 상품 추천
-- 챗봇 기능
-- 홈 화면 배너 및 카테고리 제공
+- 상품 검색, 플랫폼 필터, 정렬, 페이지네이션
+- 상품 상세 팝업과 가격 인사이트
+- 추천 상품과 최근 검색 기반 추천
+- 찜 목록, 최근 본 상품, 알림 후보, 가격 비교 리스트 로컬 저장
+- 가격 비교 모달/마이페이지 탭과 비교 그래프
+- 관리자 대시보드 UI
+- 사이드 버튼: 맨 위로, 가격 비교, 챗봇, 알림
+- Supabase 기반 상품 데이터 조회, CSV fallback 지원
 
-## 기술 구성
+## 구현 상태
 
-- Backend: Java, Spring Boot
-- Frontend: Vite, React, Tailwind CSS
-- Crawling/Preprocessing: Python
-- Database: PostgreSQL 또는 Supabase
-- Docs: DB 스키마, ERD, API 명세, 요구사항 문서
+- 현재 API 연동 완료: 상품 검색, 추천, 상품 상세
+- 로컬스토리지 우선 동작: 찜, 최근 본 상품, 알림 후보, 가격 비교 리스트, 최근 검색어
+- UI만 존재하고 API 연결이 남은 영역: 로그인/회원가입, 관리자 대시보드 데이터, 챗봇, 계정 기반 찜/알림 저장
+- Spring Boot 영역: `code/backend/src/main/java/com/used/service`에 인증, 상품, 마이페이지, 챗봇 API 구현 통합
 
-## `code` 폴더 구조
+## 프로젝트 문서
 
-```text
-code
-├── backend
-│   └── src/main
-│       ├── java/com/used/service
-│       │   ├── config
-│       │   ├── controller
-│       │   ├── service
-│       │   ├── repository
-│       │   ├── dto
-│       │   ├── entity
-│       │   ├── scheduler
-│       │   ├── notification
-│       │   ├── chatbot
-│       │   └── exception
-│       ├── python
-│       │   ├── crawling
-│       │   ├── preprocessing
-│       │   └── requirements.txt
-│       └── resources
-│           └── application.yml
-├── frontend
-│   ├── src
-│   │   ├── api
-│   │   ├── assets
-│   │   ├── components
-│   │   ├── hooks
-│   │   ├── pages
-│   │   ├── styles
-│   │   ├── utils
-│   │   ├── routes
-│   │   ├── layouts
-│   │   └── contexts
-│   ├── tailwind.config.js
-│   └── vite.config.js
-└── docs
-    ├── requirements.md
-    ├── api_spec.md
-    ├── db_schema.sql
-    ├── ERD.drawio.png
-    └── 데이터 명세서.xlsx
-```
+- [프로젝트 폴더 구조](./docs/project_structure.md)
+- [요구사항 및 작성 기준](./docs/requirements.md)
+- [API 명세](./docs/api_spec.md)
+- [구현 파일 체크리스트](./docs/document_checklist.md)
+- [검색 정합성 계획](./docs/search_relevance_plan.md)
+- [Supabase 설정](./docs/supabase_setup.md)
+- [Oracle 기준 DB 스키마](./docs/db_schema.sql)
+- [Supabase/PostgreSQL 스키마](./docs/supabase_schema.sql)
+- [DB 컬럼 카탈로그](./docs/db_column_catalog.md)
+- [Supabase migration 관리](./code/supabase/README.md)
+- [Python 백엔드 README](./code/backend/src/main/python/README.md)
+- [OpenSearch 구조](./code/backend/opensearch/README.md)
+- [프론트엔드 상세 README](./code/frontend/Hama/README.md)
 
-## 폴더별 설명
+## GitHub 업로드 기준
 
-- `code/backend`: Spring Boot 기반 백엔드 코드 영역입니다.
-- `code/backend/src/main/java/com/used/service/controller`: 사용자 요청을 받는 REST API 컨트롤러를 작성합니다.
-- `code/backend/src/main/java/com/used/service/service`: 회원, 상품, 찜, 추천, 검색 등 핵심 비즈니스 로직을 작성합니다.
-- `code/backend/src/main/java/com/used/service/repository`: DB 접근 코드를 작성합니다.
-- `code/backend/src/main/java/com/used/service/entity`: DB 테이블과 매핑되는 Entity 클래스를 작성합니다.
-- `code/backend/src/main/java/com/used/service/dto`: API 요청/응답 데이터 객체를 작성합니다.
-- `code/backend/src/main/java/com/used/service/scheduler`: 가격 갱신, 최저가 알림, 검색 순위 집계 같은 정기 작업을 작성합니다.
-- `code/backend/src/main/java/com/used/service/notification`: 알림 생성, 조회, 읽음 처리 로직을 작성합니다.
-- `code/backend/src/main/java/com/used/service/chatbot`: 챗봇 관련 API와 서비스 로직을 작성합니다.
-- `code/backend/src/main/python`: Python 크롤링 및 전처리 코드를 관리합니다.
-- `code/frontend`: Vite + React 기반 프론트엔드 코드 영역입니다.
-- `code/frontend/src/pages`: 홈, 로그인, 회원가입, 검색 결과, 상세, 마이페이지 등 페이지 단위 컴포넌트를 작성합니다.
-- `code/frontend/src/components`: Header, Footer, ItemCard, SearchBar 등 공통 컴포넌트를 작성합니다.
-- `code/frontend/src/api`: Axios 설정 및 백엔드 API 통신 모듈을 작성합니다.
-- `code/frontend/src/routes`: React Router 라우팅 설정을 작성합니다.
-- `code/frontend/src/layouts`: 공통 레이아웃을 작성합니다.
-- `code/frontend/src/contexts`: 로그인 상태, 알림 상태, 검색 상태 등 전역 상태를 관리합니다.
-- `code/docs`: 요구사항, API 명세, DB 스키마, ERD, 데이터 명세서를 보관합니다.
+올릴 파일:
 
-## 참고 문서
+- `README.md`
+- `docs/**`
+- `code/supabase/**`
+- `code/frontend/Hama/src/**`
+- `code/frontend/Hama/public/**`
+- `code/frontend/Hama/package.json`
+- `code/frontend/Hama/package-lock.json`
+- `code/frontend/Hama/.env.example`
+- `code/frontend/Hama/index.html`
+- `code/frontend/Hama/vite.config.ts`
+- `code/frontend/Hama/tsconfig.json`
+- `code/frontend/Hama/eslint.config.js`
+- `code/frontend/Hama/postcss.config.js`
+- `code/frontend/Hama/tailwind.config.js`
+- `code/backend/src/main/python/api_server.py`
+- `code/backend/src/main/python/import_csv_to_supabase.py`
+- `code/backend/src/main/python/lib/**`
+- `code/backend/src/main/python/tools/**`
+- `code/backend/src/main/python/config/**`
+- `code/backend/src/main/python/crawling/*.csv`
+- `code/backend/src/main/python/crawling/update_keyword_list.py`
+- `code/backend/src/main/python/analysis/notebooks/*.ipynb`
+- `code/backend/src/main/python/analysis/scripts/*.py`
+- `code/backend/src/main/python/analysis/handoff/**`
+- `code/backend/src/main/python/analysis/paths.py`
+- `code/backend/src/main/python/README.md`
+- `code/backend/src/main/python/requirements.txt`
+- `code/backend/src/main/python/.env.example`
 
-- `code/docs/requirements.md`: 프로젝트 구조 및 파일 작성 가이드
-- `code/docs/api_spec.md`: API 명세서
-- `code/docs/db_schema.sql`: DB 테이블 생성 SQL
-- `code/docs/ERD.drawio.png`: ERD 이미지
-- `code/docs/데이터 명세서.xlsx`: 데이터 명세서
+올리면 안 되는 파일:
+
+- `.env`, `.env.*` 단, `.env.example` 제외
+- `.venv/`, `node_modules/`, `dist/`
+- `__pycache__/`, `*.pyc`
+- `.DS_Store`, `*.log`
+- Supabase service role key, DB 비밀번호, 개인 로컬 경로가 들어간 파일
+- 크롤링 실행 중 생긴 임시 결과물과 대용량 원본 데이터
+- `code/backend/src/main/python/analysis/results/**`
+- `code/backend/src/main/python/analysis/archive/**`
+- `code/backend/src/main/python/analysis/review/**` (재생성 가능)
+- `code/backend/src/main/python/crawling/archive/**`
+- `code/backend/src/main/python/crawling/results/**`
+
+## 팀원 정보
+
+- **정지원**
+  - 팀장
+  - 백엔드 & DB 설계
+  - GitHub 레포지토리 관리
+  - GitHub: https://github.com/jiwon-jung323
+
+- **정우진**
+  - 프로젝트 매니저
+  - 백엔드 데이터 수집 파이프라인
+  - 프론트엔드 구조 및 UI 구현
+  - GitHub: https://github.com/rainstorm0907
+
+- **김다은**
+  - 프론트엔드
+  - 홈 화면 및 공통 컴포넌트 구현
+  - GitHub: https://github.com/rlekdm
+
+- **이준호**
+  - 백엔드
+  - 챗봇 기능 구현
+  - GitHub: https://github.com/dlwnsgh1130

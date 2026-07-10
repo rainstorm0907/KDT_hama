@@ -1,3 +1,12 @@
 requests
 pandas
+scikit-learn
 beautifulsoup4
+fastapi
+pydantic
+uvicorn[standard]
+pyahocorasick
+python-dotenv
+psycopg[binary]
+supabase
+opensearch-py

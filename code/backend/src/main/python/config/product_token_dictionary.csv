@@ -1,0 +1,40 @@
+field_name,canonical_value,aliases,enabled
+brand,아이폰,"iphone,아이폰",1
+brand,갤럭시,"galaxy,갤럭시",1
+brand,애플,"apple,애플",1
+brand,삼성,"samsung,삼성",1
+brand,LG,"lg,엘지",1
+model,16,"16,sixteen",1
+model,16 pro,"16pro,16프로,16 pro,16 프로",1
+model,16 pro max,"16promax,16프로맥스,16 pro max,16 프로 맥스",1
+model,17,"17",1
+model,17 pro,"17pro,17프로,17 pro,17 프로",1
+model,17 pro max,"17promax,17프로맥스,17 pro max,17 프로 맥스",1
+model,s25,"s25,갤럭시s25,galaxys25",1
+model,s25 plus,"s25plus,s25플러스,s25 plus,s25 플러스",1
+model,s25 ultra,"s25ultra,s25울트라,s25 ultra,s25 울트라",1
+model,s26,"s26,갤럭시s26,galaxys26",1
+model,s26 ultra,"s26ultra,s26울트라,s26 ultra,s26 울트라",1
+model,맥북,"macbook,맥북",1
+model,맥북 에어,"macbookair,맥북에어,macbook air,맥북 에어",1
+model,맥북 프로,"macbookpro,맥북프로,macbook pro,맥북 프로",1
+model,그램,"gram,그램",1
+detail,pro,"pro,프로",1
+detail,pro max,"promax,프로맥스,pro max,프로 맥스",1
+detail,plus,"plus,플러스",1
+detail,ultra,"ultra,울트라",1
+detail,air,"air,에어",1
+detail,m1,"m1",1
+detail,m2,"m2",1
+detail,m3,"m3",1
+detail,m4,"m4",1
+spec,64GB,"64gb,64기가,64g",1
+spec,128GB,"128gb,128기가,128g",1
+spec,256GB,"256gb,256기가,256g",1
+spec,512GB,"512gb,512기가,512g",1
+spec,1TB,"1tb,1테라",1
+option,자급제,"자급제,공기계",1
+option,미개봉,"미개봉,새상품,새제품",1
+option,정상해지,"정상해지",1
+option,풀박스,"풀박스,풀박,박스풀",1
+option,리퍼,"리퍼,리퍼폰",1
