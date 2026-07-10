@@ -4,6 +4,7 @@
 - GitHub: https://github.com/shortKDT
 - Notion: https://suave-kip-fd7.notion.site/KDT-350c2695cef080ec881ad5a86bdd8da8
 - 작업일지: https://docs.google.com/document/d/1dVSdk9_XY6iGct6hbBqkIfOONJ4G7_REaNwQ3mR1rSQ/edit
+- 배포 주소: https://kdt-hama.vercel.app/
 
 ## 프로젝트 설명
 
