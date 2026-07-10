@@ -4,7 +4,6 @@
 - GitHub: https://github.com/shortKDT
 - Notion: https://suave-kip-fd7.notion.site/KDT-350c2695cef080ec881ad5a86bdd8da8
 - 작업일지: https://docs.google.com/document/d/1dVSdk9_XY6iGct6hbBqkIfOONJ4G7_REaNwQ3mR1rSQ/edit
-- DRIVE: https://drive.google.com/drive/u/0/folders/1_V8_IYdDE5DPy7e_IqMRJWGsNFNyX0dF
 
 ## 프로젝트 설명
 
